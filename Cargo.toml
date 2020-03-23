@@ -11,3 +11,5 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 openssl = "~0.10.28"
 base64 = "~0.12.0"
+hmac = "~0.7.1"
+sha2 = "~0.8.1"
