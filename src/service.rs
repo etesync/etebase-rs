@@ -267,3 +267,109 @@ impl JournalManager<'_> {
         }
     }
 }
+
+#[derive(Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct EntryJson {
+    uid: String,
+    content: String,
+}
+
+#[derive(Clone)]
+pub struct Entry {
+    pub uid: String,
+    pub content: Vec<u8>,
+}
+
+impl Entry {
+    // FIXME: this should return a result
+    fn from_json(uid: &str, json: &EntryJson) -> Entry {
+        #[allow(non_snake_case)]
+        Entry {
+            uid: uid.to_owned(),
+            content: base64::decode(&json.content).unwrap(),
+        }
+    }
+
+    fn to_json(&self) -> EntryJson {
+        EntryJson {
+            uid: self.uid.clone(),
+            content: base64::encode(&self.content),
+        }
+    }
+
+    pub fn get_crypto_manager() {
+    }
+}
+
+pub struct EntryManager<'a> {
+    api_base: Url,
+    client: &'a Client,
+    auth_token: String,
+}
+
+impl EntryManager<'_> {
+    pub fn new<'a>(client: &'a Client, auth_token: &str, journal_uid: &str, api_base: &str) -> EntryManager<'a> {
+        let api_base = Url::parse(api_base).unwrap();
+        let api_base = api_base.join(&format!("api/v1/journals/{}/entries/", &journal_uid)).unwrap();
+        EntryManager {
+            api_base,
+            client,
+            auth_token: auth_token.to_owned(),
+        }
+    }
+
+    pub fn list(&self, last_uid: Option<&str>, limit: Option<usize>) -> Result<Vec<Entry>, Box<dyn std::error::Error>> {
+        let mut url = self.api_base.clone();
+
+        if let Some(last_uid) = last_uid {
+            let mut query = url.query_pairs_mut();
+            query.append_pair("last", &last_uid);
+        }
+        if let Some(limit) = limit {
+            let mut query = url.query_pairs_mut();
+            query.append_pair("limit", &limit.to_string());
+        }
+
+        let headers = get_base_headers(&self.auth_token, 0);
+        let res = self.client.get(url.as_str())
+            .headers(headers)
+            .send()?;
+
+        match res.error_for_status() {
+            Ok(res) => {
+                let entrys_json = res.json::<Vec<EntryJson>>()?;
+                Ok(entrys_json.into_iter().map(|entry_json| Entry::from_json(&entry_json.uid, &entry_json)).collect())
+            },
+            Err(err) => {
+                Err(Box::new(err))
+            }
+        }
+    }
+
+    pub fn create(&self, entries: &[&Entry], last_uid: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+        let mut url = self.api_base.clone();
+
+        if let Some(last_uid) = last_uid {
+            let mut query = url.query_pairs_mut();
+            query.append_pair("last", &last_uid);
+        }
+        let headers = get_base_headers(&self.auth_token, 0);
+
+        let entries_json: Vec<EntryJson> = entries.into_iter().map(|entry| entry.to_json()).collect();
+
+        let res = self.client.post(url.as_str())
+            .headers(headers)
+            .json(&entries_json)
+            .send()?;
+
+        match res.error_for_status() {
+            Ok(_res) => {
+                Ok(())
+            },
+            Err(err) => {
+                Err(Box::new(err))
+            }
+        }
+    }
+}
