@@ -5,6 +5,7 @@ use std::os::raw::c_char;
 use std::ffi::{CString};
 
 pub mod crypto;
+pub mod service;
 
 #[no_mangle]
 #[repr(C)]
