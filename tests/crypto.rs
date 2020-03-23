@@ -1,4 +1,9 @@
-use etesync::crypto;
+use etesync::{
+    crypto,
+    crypto::{
+        AsymmetricKeyPair
+    },
+};
 
 use base64;
 
@@ -11,4 +16,9 @@ fn derive_key() {
     let derived = crypto::derive_key(USER, PASSWORD).unwrap();
     let derived64 = base64::encode(derived);
     assert_eq!(derived64, KEY_BASE64);
+}
+
+#[test]
+fn generate_keypair() {
+    let _keypair = AsymmetricKeyPair::generate_keypair().unwrap();
 }
