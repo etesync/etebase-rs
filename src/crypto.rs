@@ -19,6 +19,7 @@ pub const CURRENT_VERSION: u8 = 2;
 
 type HmacSha256 = Hmac<Sha256>;
 
+// FIXME: don't use unwrap, have proper error handling - won't work in C...
 // FIXME: have our own error type
 pub fn derive_key(salt: &str, password: &str) -> Result<Box<[u8]>, ErrorStack> {
     let salt = salt.as_bytes();
