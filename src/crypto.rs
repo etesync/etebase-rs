@@ -31,6 +31,10 @@ pub fn derive_key(salt: &str, password: &str) -> Result<Box<[u8]>, ErrorStack> {
     }
 }
 
+pub fn memcmp(a: &[u8], b: &[u8]) -> bool {
+    openssl::memcmp::eq(&a, &b)
+}
+
 fn hmac256(salt: &[u8], key: &[u8], extra: Option<&[u8]>) -> Result<Vec<u8>, &'static str> {
     let mut mac = HmacSha256::new_varkey(salt)
         .expect("HMAC can take key of any size");

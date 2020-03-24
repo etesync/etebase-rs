@@ -6,6 +6,7 @@ use std::ffi::{CString};
 
 pub mod crypto;
 pub mod service;
+pub mod content;
 
 #[no_mangle]
 #[repr(C)]

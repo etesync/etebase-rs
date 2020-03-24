@@ -1,4 +1,5 @@
 use etesync::{
+    crypto,
     service::{
         test_reset,
         get_client,
@@ -33,15 +34,12 @@ fn simple_sync() {
 
     let journal_manager = JournalManager::new(&client, &token, TEST_API_URL);
 
-    let journal = Journal {
-        uid: String::from("f3436f50b2f7f1613ad142dbce1d24801d9daaabc45ecb2db909251a214c9841"),
-        version: 2,
-        owner: String::from(""),
-        content: b"bla".to_vec(),
-        read_only: false,
-        key: None,
-        last_uid: None,
-    };
+    let mut journal = Journal::new(
+        "f3436f50b2f7f1613ad142dbce1d24801d9daaabc45ecb2db909251a214c9841",
+        crypto::CURRENT_VERSION,
+        USER);
+
+    journal.content = b"bla".to_vec();
 
     {
         journal_manager.create(&journal).unwrap();

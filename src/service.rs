@@ -1,3 +1,5 @@
+extern crate serde_json;
+
 use url::{Url, ParseError};
 
 use serde::{Serialize, Deserialize};
@@ -7,6 +9,16 @@ use reqwest::{
     header,
 };
 
+use super::{
+    crypto::{
+        memcmp,
+        CryptoManager,
+    },
+    content::{
+        CollectionInfo,
+    },
+};
+
 static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_NAME"),
     "/",
@@ -14,6 +26,8 @@ static APP_USER_AGENT: &str = concat!(
 );
 
 pub static SERVICE_API_URL: &str = "https://api.etesync.com";
+
+const HMAC_SIZE: usize = 32;
 
 pub fn get_client() -> Result<Client, Box<dyn std::error::Error>> {
     let client = Client::builder()
@@ -109,12 +123,26 @@ pub struct Journal {
     pub version: u8,
     pub owner: String,
     pub content: Vec<u8>,
-    pub read_only: bool,
     pub key: Option<Vec<u8>>,
-    pub last_uid: Option<String>,
+
+    read_only: bool,
+    last_uid: Option<String>,
 }
 
 impl Journal {
+    pub fn new(uid: &str, version: u8, owner: &str) -> Journal {
+        Journal {
+            uid: uid.to_owned(),
+            version,
+            owner: owner.to_owned(),
+            content: vec![],
+            key: None,
+
+            read_only: false,
+            last_uid: None,
+        }
+    }
+
     // FIXME: this should return a result
     fn from_json(uid: &str, json: &JournalJson) -> Journal {
         Journal {
@@ -149,7 +177,61 @@ impl Journal {
         }
     }
 
-    pub fn get_crypto_manager() {
+    pub fn is_read_only(&self) -> bool {
+        return self.read_only;
+    }
+
+    pub fn get_last_uid(&self) -> &Option<String> {
+        return &self.last_uid;
+    }
+
+    pub fn get_crypto_manager(&self, key: &[u8]) -> Result<CryptoManager, &'static str> {
+        if self.key != None {
+            return Err("Asymmetric keys currently not supported");
+        } else {
+            return CryptoManager::new(key, &self.uid, self.version);
+        }
+    }
+
+    pub fn set_info(&mut self, crypto_manager: &CryptoManager, info: &CollectionInfo) -> Result<(), &'static str> {
+        let json = serde_json::to_vec(&info).unwrap();
+        let ciphertext = crypto_manager.encrypt(&json)?;
+        let hmac = self.calculate_hmac(crypto_manager, &ciphertext)?;
+        let mut content = hmac;
+        content.extend(ciphertext);
+        self.content = content;
+
+        Ok(())
+    }
+
+    pub fn get_info(&self, crypto_manager: &CryptoManager) -> Result<CollectionInfo, Box<dyn std::error::Error>> {
+        self.verify(&crypto_manager)?;
+
+        let ciphertext = &self.content[HMAC_SIZE..];
+        let info = crypto_manager.decrypt(ciphertext)?;
+        let info = serde_json::from_slice(&info)?;
+
+        Ok(info)
+    }
+
+    fn calculate_hmac(&self, crypto_manager: &CryptoManager, message: &[u8]) -> Result<Vec<u8>, &'static str> {
+        let mut data = self.uid.as_bytes().to_vec();
+        data.extend(message);
+        let hmac = crypto_manager.hmac(&data)?;
+
+        Ok(hmac)
+    }
+
+    fn verify(&self, crypto_manager: &CryptoManager) -> Result<(), &'static str> {
+        let hmac = &self.content[..HMAC_SIZE];
+        let ciphertext = &self.content[HMAC_SIZE..];
+        let calculated = self.calculate_hmac(crypto_manager, &ciphertext)?;
+
+        if memcmp(&hmac, &calculated) {
+            return Ok(());
+        } else {
+            return Err("HMAC mismatch");
+        }
     }
 }
 
