@@ -51,7 +51,6 @@ fn hmac256(salt: &[u8], key: &[u8], extra: Option<&[u8]>) -> Result<Vec<u8>, &'s
 
 pub struct CryptoManager {
     pub version: u8,
-    key: Vec<u8>,
     cipher_key: Vec<u8>,
     hmac_key: Vec<u8>,
 }
@@ -73,7 +72,6 @@ impl CryptoManager {
 
         Ok(CryptoManager {
             version,
-            key: key.to_vec(),
             cipher_key,
             hmac_key,
         })
