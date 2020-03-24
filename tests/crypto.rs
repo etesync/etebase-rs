@@ -2,6 +2,7 @@ use etesync::{
     crypto,
     crypto::{
         AsymmetricKeyPair,
+        AsymmetricCryptoManager,
         CryptoManager,
     },
 };
@@ -26,7 +27,14 @@ fn derive_key() {
 
 #[test]
 fn generate_keypair() {
-    let _keypair = AsymmetricKeyPair::generate_keypair().unwrap();
+    let keypair = AsymmetricKeyPair::generate_keypair().unwrap();
+    let pkey = &keypair.get_pkey().unwrap();
+    let crypto_manager = AsymmetricCryptoManager::new(&keypair);
+
+    let message = vec![1, 2, 4, 5];
+    let ciphertext = crypto_manager.encrypt(&pkey, &message).unwrap();
+    let decrypted = crypto_manager.decrypt(&ciphertext).unwrap();
+    assert_eq!(&message, &decrypted);
 }
 
 #[test]

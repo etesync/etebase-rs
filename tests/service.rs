@@ -43,6 +43,7 @@ fn simple_sync() {
     test_reset(&client, &token, TEST_API_URL).unwrap();
 
     let derived = get_encryption_key();
+    let keypair = crypto::AsymmetricKeyPair::generate_keypair().unwrap();
 
     let journal_manager = JournalManager::new(&client, &token, TEST_API_URL);
 
@@ -51,7 +52,7 @@ fn simple_sync() {
         crypto::CURRENT_VERSION,
         USER);
 
-    let crypto_manager = journal.get_crypto_manager(&derived).unwrap();
+    let crypto_manager = journal.get_crypto_manager(&derived, &keypair).unwrap();
 
     let info = CollectionInfo {
         col_type: "CALENDAR".to_owned(),

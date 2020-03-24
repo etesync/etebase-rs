@@ -10,6 +10,7 @@ use openssl::{
     rand,
     rsa::{
         Rsa,
+        Padding,
     },
     symm::{encrypt, decrypt, Cipher},
     error::ErrorStack,
@@ -63,12 +64,16 @@ impl CryptoManager {
             _ => return Err("Version mismatch"),
         };
 
-        let cipher_key = hmac256(b"aes", &key, None).unwrap();
-        let hmac_key = hmac256(b"hmac", &key, None).unwrap();
+        CryptoManager::from_derived_key(&key, version)
+    }
+
+    pub fn from_derived_key(derived: &[u8], version: u8) -> Result<CryptoManager, &'static str> {
+        let cipher_key = hmac256(b"aes", derived, None).unwrap();
+        let hmac_key = hmac256(b"hmac", derived, None).unwrap();
 
         Ok(CryptoManager {
             version,
-            key,
+            key: key.to_vec(),
             cipher_key,
             hmac_key,
         })
@@ -109,19 +114,55 @@ impl CryptoManager {
     }
 }
 
+#[derive(Clone)]
 pub struct AsymmetricKeyPair {
-    pub pkey: Vec<u8>,
-    pub skey: Vec<u8>,
+    rsa: Rsa<openssl::pkey::Private>,
 }
 
 impl AsymmetricKeyPair {
-    pub fn generate_keypair() -> Result<Box<AsymmetricKeyPair>, ()> {
+    pub fn generate_keypair() -> Result<AsymmetricKeyPair, ()> {
         let rsa = Rsa::generate(3072).unwrap();
-        // FIXME: Shouldn't unwrap
-        Ok(Box::new(AsymmetricKeyPair {
-            skey: rsa.private_key_to_der().unwrap(),
-            pkey: rsa.public_key_to_der().unwrap(),
-        }))
+        Ok(AsymmetricKeyPair {
+            rsa,
+        })
+    }
+
+    pub fn get_skey(&self) -> Result<Vec<u8>, &'static str> {
+        Ok(self.rsa.private_key_to_der().unwrap())
+    }
+
+    pub fn get_pkey(&self) -> Result<Vec<u8>, &'static str> {
+        Ok(self.rsa.public_key_to_der().unwrap())
+    }
+}
+
+pub struct AsymmetricCryptoManager {
+    keypair: AsymmetricKeyPair,
+}
+
+impl AsymmetricCryptoManager {
+    pub fn new(keypair: &AsymmetricKeyPair) -> AsymmetricCryptoManager {
+        AsymmetricCryptoManager {
+            keypair: keypair.clone(),
+        }
+    }
+
+    pub fn encrypt(&self, pkey: &[u8], message: &[u8]) -> Result<Vec<u8>, &'static str> {
+        let rsa = Rsa::public_key_from_der(pkey).unwrap();
+        let mut buf = vec![0; rsa.size() as usize];
+        let result_len = rsa.public_encrypt(message, &mut buf, Padding::PKCS1_OAEP).unwrap();
+        buf.truncate(result_len);
+
+        Ok(buf)
+    }
+
+    pub fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>, &'static str> {
+        let rsa = &self.keypair.rsa;
+        let mut buf = vec![0; rsa.size() as usize];
+        let result_len = rsa.private_decrypt(ciphertext, &mut buf, Padding::PKCS1_OAEP).unwrap();
+        buf.truncate(result_len);
+
+        Ok(buf)
     }
 }
 

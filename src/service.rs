@@ -14,6 +14,8 @@ use super::{
     crypto::{
         memcmp,
         CryptoManager,
+        AsymmetricKeyPair,
+        AsymmetricCryptoManager,
     },
     content::{
         CollectionInfo,
@@ -187,9 +189,12 @@ impl Journal {
         return &self.last_uid;
     }
 
-    pub fn get_crypto_manager(&self, key: &[u8]) -> Result<CryptoManager, &'static str> {
-        if self.key != None {
-            return Err("Asymmetric keys currently not supported");
+    pub fn get_crypto_manager(&self, key: &[u8], keypair: &AsymmetricKeyPair) -> Result<CryptoManager, &'static str> {
+        if let Some(key) = &self.key {
+            let asymmetric_crypto_manager = AsymmetricCryptoManager::new(&keypair);
+            let derived = asymmetric_crypto_manager.decrypt(&key).unwrap();
+
+            return CryptoManager::from_derived_key(&derived, self.version);
         } else {
             return CryptoManager::new(key, &self.uid, self.version);
         }
