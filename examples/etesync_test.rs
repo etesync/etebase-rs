@@ -82,4 +82,6 @@ fn main() {
             }
         }
     }
+
+    authenticator.invalidate_token(&token).unwrap();
 }
