@@ -92,15 +92,15 @@ fn get_base_headers(auth_token: &str, capacity: usize) -> header::HeaderMap<head
 }
 
 #[derive(Serialize, Deserialize)]
-#[allow(non_snake_case)]
+#[serde(rename_all = "camelCase")]
 struct JournalJson {
     uid: String,
     version: u8,
     owner: String,
     content: String,
-    readOnly: Option<bool>,
+    read_only: Option<bool>,
     key: Option<String>,
-    lastUid: Option<String>,
+    last_uid: Option<String>,
 }
 
 #[derive(Clone)]
@@ -117,12 +117,11 @@ pub struct Journal {
 impl Journal {
     // FIXME: this should return a result
     fn from_json(uid: &str, json: &JournalJson) -> Journal {
-        #[allow(non_snake_case)]
         Journal {
             uid: uid.to_owned(),
             version: json.version,
             owner: json.owner.clone(),
-            read_only: match json.readOnly {
+            read_only: match json.read_only {
                 Some(val) => val,
                 None => false,
             },
@@ -131,7 +130,7 @@ impl Journal {
                 Some(val) => Some(base64::decode(val).unwrap()),
                 None => None,
             },
-            last_uid: json.lastUid.clone(),
+            last_uid: json.last_uid.clone(),
         }
     }
 
@@ -140,13 +139,13 @@ impl Journal {
             uid: self.uid.clone(),
             version: self.version,
             owner: self.owner.clone(),
-            readOnly: Some(self.read_only),
+            read_only: Some(self.read_only),
             content: base64::encode(&self.content),
             key: match &self.key {
                 Some(val) => Some(base64::encode(val)),
                 None => None,
             },
-            lastUid: None,
+            last_uid: None,
         }
     }
 
