@@ -26,6 +26,13 @@ include_version = true
 # default: "both"
 style = "both"
 
+[export]
+prefix = "EteSync"
+renaming_overrides_prefixing = true
+
+[export.rename]
+"EteSync" = "EteSync"
+"CURRENT_VERSION" = "ETESYNC_CURRENT_VERSION"
 
 [fn]
 # An optional prefix to put before every function declaration
