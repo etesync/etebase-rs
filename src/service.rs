@@ -1,4 +1,5 @@
 extern crate serde_json;
+extern crate hex;
 
 use url::{Url, ParseError};
 
@@ -16,6 +17,7 @@ use super::{
     },
     content::{
         CollectionInfo,
+        SyncEntry,
     },
 };
 
@@ -363,6 +365,19 @@ pub struct Entry {
 }
 
 impl Entry {
+    pub fn from_sync_entry(crypto_manager: &CryptoManager, sync_entry: &SyncEntry, prev_uid: Option<& str>) -> Result<Entry, &'static str> {
+        let json = serde_json::to_vec(&sync_entry).unwrap();
+        let ciphertext = crypto_manager.encrypt(&json)?;
+        let hmac = Entry::calculate_hmac(crypto_manager, &ciphertext, prev_uid)?;
+
+        let ret = Entry {
+            uid: hex::encode(hmac),
+            content: ciphertext,
+        };
+
+        Ok(ret)
+    }
+
     // FIXME: this should return a result
     fn from_json(uid: &str, json: &EntryJson) -> Entry {
         #[allow(non_snake_case)]
@@ -379,7 +394,39 @@ impl Entry {
         }
     }
 
-    pub fn get_crypto_manager() {
+    pub fn get_sync_entry(&self, crypto_manager: &CryptoManager, prev_uid: Option<& str>) -> Result<SyncEntry, Box<dyn std::error::Error>> {
+        self.verify(&crypto_manager, prev_uid)?;
+
+        let ciphertext = &self.content;
+        let info = crypto_manager.decrypt(ciphertext)?;
+        let info = serde_json::from_slice(&info)?;
+
+        Ok(info)
+    }
+
+    fn calculate_hmac(crypto_manager: &CryptoManager, message: &[u8], prev_uid: Option<& str>) -> Result<Vec<u8>, &'static str> {
+        let mut data = match prev_uid {
+            Some(prev_uid) => prev_uid.as_bytes().to_vec(),
+            None => vec![],
+        };
+        data.extend(message);
+        let hmac = crypto_manager.hmac(&data)?;
+
+        Ok(hmac)
+    }
+
+    fn verify(&self, crypto_manager: &CryptoManager, prev_uid: Option<& str>) -> Result<(), &'static str> {
+        let calculated = Entry::calculate_hmac(crypto_manager, &self.content, prev_uid)?;
+        let hmac = match hex::decode(&self.uid) {
+            Ok(hmac) => hmac,
+            Err(_e) => return Err("Failed decoding uid"),
+        };
+
+        if memcmp(&hmac, &calculated) {
+            return Ok(());
+        } else {
+            return Err("HMAC mismatch");
+        }
     }
 }
 

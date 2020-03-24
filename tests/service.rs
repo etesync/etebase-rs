@@ -10,7 +10,9 @@ use etesync::{
         Entry,
     },
     content::{
+        ACTION_ADD,
         CollectionInfo,
+        SyncEntry,
     }
 };
 
@@ -99,28 +101,39 @@ fn simple_sync() {
     {
         let entry_manager = EntryManager::new(&client, &token, &journal.uid, TEST_API_URL);
 
-        let entry = Entry {
-            uid: String::from("eeeeef50b2f7f1613ad142dbce1d24801d9daaabc45ecb2db909251a20000001"),
-            content: b"bla".to_vec(),
+        let sync_entry = SyncEntry {
+            action: ACTION_ADD.to_owned(),
+            content: "bla1".to_owned(),
         };
+        let entry = Entry::from_sync_entry(&crypto_manager, &sync_entry, None).unwrap();
 
         entry_manager.create(&[&entry], None).unwrap();
         assert_eq!(entry_manager.list(None, None).unwrap().len(), 1);
 
-        let entry2 = Entry {
-            uid: String::from("eeeeef50b2f7f1613ad142dbce1d24801d9daaabc45ecb2db909251a20000002"),
-            content: b"bla2".to_vec(),
+        let tmp = SyncEntry {
+            action: ACTION_ADD.to_owned(),
+            content: "bla2".to_owned(),
         };
+        let entry2 = Entry::from_sync_entry(&crypto_manager, &tmp, Some(&entry.uid)).unwrap();
 
-        let entry3 = Entry {
-            uid: String::from("eeeeef50b2f7f1613ad142dbce1d24801d9daaabc45ecb2db909251a20000003"),
-            content: b"bla3".to_vec(),
+        let tmp = SyncEntry {
+            action: ACTION_ADD.to_owned(),
+            content: "bla3".to_owned(),
         };
+        let entry3 = Entry::from_sync_entry(&crypto_manager, &tmp, Some(&entry2.uid)).unwrap();
 
         entry_manager.create(&[&entry2, &entry3], Some(&entry.uid)).unwrap();
         assert_eq!(entry_manager.list(None, None).unwrap().len(), 3);
         assert_eq!(entry_manager.list(Some(&entry.uid), None).unwrap().len(), 2);
         assert_eq!(entry_manager.list(Some(&entry.uid), Some(1)).unwrap().len(), 1);
+
+        let entries = entry_manager.list(None, None).unwrap();
+        let tmp = entries[0].get_sync_entry(&crypto_manager, None).unwrap();
+        assert_eq!(&tmp.content, "bla1");
+        let tmp = entries[1].get_sync_entry(&crypto_manager, Some(&entries[0].uid)).unwrap();
+        assert_eq!(&tmp.content, "bla2");
+        let tmp = entries[2].get_sync_entry(&crypto_manager, Some(&entries[1].uid)).unwrap();
+        assert_eq!(&tmp.content, "bla3");
     }
 
 
