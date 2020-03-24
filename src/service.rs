@@ -242,19 +242,19 @@ impl Journal {
     }
 }
 
-pub struct JournalManager<'a> {
+pub struct JournalManager {
     api_base: Url,
-    client: &'a Client,
+    client: Client,
     auth_token: String,
 }
 
-impl JournalManager<'_> {
-    pub fn new<'a>(client: &'a Client, auth_token: &str, api_base: &str) -> JournalManager<'a> {
+impl JournalManager {
+    pub fn new(client: &Client, auth_token: &str, api_base: &str) -> JournalManager {
         let api_base = Url::parse(api_base).unwrap();
         let api_base = api_base.join("api/v1/journals/").unwrap();
         JournalManager {
             api_base,
-            client,
+            client: client.clone(),
             auth_token: auth_token.to_owned(),
         }
     }
@@ -435,19 +435,19 @@ impl Entry {
     }
 }
 
-pub struct EntryManager<'a> {
+pub struct EntryManager {
     api_base: Url,
-    client: &'a Client,
+    client: Client,
     auth_token: String,
 }
 
-impl EntryManager<'_> {
-    pub fn new<'a>(client: &'a Client, auth_token: &str, journal_uid: &str, api_base: &str) -> EntryManager<'a> {
+impl EntryManager {
+    pub fn new(client: &Client, auth_token: &str, journal_uid: &str, api_base: &str) -> EntryManager {
         let api_base = Url::parse(api_base).unwrap();
         let api_base = api_base.join(&format!("api/v1/journals/{}/entries/", &journal_uid)).unwrap();
         EntryManager {
             api_base,
-            client,
+            client: client.clone(),
             auth_token: auth_token.to_owned(),
         }
     }
