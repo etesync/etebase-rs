@@ -56,8 +56,8 @@ pub extern fn etesync_destroy(etesync: *mut EteSync) {
 
 #[no_mangle]
 pub extern fn etesync_crypto_derive_key(_etesync: *const EteSync, salt: *const c_char, password: *const c_char) -> *mut c_char {
-    let salt = (unsafe { CStr::from_ptr(salt) }).to_string_lossy().into_owned();
-    let password = (unsafe { CStr::from_ptr(password) }).to_string_lossy().into_owned();
+    let salt = (unsafe { CStr::from_ptr(salt) }).to_string_lossy();
+    let password = (unsafe { CStr::from_ptr(password) }).to_string_lossy();
 
     let derived = crypto::derive_key(&salt, &password).unwrap();
 
@@ -69,8 +69,8 @@ pub extern fn etesync_crypto_derive_key(_etesync: *const EteSync, salt: *const c
 #[no_mangle]
 pub extern fn etesync_auth_get_token(etesync: *const EteSync, username: *const c_char, password: *const c_char) -> *mut c_char {
     let etesync = unsafe { &*etesync };
-    let username = (unsafe { CStr::from_ptr(username) }).to_string_lossy().into_owned();
-    let password = (unsafe { CStr::from_ptr(password) }).to_string_lossy().into_owned();
+    let username = (unsafe { CStr::from_ptr(username) }).to_string_lossy();
+    let password = (unsafe { CStr::from_ptr(password) }).to_string_lossy();
 
     let authenticator = Authenticator::new(&etesync.client, &etesync.server_url);
     let token = authenticator.get_token(&username, &password).unwrap();
@@ -83,7 +83,7 @@ pub extern fn etesync_auth_get_token(etesync: *const EteSync, username: *const c
 #[no_mangle]
 pub extern fn etesync_auth_invalidate_token(etesync: *const EteSync, token: *const c_char) -> bool {
     let etesync = unsafe { &*etesync };
-    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy().into_owned();
+    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
 
     let authenticator = Authenticator::new(&etesync.client, &etesync.server_url);
     authenticator.invalidate_token(&token).unwrap();
@@ -94,7 +94,7 @@ pub extern fn etesync_auth_invalidate_token(etesync: *const EteSync, token: *con
 #[no_mangle]
 pub extern fn etesync_journal_manager_new(etesync: *const EteSync, token: *const c_char) -> *mut JournalManager {
     let etesync = unsafe { &*etesync };
-    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy().into_owned();
+    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
     let journal_manager = JournalManager::new(&etesync.client, &token, &etesync.server_url);
 
     Box::into_raw(
@@ -111,7 +111,7 @@ pub extern fn etesync_journal_manager_destroy(journal_manager: *mut JournalManag
 #[no_mangle]
 pub extern fn etesync_journal_manager_fetch(journal_manager: *const JournalManager, journal_uid: *const c_char) -> *mut Journal {
     let journal_manager = unsafe { &*journal_manager };
-    let journal_uid = (unsafe { CStr::from_ptr(journal_uid) }).to_string_lossy().into_owned();
+    let journal_uid = (unsafe { CStr::from_ptr(journal_uid) }).to_string_lossy();
     let journal = journal_manager.fetch(&journal_uid).unwrap();
 
     Box::into_raw(
