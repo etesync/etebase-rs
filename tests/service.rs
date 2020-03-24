@@ -11,10 +11,14 @@ use etesync::{
     },
 };
 
-const TEST_API_URL: &str = "http://localhost:8000";
+mod common;
 
-const USER: &str = "test@localhost";
-const PASSWORD: &str = "SomePassword";
+use common::{
+    USER,
+    PASSWORD,
+};
+
+const TEST_API_URL: &str = "http://localhost:8000";
 
 #[test]
 fn auth_token() {
