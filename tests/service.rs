@@ -9,6 +9,9 @@ use etesync::{
         EntryManager,
         Entry,
     },
+    content::{
+        CollectionInfo,
+    }
 };
 
 mod common;
@@ -16,6 +19,7 @@ mod common;
 use common::{
     USER,
     PASSWORD,
+    get_encryption_key,
 };
 
 const TEST_API_URL: &str = "http://localhost:8000";
@@ -36,6 +40,8 @@ fn simple_sync() {
     let token = authenticator.get_token(USER, PASSWORD).unwrap();
     test_reset(&client, &token, TEST_API_URL).unwrap();
 
+    let derived = get_encryption_key();
+
     let journal_manager = JournalManager::new(&client, &token, TEST_API_URL);
 
     let mut journal = Journal::new(
@@ -43,7 +49,21 @@ fn simple_sync() {
         crypto::CURRENT_VERSION,
         USER);
 
-    journal.content = b"bla".to_vec();
+    let crypto_manager = journal.get_crypto_manager(&derived).unwrap();
+
+    let info = CollectionInfo {
+        col_type: "CALENDAR".to_owned(),
+        display_name: "Default".to_owned(),
+        description: None,
+        color: None,
+    };
+
+    journal.set_info(&crypto_manager, &info).unwrap();
+
+    {
+        let info2 = journal.get_info(&crypto_manager).unwrap();
+        assert_eq!(&info2.display_name, &info.display_name);
+    }
 
     {
         journal_manager.create(&journal).unwrap();

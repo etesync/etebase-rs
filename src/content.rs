@@ -4,10 +4,10 @@ use serde::{Serialize, Deserialize};
 #[serde(rename_all = "camelCase")]
 pub struct CollectionInfo {
     #[serde(rename = "type")]
-    col_type: String,
-    display_name: String,
-    description: Option<String>,
-    color: Option<i32>,
+    pub col_type: String,
+    pub display_name: String,
+    pub description: Option<String>,
+    pub color: Option<i32>,
 }
 
 pub const ACTION_ADD: &str = "ADD";
@@ -16,6 +16,6 @@ pub const ACTION_DELETE: &str = "DELETE";
 
 #[derive(Serialize, Deserialize)]
 pub struct SyncEntry {
-    action: String,
-    content: String,
+    pub action: String,
+    pub content: String,
 }
