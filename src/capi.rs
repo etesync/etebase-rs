@@ -309,11 +309,10 @@ pub extern fn etesync_entry_manager_new(etesync: *const EteSync, token: *const c
 #[no_mangle]
 pub extern fn etesync_entry_manager_list(entry_manager: *const EntryManager, prev_uid: *const c_char, limit: usize) -> *mut *mut Entry {
     let entry_manager = unsafe { &*entry_manager };
-    let prev_uid = if prev_uid == std::ptr::null() {
-        None
-    } else {
-        Some((unsafe { CStr::from_ptr(prev_uid) }).to_string_lossy().to_string())
-    };
+    let prev_uid = unsafe { match prev_uid.as_ref() {
+        Some(prev_uid) => Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()),
+        None => None,
+    }};
     let limit = if limit == 0 {
         None
     } else {
@@ -353,11 +352,10 @@ pub extern fn etesync_entry_get_uid(entry: *const Entry) -> *mut c_char {
 pub extern fn etesync_entry_get_sync_entry(entry: *const Entry, crypto_manager: *const CryptoManager, prev_uid: *const c_char) -> *mut SyncEntry {
     let entry = unsafe { &*entry };
     let crypto_manager = unsafe { &*crypto_manager };
-    let prev_uid = if prev_uid == std::ptr::null() {
-        None
-    } else {
-        Some((unsafe { CStr::from_ptr(prev_uid) }).to_string_lossy().to_string())
-    };
+    let prev_uid = unsafe { match prev_uid.as_ref() {
+        Some(prev_uid) => Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()),
+        None => None,
+    }};
     let sync_entry = entry.get_sync_entry(&crypto_manager, prev_uid.as_deref()).unwrap();
 
     Box::into_raw(
