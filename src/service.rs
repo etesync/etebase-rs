@@ -154,15 +154,9 @@ impl Journal {
             uid: uid.to_owned(),
             version: json.version,
             owner: json.owner.clone(),
-            read_only: match json.read_only {
-                Some(val) => val,
-                None => false,
-            },
+            read_only: json.read_only.unwrap_or(false),
             content: base64::decode(&json.content).unwrap(),
-            key: match &json.key {
-                Some(val) => Some(base64::decode(val).unwrap()),
-                None => None,
-            },
+            key: json.key.as_ref().and_then(|val| Some(base64::decode(val).unwrap())),
             last_uid: json.last_uid.clone(),
         }
     }
@@ -174,10 +168,7 @@ impl Journal {
             owner: self.owner.clone(),
             read_only: Some(self.read_only),
             content: base64::encode(&self.content),
-            key: match &self.key {
-                Some(val) => Some(base64::encode(val)),
-                None => None,
-            },
+            key: self.key.as_ref().and_then(|val| Some(base64::encode(val))),
             last_uid: None,
         }
     }
@@ -236,9 +227,9 @@ impl Journal {
         let calculated = Journal::calculate_hmac(crypto_manager, &ciphertext, &self.uid.as_bytes())?;
 
         if memcmp(&hmac, &calculated) {
-            return Ok(());
+            Ok(())
         } else {
-            return Err(Error::from("HMAC mismatch"));
+            Err(Error::from("HMAC mismatch"))
         }
     }
 }
@@ -386,10 +377,8 @@ impl Entry {
     }
 
     fn calculate_hmac(crypto_manager: &CryptoManager, message: &[u8], prev_uid: Option<& str>) -> Result<Vec<u8>> {
-        let mut data = match prev_uid {
-            Some(prev_uid) => prev_uid.as_bytes().to_vec(),
-            None => vec![],
-        };
+        let mut data = prev_uid.and_then(|prev_uid| Some(prev_uid.as_bytes().to_vec()))
+            .unwrap_or(vec![]);
         data.extend(message);
         let hmac = crypto_manager.hmac(&data)?;
 
@@ -404,9 +393,9 @@ impl Entry {
         };
 
         if memcmp(&hmac, &calculated) {
-            return Ok(());
+            Ok(())
         } else {
-            return Err(Error::from("HMAC mismatch"));
+            Err(Error::from("HMAC mismatch"))
         }
     }
 }
@@ -507,10 +496,7 @@ impl UserInfo {
             owner: Some(owner.to_owned()),
             version: json.version,
             pubkey: base64::decode(&json.pubkey).unwrap(),
-            content: match &json.content {
-                Some(val) => Some(base64::decode(val).unwrap()),
-                None => None,
-            },
+            content: json.content.as_ref().and_then(|val| Some(base64::decode(val).unwrap())),
         }
     }
 
@@ -519,10 +505,7 @@ impl UserInfo {
             owner: self.owner.clone(),
             version: self.version,
             pubkey: base64::encode(&self.pubkey),
-            content: match &self.content {
-                Some(val) => Some(base64::encode(val)),
-                None => None,
-            },
+            content: self.content.as_ref().and_then(|val| Some(base64::encode(val))),
         }
     }
 

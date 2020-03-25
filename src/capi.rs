@@ -88,16 +88,12 @@ pub extern fn etesync_crypto_derive_key(_etesync: *const EteSync, salt: *const c
 
     let derived = derive_key(&salt, &password).unwrap();
 
-    let ret = CString::new(base64::encode(&derived)).unwrap();
-
-    ret.into_raw()
+    CString::new(base64::encode(&derived)).unwrap().into_raw()
 }
 
 #[no_mangle]
 pub extern fn etesync_gen_uid() -> *mut c_char {
-    let ret = CString::new(gen_uid().unwrap()).unwrap();
-
-    ret.into_raw()
+    CString::new(gen_uid().unwrap()).unwrap().into_raw()
 }
 
 #[no_mangle]
@@ -118,9 +114,7 @@ pub extern fn etesync_auth_get_token(etesync: *const EteSync, username: *const c
     let authenticator = Authenticator::new(&etesync.client, &etesync.server_url);
     let token = authenticator.get_token(&username, &password).unwrap();
 
-    let ret = CString::new(&token[..]).unwrap();
-
-    ret.into_raw()
+    CString::new(&token[..]).unwrap().into_raw()
 }
 
 #[no_mangle]
@@ -220,9 +214,7 @@ pub extern fn etesync_journal_new(uid: *const c_char, version: u8) -> *mut Journ
 pub extern fn etesync_journal_get_uid(journal: *const Journal) -> *mut c_char {
     let journal = unsafe { &*journal };
 
-    let ret = CString::new(&journal.uid[..]).unwrap();
-
-    ret.into_raw()
+    CString::new(&journal.uid[..]).unwrap().into_raw()
 }
 
 #[no_mangle]
@@ -236,16 +228,9 @@ pub extern fn etesync_journal_get_version(journal: *const Journal) -> u8 {
 pub extern fn etesync_journal_get_owner(journal: *const Journal) -> *mut c_char {
     let journal = unsafe { &*journal };
 
-    match &journal.owner {
-        Some(owner) => {
-            let ret = CString::new(&owner[..]).unwrap();
-
-            ret.into_raw()
-        },
-        None => {
-            std::ptr::null_mut()
-        }
-    }
+    journal.owner.as_ref().and_then(|owner| {
+        Some(CString::new(&owner[..]).unwrap().into_raw())
+    }).unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]
@@ -259,16 +244,9 @@ pub extern fn etesync_journal_is_read_only(journal: *const Journal) -> bool {
 pub extern fn etesync_journal_get_last_uid(journal: *const Journal) -> *mut c_char {
     let journal = unsafe { &*journal };
 
-    match journal.get_last_uid() {
-        Some(last_uid) => {
-            let ret = CString::new(&last_uid[..]).unwrap();
-
-            ret.into_raw()
-        },
-        None => {
-            std::ptr::null_mut()
-        }
-    }
+    journal.get_last_uid().as_ref().and_then(|last_uid| {
+        Some(CString::new(&last_uid[..]).unwrap().into_raw())
+    }).unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]
@@ -324,10 +302,9 @@ pub extern fn etesync_crypto_manager_destroy(crypto_manager: *mut CryptoManager)
 pub extern fn etesync_collection_info_new(col_type: *const c_char, display_name: *const c_char, description: *const c_char, color: i32) -> *mut CollectionInfo {
     let col_type = (unsafe { CStr::from_ptr(col_type) }).to_string_lossy().to_string();
     let display_name = (unsafe { CStr::from_ptr(display_name) }).to_string_lossy().to_string();
-    let description = unsafe { match description.as_ref() {
-        Some(description) => Some(CStr::from_ptr(description).to_string_lossy().to_string()),
-        None => None,
-    }};
+    let description = unsafe {
+        description.as_ref().and_then(|description| Some(CStr::from_ptr(description).to_string_lossy().to_string()))
+    };
 
     let info = CollectionInfo {
         col_type,
@@ -345,44 +322,30 @@ pub extern fn etesync_collection_info_new(col_type: *const c_char, display_name:
 pub extern fn etesync_collection_info_get_type(info: *const CollectionInfo) -> *mut c_char {
     let info = unsafe { &*info };
 
-    let ret = CString::new(&info.col_type[..]).unwrap();
-
-    ret.into_raw()
+    CString::new(&info.col_type[..]).unwrap().into_raw()
 }
 
 #[no_mangle]
 pub extern fn etesync_collection_info_get_display_name(info: *const CollectionInfo) -> *mut c_char {
     let info = unsafe { &*info };
 
-    let ret = CString::new(&info.display_name[..]).unwrap();
-
-    ret.into_raw()
+    CString::new(&info.display_name[..]).unwrap().into_raw()
 }
 
 #[no_mangle]
 pub extern fn etesync_collection_info_get_description(info: *const CollectionInfo) -> *mut c_char {
     let info = unsafe { &*info };
 
-    match &info.description {
-        Some(description) => {
-            let ret = CString::new(&description[..]).unwrap();
-
-            ret.into_raw()
-        },
-        None => {
-            std::ptr::null_mut()
-        }
-    }
+    info.description.as_ref().and_then(|description| {
+        Some(CString::new(&description[..]).unwrap().into_raw())
+    }).unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]
 pub extern fn etesync_collection_info_get_color(info: *const CollectionInfo) -> i32 {
     let info = unsafe { &*info };
 
-    match info.color {
-        Some(color) => color,
-        None => DEFAULT_COLOR,
-    }
+    info.color.unwrap_or(DEFAULT_COLOR)
 }
 
 #[no_mangle]
@@ -408,10 +371,9 @@ pub extern fn etesync_entry_manager_new(etesync: *const EteSync, token: *const c
 #[no_mangle]
 pub extern fn etesync_entry_manager_list(entry_manager: *const EntryManager, prev_uid: *const c_char, limit: usize) -> *mut *mut Entry {
     let entry_manager = unsafe { &*entry_manager };
-    let prev_uid = unsafe { match prev_uid.as_ref() {
-        Some(prev_uid) => Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()),
-        None => None,
-    }};
+    let prev_uid = unsafe {
+        prev_uid.as_ref().and_then(|prev_uid| Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()))
+    };
     let limit = if limit == 0 {
         None
     } else {
@@ -435,10 +397,9 @@ pub extern fn etesync_entry_manager_list(entry_manager: *const EntryManager, pre
 #[no_mangle]
 pub extern fn etesync_entry_manager_create(entry_manager: *const EntryManager, entries: *const *const Entry, prev_uid: *const c_char) -> i32 {
     let entry_manager = unsafe { &*entry_manager };
-    let prev_uid = unsafe { match prev_uid.as_ref() {
-        Some(prev_uid) => Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()),
-        None => None,
-    }};
+    let prev_uid = unsafe {
+        prev_uid.as_ref().and_then(|prev_uid| Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()))
+    };
     let mut to_create: Vec<&Entry> = vec![];
     unsafe {
         for i in 0.. {
@@ -464,10 +425,9 @@ pub extern fn etesync_entry_manager_destroy(entry_manager: *mut EntryManager) {
 pub extern fn etesync_entry_from_sync_entry(crypto_manager: *const CryptoManager, sync_entry: *const SyncEntry, prev_uid: *const c_char) -> *mut Entry {
     let crypto_manager = unsafe { &*crypto_manager };
     let sync_entry = unsafe { &*sync_entry };
-    let prev_uid = unsafe { match prev_uid.as_ref() {
-        Some(prev_uid) => Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()),
-        None => None,
-    }};
+    let prev_uid = unsafe {
+        prev_uid.as_ref().and_then(|prev_uid| Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()))
+    };
 
     let entry = Entry::from_sync_entry(crypto_manager, sync_entry, prev_uid.as_deref()).unwrap();
 
@@ -480,19 +440,16 @@ pub extern fn etesync_entry_from_sync_entry(crypto_manager: *const CryptoManager
 pub extern fn etesync_entry_get_uid(entry: *const Entry) -> *mut c_char {
     let entry = unsafe { &*entry };
 
-    let ret = CString::new(&entry.uid[..]).unwrap();
-
-    ret.into_raw()
+    CString::new(&entry.uid[..]).unwrap().into_raw()
 }
 
 #[no_mangle]
 pub extern fn etesync_entry_get_sync_entry(entry: *const Entry, crypto_manager: *const CryptoManager, prev_uid: *const c_char) -> *mut SyncEntry {
     let entry = unsafe { &*entry };
     let crypto_manager = unsafe { &*crypto_manager };
-    let prev_uid = unsafe { match prev_uid.as_ref() {
-        Some(prev_uid) => Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()),
-        None => None,
-    }};
+    let prev_uid = unsafe {
+        prev_uid.as_ref().and_then(|prev_uid| Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()))
+    };
     let sync_entry = entry.get_sync_entry(&crypto_manager, prev_uid.as_deref()).unwrap();
 
     Box::into_raw(
@@ -519,18 +476,14 @@ pub extern fn etesync_sync_entry_new(action: *const c_char, content: *const c_ch
 pub extern fn etesync_sync_entry_get_action(sync_entry: *const SyncEntry) -> *mut c_char {
     let sync_entry = unsafe { &*sync_entry };
 
-    let ret = CString::new(&sync_entry.action[..]).unwrap();
-
-    ret.into_raw()
+    CString::new(&sync_entry.action[..]).unwrap().into_raw()
 }
 
 #[no_mangle]
 pub extern fn etesync_sync_entry_get_content(sync_entry: *const SyncEntry) -> *mut c_char {
     let sync_entry = unsafe { &*sync_entry };
 
-    let ret = CString::new(&sync_entry.content[..]).unwrap();
-
-    ret.into_raw()
+    CString::new(&sync_entry.content[..]).unwrap().into_raw()
 }
 
 #[no_mangle]
