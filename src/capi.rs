@@ -210,9 +210,9 @@ pub extern fn etesync_journal_get_version(journal: &Journal) -> u8 {
 
 #[no_mangle]
 pub extern fn etesync_journal_get_owner(journal: &Journal) -> *mut c_char {
-    journal.owner.as_ref().and_then(|owner| {
-        Some(CString::new(&owner[..]).unwrap().into_raw())
-    }).unwrap_or(std::ptr::null_mut())
+    journal.owner.as_ref()
+        .and_then(|owner| Some(CString::new(&owner[..]).unwrap().into_raw()))
+        .unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]
@@ -222,9 +222,9 @@ pub extern fn etesync_journal_is_read_only(journal: &Journal) -> bool {
 
 #[no_mangle]
 pub extern fn etesync_journal_get_last_uid(journal: &Journal) -> *mut c_char {
-    journal.get_last_uid().as_ref().and_then(|last_uid| {
-        Some(CString::new(&last_uid[..]).unwrap().into_raw())
-    }).unwrap_or(std::ptr::null_mut())
+    journal.get_last_uid().as_ref()
+        .and_then(|last_uid| Some(CString::new(&last_uid[..]).unwrap().into_raw()))
+        .unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]
@@ -300,9 +300,9 @@ pub extern fn etesync_collection_info_get_display_name(info: &CollectionInfo) ->
 
 #[no_mangle]
 pub extern fn etesync_collection_info_get_description(info: &CollectionInfo) -> *mut c_char {
-    info.description.as_ref().and_then(|description| {
-        Some(CString::new(&description[..]).unwrap().into_raw())
-    }).unwrap_or(std::ptr::null_mut())
+    info.description.as_ref()
+        .and_then(|description| Some(CString::new(&description[..]).unwrap().into_raw()))
+        .unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]
