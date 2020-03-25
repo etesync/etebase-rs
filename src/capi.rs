@@ -20,6 +20,8 @@ use super::{
         Journal,
         EntryManager,
         Entry,
+        UserInfoManager,
+        UserInfo,
     },
     content::{
         CollectionInfo,
@@ -382,3 +384,76 @@ pub extern fn etesync_entry_destroy(entry: *mut Entry) {
     drop(entry);
 }
 
+
+
+
+#[no_mangle]
+pub extern fn etesync_user_info_manager_new(etesync: *const EteSync, token: *const c_char) -> *mut UserInfoManager {
+    let etesync = unsafe { &*etesync };
+    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
+    let user_info_manager = UserInfoManager::new(&etesync.client, &token, &etesync.server_url);
+
+    Box::into_raw(
+        Box::new(user_info_manager)
+    )
+}
+
+#[no_mangle]
+pub extern fn etesync_user_info_manager_fetch(user_info_manager: *const UserInfoManager, owner: *const c_char) -> *mut UserInfo {
+    let user_info_manager = unsafe { &*user_info_manager };
+    let owner = (unsafe { CStr::from_ptr(owner) }).to_string_lossy();
+    let user_info = user_info_manager.fetch(&owner).unwrap();
+
+    Box::into_raw(
+        Box::new(user_info)
+    )
+}
+
+#[no_mangle]
+pub extern fn etesync_user_info_get_crypto_manager(user_info: *const UserInfo, key: *const c_char) -> *mut CryptoManager {
+    let user_info = unsafe { &*user_info };
+    let key = (unsafe { CStr::from_ptr(key) }).to_string_lossy();
+    let key = base64::decode(&key[..]).unwrap();
+    let crypto_manager = user_info.get_crypto_manager(&key).unwrap();
+
+    Box::into_raw(
+        Box::new(crypto_manager)
+    )
+}
+
+#[no_mangle]
+pub extern fn etesync_user_info_get_keypair(user_info: *const UserInfo, crypto_manager: *const CryptoManager) -> *mut AsymmetricKeyPair {
+    let user_info = unsafe { &*user_info };
+    let crypto_manager = unsafe { &*crypto_manager };
+
+    let keypair = user_info.get_keypair(&crypto_manager).unwrap();
+
+    Box::into_raw(
+        Box::new(keypair)
+    )
+}
+
+#[no_mangle]
+pub extern fn etesync_keypair_destroy(keypair: *mut AsymmetricKeyPair) {
+    let keypair = unsafe { Box::from_raw(keypair) };
+    drop(keypair);
+}
+
+#[no_mangle]
+pub extern fn etesync_user_info_get_version(user_info: *const UserInfo) -> u8 {
+    let user_info = unsafe { &*user_info };
+
+    user_info.version
+}
+
+#[no_mangle]
+pub extern fn etesync_user_info_destroy(user_info: *mut UserInfo) {
+    let user_info = unsafe { Box::from_raw(user_info) };
+    drop(user_info);
+}
+
+#[no_mangle]
+pub extern fn etesync_user_info_manager_destroy(user_info_manager: *mut UserInfoManager) {
+    let user_info_manager = unsafe { Box::from_raw(user_info_manager) };
+    drop(user_info_manager);
+}
