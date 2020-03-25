@@ -8,12 +8,14 @@ use reqwest::blocking::Client;
 
 use super::{
     crypto::{
+        gen_uid,
         CURRENT_VERSION,
         derive_key,
         AsymmetricKeyPair,
         CryptoManager,
     },
     service::{
+        test_reset,
         get_client,
         Authenticator,
         JournalManager,
@@ -68,6 +70,16 @@ pub extern fn etesync_destroy(etesync: *mut EteSync) {
     drop(etesync);
 }
 
+#[no_mangle]
+pub extern fn etesync_test_reset(etesync: *const EteSync, token: *const c_char) -> i32 {
+    let etesync = unsafe { &*etesync };
+    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
+
+    test_reset(&etesync.client, &token, &etesync.server_url).unwrap();
+
+    0
+}
+
 
 #[no_mangle]
 pub extern fn etesync_crypto_derive_key(_etesync: *const EteSync, salt: *const c_char, password: *const c_char) -> *mut c_char {
@@ -79,6 +91,22 @@ pub extern fn etesync_crypto_derive_key(_etesync: *const EteSync, salt: *const c
     let ret = CString::new(base64::encode(&derived)).unwrap();
 
     ret.into_raw()
+}
+
+#[no_mangle]
+pub extern fn etesync_gen_uid() -> *mut c_char {
+    let ret = CString::new(gen_uid().unwrap()).unwrap();
+
+    ret.into_raw()
+}
+
+#[no_mangle]
+pub extern fn etesync_crypto_generate_keypair(_etesync: *const EteSync) -> *mut AsymmetricKeyPair {
+    let keypair = AsymmetricKeyPair::generate_keypair().unwrap();
+
+    Box::into_raw(
+        Box::new(keypair)
+    )
 }
 
 #[no_mangle]
@@ -152,6 +180,43 @@ pub extern fn etesync_journal_manager_list(journal_manager: *const JournalManage
 }
 
 #[no_mangle]
+pub extern fn etesync_journal_manager_create(journal_manager: *const JournalManager, journal: *const Journal) -> i32 {
+    let journal_manager = unsafe { &*journal_manager };
+    let journal = unsafe { &*journal };
+    journal_manager.create(&journal).unwrap();
+
+    0
+}
+
+#[no_mangle]
+pub extern fn etesync_journal_manager_update(journal_manager: *const JournalManager, journal: *const Journal) -> i32 {
+    let journal_manager = unsafe { &*journal_manager };
+    let journal = unsafe { &*journal };
+    journal_manager.update(&journal).unwrap();
+
+    0
+}
+
+#[no_mangle]
+pub extern fn etesync_journal_manager_delete(journal_manager: *const JournalManager, journal: *const Journal) -> i32 {
+    let journal_manager = unsafe { &*journal_manager };
+    let journal = unsafe { &*journal };
+    journal_manager.delete(&journal).unwrap();
+
+    0
+}
+
+#[no_mangle]
+pub extern fn etesync_journal_new(uid: *const c_char, version: u8) -> *mut Journal {
+    let uid = (unsafe { CStr::from_ptr(uid) }).to_string_lossy();
+    let journal = Journal::new(&uid[..], version);
+
+    Box::into_raw(
+        Box::new(journal)
+    )
+}
+
+#[no_mangle]
 pub extern fn etesync_journal_get_uid(journal: *const Journal) -> *mut c_char {
     let journal = unsafe { &*journal };
 
@@ -218,6 +283,19 @@ pub extern fn etesync_journal_get_info(journal: *const Journal, crypto_manager: 
 }
 
 #[no_mangle]
+pub extern fn etesync_journal_set_info(journal: *mut Journal, crypto_manager: *const CryptoManager, info: *const CollectionInfo) -> i32 {
+    let mut journal = unsafe { Box::from_raw(journal) };
+    let crypto_manager = unsafe { &*crypto_manager };
+    let info = unsafe { &*info };
+
+    journal.set_info(&crypto_manager, &info).unwrap();
+
+    std::mem::forget(journal); // We don't want it freed
+
+    0
+}
+
+#[no_mangle]
 pub extern fn etesync_journal_get_crypto_manager(journal: *const Journal, key: *const c_char, keypair: *const AsymmetricKeyPair) -> *mut CryptoManager {
     let journal = unsafe { &*journal };
     let key = (unsafe { CStr::from_ptr(key) }).to_string_lossy();
@@ -240,6 +318,27 @@ pub extern fn etesync_journal_destroy(journal: *mut Journal) {
 pub extern fn etesync_crypto_manager_destroy(crypto_manager: *mut CryptoManager) {
     let crypto_manager = unsafe { Box::from_raw(crypto_manager) };
     drop(crypto_manager);
+}
+
+#[no_mangle]
+pub extern fn etesync_collection_info_new(col_type: *const c_char, display_name: *const c_char, description: *const c_char, color: i32) -> *mut CollectionInfo {
+    let col_type = (unsafe { CStr::from_ptr(col_type) }).to_string_lossy().to_string();
+    let display_name = (unsafe { CStr::from_ptr(display_name) }).to_string_lossy().to_string();
+    let description = unsafe { match description.as_ref() {
+        Some(description) => Some(CStr::from_ptr(description).to_string_lossy().to_string()),
+        None => None,
+    }};
+
+    let info = CollectionInfo {
+        col_type,
+        display_name,
+        description,
+        color: Some(color),
+    };
+
+    Box::into_raw(
+        Box::new(info)
+    )
 }
 
 #[no_mangle]
@@ -334,9 +433,47 @@ pub extern fn etesync_entry_manager_list(entry_manager: *const EntryManager, pre
 }
 
 #[no_mangle]
+pub extern fn etesync_entry_manager_create(entry_manager: *const EntryManager, entries: *const *const Entry, prev_uid: *const c_char) -> i32 {
+    let entry_manager = unsafe { &*entry_manager };
+    let prev_uid = unsafe { match prev_uid.as_ref() {
+        Some(prev_uid) => Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()),
+        None => None,
+    }};
+    let mut to_create: Vec<&Entry> = vec![];
+    unsafe {
+        for i in 0.. {
+            if let Some(cur) = (*entries.offset(i)).as_ref() {
+                to_create.push(&*cur);
+            } else {
+                break;
+            }
+        }
+    }
+    entry_manager.create(&to_create, prev_uid.as_deref()).unwrap();
+
+    0
+}
+
+#[no_mangle]
 pub extern fn etesync_entry_manager_destroy(entry_manager: *mut EntryManager) {
     let entry_manager = unsafe { Box::from_raw(entry_manager) };
     drop(entry_manager);
+}
+
+#[no_mangle]
+pub extern fn etesync_entry_from_sync_entry(crypto_manager: *const CryptoManager, sync_entry: *const SyncEntry, prev_uid: *const c_char) -> *mut Entry {
+    let crypto_manager = unsafe { &*crypto_manager };
+    let sync_entry = unsafe { &*sync_entry };
+    let prev_uid = unsafe { match prev_uid.as_ref() {
+        Some(prev_uid) => Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()),
+        None => None,
+    }};
+
+    let entry = Entry::from_sync_entry(crypto_manager, sync_entry, prev_uid.as_deref()).unwrap();
+
+    Box::into_raw(
+        Box::new(entry)
+    )
 }
 
 #[no_mangle]
@@ -357,6 +494,21 @@ pub extern fn etesync_entry_get_sync_entry(entry: *const Entry, crypto_manager: 
         None => None,
     }};
     let sync_entry = entry.get_sync_entry(&crypto_manager, prev_uid.as_deref()).unwrap();
+
+    Box::into_raw(
+        Box::new(sync_entry)
+    )
+}
+
+#[no_mangle]
+pub extern fn etesync_sync_entry_new(action: *const c_char, content: *const c_char) -> *mut SyncEntry {
+    let action = (unsafe { CStr::from_ptr(action) }).to_string_lossy().to_string();
+    let content = (unsafe { CStr::from_ptr(content) }).to_string_lossy().to_string();
+
+    let sync_entry = SyncEntry {
+        action,
+        content,
+    };
 
     Box::into_raw(
         Box::new(sync_entry)
@@ -440,6 +592,19 @@ pub extern fn etesync_user_info_get_keypair(user_info: *const UserInfo, crypto_m
     Box::into_raw(
         Box::new(keypair)
     )
+}
+
+#[no_mangle]
+pub extern fn etesync_user_info_set_keypair(user_info: *mut UserInfo, crypto_manager: *const CryptoManager, keypair: *const AsymmetricKeyPair) -> i32 {
+    let mut user_info = unsafe { Box::from_raw(user_info) };
+    let crypto_manager = unsafe { &*crypto_manager };
+    let keypair = unsafe { &*keypair };
+
+    user_info.set_keypair(&crypto_manager, &keypair).unwrap();
+
+    std::mem::forget(user_info); // We don't want it freed
+
+    0
 }
 
 #[no_mangle]
