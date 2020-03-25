@@ -32,6 +32,13 @@ pub fn derive_key(salt: &str, password: &str) -> Result<Box<[u8]>> {
     Ok(key)
 }
 
+pub fn gen_uid() -> Result<String> {
+    let mut bytes = [0; 32];
+    rand::rand_bytes(&mut bytes)?;
+
+    Ok(hex::encode(bytes))
+}
+
 pub fn memcmp(a: &[u8], b: &[u8]) -> bool {
     openssl::memcmp::eq(&a, &b)
 }

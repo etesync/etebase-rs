@@ -49,7 +49,7 @@ fn simple_sync() {
     let journal_manager = JournalManager::new(&client, &token, TEST_API_URL);
 
     let mut journal = Journal::new(
-        "f3436f50b2f7f1613ad142dbce1d24801d9daaabc45ecb2db909251a214c9841",
+        &crypto::gen_uid().unwrap(),
         crypto::CURRENT_VERSION);
 
     let crypto_manager = journal.get_crypto_manager(&derived, &keypair).unwrap();
@@ -88,7 +88,7 @@ fn simple_sync() {
 
     {
         let mut journal = journal.clone();
-        journal.uid = String::from("f3436f50b2f7f1613ad142dbce1d24801d9daaabc45ecb2db909251a20000000");
+        journal.uid = crypto::gen_uid().unwrap();
         journal.content = b"blabla".to_vec();
 
         journal_manager.create(&journal).unwrap();
