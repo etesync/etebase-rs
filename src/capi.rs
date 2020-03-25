@@ -96,14 +96,14 @@ pub extern fn etesync_auth_get_token(etesync: *const EteSync, username: *const c
 }
 
 #[no_mangle]
-pub extern fn etesync_auth_invalidate_token(etesync: *const EteSync, token: *const c_char) -> bool {
+pub extern fn etesync_auth_invalidate_token(etesync: *const EteSync, token: *const c_char) -> i32 {
     let etesync = unsafe { &*etesync };
     let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
 
     let authenticator = Authenticator::new(&etesync.client, &etesync.server_url);
     authenticator.invalidate_token(&token).unwrap();
 
-    true
+    0
 }
 
 #[no_mangle]
