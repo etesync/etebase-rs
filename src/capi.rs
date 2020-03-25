@@ -8,6 +8,7 @@ use reqwest::blocking::Client;
 
 use super::{
     crypto::{
+        CURRENT_VERSION,
         derive_key,
         AsymmetricKeyPair,
         CryptoManager,
@@ -25,6 +26,16 @@ use super::{
         SyncEntry,
     }
 };
+
+#[no_mangle]
+pub static ETESYNC_CURRENT_VERSION: u8 = CURRENT_VERSION;
+
+#[no_mangle]
+pub extern fn etesync_get_server_url() -> *const c_char {
+    // FIXME: find a way to not clone SERVICE_API_URL,
+    let service_url: *const u8 = b"https://api.etesync.com\0".as_ptr();
+    return service_url as *const c_char;
+}
 
 #[no_mangle]
 pub struct EteSync {

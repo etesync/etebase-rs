@@ -29,7 +29,7 @@ static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_VERSION"),
 );
 
-pub static SERVICE_API_URL: &str = "https://api.etesync.com";
+pub const SERVICE_API_URL: &str = "https://api.etesync.com";
 
 const HMAC_SIZE: usize = 32;
 

@@ -32,7 +32,7 @@ renaming_overrides_prefixing = true
 
 [export.rename]
 "EteSync" = "EteSync"
-"CURRENT_VERSION" = "ETESYNC_CURRENT_VERSION"
+"CURRENT_VERSION" = "_ETESYNC_CURRENT_VERSION_DEFINE"
 
 [fn]
 # An optional prefix to put before every function declaration
