@@ -472,3 +472,198 @@ impl EntryManager {
         Ok(())
     }
 }
+
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UserInfoJson {
+    owner: Option<String>,
+    version: u8,
+    pubkey: String,
+    content: Option<String>,
+}
+
+#[derive(Clone)]
+pub struct UserInfo {
+    pub owner: Option<String>,
+    pub version: u8,
+    pub pubkey: Vec<u8>,
+    pub content: Option<Vec<u8>>,
+}
+
+impl UserInfo {
+    pub fn new(owner: &str, version: u8) -> UserInfo {
+        UserInfo {
+            owner: Some(owner.to_owned()),
+            version,
+            pubkey: vec![],
+            content: None,
+        }
+    }
+
+    // FIXME: this should return a result
+    fn from_json(owner: &str, json: &UserInfoJson) -> UserInfo {
+        UserInfo {
+            owner: Some(owner.to_owned()),
+            version: json.version,
+            pubkey: base64::decode(&json.pubkey).unwrap(),
+            content: match &json.content {
+                Some(val) => Some(base64::decode(val).unwrap()),
+                None => None,
+            },
+        }
+    }
+
+    fn to_json(&self) -> UserInfoJson {
+        UserInfoJson {
+            owner: self.owner.clone(),
+            version: self.version,
+            pubkey: base64::encode(&self.pubkey),
+            content: match &self.content {
+                Some(val) => Some(base64::encode(val)),
+                None => None,
+            },
+        }
+    }
+
+    pub fn get_crypto_manager(&self, key: &[u8]) -> Result<CryptoManager> {
+        return CryptoManager::new(key, "userInfo", self.version);
+    }
+
+    pub fn set_keypair(&mut self, crypto_manager: &CryptoManager, keypair: &AsymmetricKeyPair) -> Result<()> {
+        let ciphertext = crypto_manager.encrypt(&keypair.get_skey()?)?;
+        self.pubkey = keypair.get_pkey()?;
+        let hmac = UserInfo::calculate_hmac(crypto_manager, &ciphertext, &self.pubkey)?;
+        let mut content = hmac;
+        content.extend(ciphertext);
+        self.content = Some(content);
+
+        Ok(())
+    }
+
+    pub fn get_keypair(&self, crypto_manager: &CryptoManager) -> Result<AsymmetricKeyPair> {
+        let content = match &self.content {
+            Some(content) => content,
+            None => return Err(Error::from("Can't get keypair for someone else's user info")),
+        };
+
+        self.verify(&crypto_manager)?;
+
+        let ciphertext = &content[HMAC_SIZE..];
+        let skey = crypto_manager.decrypt(ciphertext)?;
+        let keypair = AsymmetricKeyPair::from_der(&skey, &self.pubkey)?;
+
+        Ok(keypair)
+    }
+
+    fn calculate_hmac(crypto_manager: &CryptoManager, message: &[u8], pubkey: &[u8]) -> Result<Vec<u8>> {
+        let mut data = message.to_vec();
+        data.extend(pubkey);
+        let hmac = crypto_manager.hmac(&data)?;
+
+        Ok(hmac)
+    }
+
+    fn verify(&self, crypto_manager: &CryptoManager) -> Result<()> {
+        let content = match &self.content {
+            Some(content) => content,
+            None => return Err(Error::from("Can't verify someone else's user info")),
+        };
+
+        let hmac = &content[..HMAC_SIZE];
+        let ciphertext = &content[HMAC_SIZE..];
+        let calculated = UserInfo::calculate_hmac(crypto_manager, &ciphertext, &self.pubkey)?;
+
+        if memcmp(&hmac, &calculated) {
+            Ok(())
+        } else {
+            Err(Error::from("HMAC mismatch"))
+        }
+    }
+}
+
+pub struct UserInfoManager {
+    api_base: Url,
+    client: Client,
+    auth_token: String,
+}
+
+impl UserInfoManager {
+    pub fn new(client: &Client, auth_token: &str, api_base: &str) -> UserInfoManager {
+        let api_base = Url::parse(api_base).unwrap();
+        let api_base = api_base.join("api/v1/user/").unwrap();
+        UserInfoManager {
+            api_base,
+            client: client.clone(),
+            auth_token: auth_token.to_owned(),
+        }
+    }
+
+    pub fn fetch(&self, owner: &str) -> Result<UserInfo> {
+        let url = self.api_base.join(&format!{"{}/", owner})?;
+        let headers = get_base_headers(&self.auth_token, 0);
+        let res = self.client.get(url.as_str())
+            .headers(headers)
+            .send()?;
+
+        let res = res.error_for_status()?;
+
+        let user_info_json = res.json::<UserInfoJson>()?;
+        Ok(UserInfo::from_json(owner, &user_info_json))
+    }
+
+    pub fn create(&self, user_info: &UserInfo) -> Result<()> {
+        let url = &self.api_base;
+        let headers = get_base_headers(&self.auth_token, 0);
+
+        let user_info_json = user_info.to_json();
+
+        let res = self.client.post(url.as_str())
+            .headers(headers)
+            .json(&user_info_json)
+            .send()?;
+
+        res.error_for_status()?;
+
+        Ok(())
+    }
+
+    pub fn update(&self, user_info: &UserInfo) -> Result<()> {
+        let owner = match &user_info.owner {
+            Some(owner) => owner,
+            None => return Err(Error::from("Owner is unset")),
+        };
+
+        let url = self.api_base.join(&format!{"{}/", owner})?;
+        let headers = get_base_headers(&self.auth_token, 0);
+
+        let user_info_json = user_info.to_json();
+
+        let res = self.client.put(url.as_str())
+            .headers(headers)
+            .json(&user_info_json)
+            .send()?;
+
+        res.error_for_status()?;
+
+        Ok(())
+    }
+
+    pub fn delete(&self, user_info: &UserInfo) -> Result<()> {
+        let owner = match &user_info.owner {
+            Some(owner) => owner,
+            None => return Err(Error::from("Owner is unset")),
+        };
+
+        let url = self.api_base.join(&format!{"{}/", owner})?;
+        let headers = get_base_headers(&self.auth_token, 0);
+
+        let res = self.client.delete(url.as_str())
+            .headers(headers)
+            .send()?;
+
+        res.error_for_status()?;
+
+        Ok(())
+    }
+}
