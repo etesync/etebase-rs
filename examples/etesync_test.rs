@@ -19,6 +19,8 @@ use etesync::{
     }
 };
 
+const CLIENT_NAME: &str = "etesync-example";
+
 fn print_journal(journal: &Journal, info: &CollectionInfo) {
     println!("UID: {} (version: {})", &journal.uid, journal.version);
     println!("Display name: {}", &info.display_name);
@@ -40,7 +42,7 @@ fn main() {
     let enc_password = &args[3];
     let server_url = &args[4];
 
-    let client = get_client().unwrap();
+    let client = get_client(CLIENT_NAME).unwrap();
     let authenticator = Authenticator::new(&client, &server_url);
     let token = authenticator.get_token(&username, &password).unwrap();
 

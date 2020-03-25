@@ -25,10 +25,11 @@ use common::{
 };
 
 const TEST_API_URL: &str = "http://localhost:8000";
+const CLIENT_NAME: &str = "etesync-tests";
 
 #[test]
 fn auth_token() {
-    let client = get_client().unwrap();
+    let client = get_client(CLIENT_NAME).unwrap();
     let authenticator = Authenticator::new(&client, TEST_API_URL);
     let token = authenticator.get_token(USER, PASSWORD).unwrap();
 
@@ -37,7 +38,7 @@ fn auth_token() {
 
 #[test]
 fn simple_sync() {
-    let client = get_client().unwrap();
+    let client = get_client(CLIENT_NAME).unwrap();
     let authenticator = Authenticator::new(&client, TEST_API_URL);
     let token = authenticator.get_token(USER, PASSWORD).unwrap();
     test_reset(&client, &token, TEST_API_URL).unwrap();

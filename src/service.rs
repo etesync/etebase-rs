@@ -33,9 +33,9 @@ pub const SERVICE_API_URL: &str = "https://api.etesync.com";
 
 const HMAC_SIZE: usize = 32;
 
-pub fn get_client() -> Result<Client, Box<dyn std::error::Error>> {
+pub fn get_client(client_name: &str) -> Result<Client, Box<dyn std::error::Error>> {
     let client = Client::builder()
-        .user_agent(APP_USER_AGENT)
+        .user_agent(format!("{} {}", client_name, APP_USER_AGENT))
         .build()?;
 
     Ok(client)

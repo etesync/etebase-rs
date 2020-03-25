@@ -44,12 +44,13 @@ pub struct EteSync {
 }
 
 #[no_mangle]
-pub extern fn etesync_new(server_url: *const c_char) -> *mut EteSync {
+pub extern fn etesync_new(client_name: *const c_char, server_url: *const c_char) -> *mut EteSync {
     let server_url = (unsafe { CStr::from_ptr(server_url) }).to_string_lossy().into_owned();
+    let client_name = (unsafe { CStr::from_ptr(client_name) }).to_string_lossy();
 
     Box::into_raw(
         Box::new(EteSync {
-            client: get_client().unwrap(),
+            client: get_client(&client_name).unwrap(),
             server_url,
         })
     )
