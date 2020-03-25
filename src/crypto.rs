@@ -21,8 +21,6 @@ pub const CURRENT_VERSION: u8 = 2;
 
 type HmacSha256 = Hmac<Sha256>;
 
-// FIXME: don't use unwrap, have proper error handling - won't work in C...
-// FIXME: have our own error type
 pub fn derive_key(salt: &str, password: &str) -> Result<Box<[u8]>> {
     let salt = salt.as_bytes();
     let password = password.as_bytes();
@@ -66,7 +64,7 @@ impl CryptoManager {
     pub fn new(key: &[u8], salt: &str, version: u8) -> Result<CryptoManager> {
         let key = match version {
             1 => key.to_vec(),
-            2 => hmac256(salt.as_bytes(), key, None).unwrap(),
+            2 => hmac256(salt.as_bytes(), key, None)?,
             _ => return Err(Error::from("Version mismatch")),
         };
 
@@ -74,8 +72,8 @@ impl CryptoManager {
     }
 
     pub fn from_derived_key(derived: &[u8], version: u8) -> Result<CryptoManager> {
-        let cipher_key = hmac256(b"aes", derived, None).unwrap();
-        let hmac_key = hmac256(b"hmac", derived, None).unwrap();
+        let cipher_key = hmac256(b"aes", derived, None)?;
+        let hmac_key = hmac256(b"hmac", derived, None)?;
 
         Ok(CryptoManager {
             version,
@@ -87,7 +85,7 @@ impl CryptoManager {
     pub fn encrypt(&self, message: &[u8]) -> Result<Vec<u8>> {
         let cipher = Cipher::aes_256_cbc();
         let mut iv = [0; 16];
-        rand::rand_bytes(&mut iv).unwrap();
+        rand::rand_bytes(&mut iv)?;
         let ciphertext = encrypt(cipher, &self.cipher_key, Some(&iv), message)?;
 
         let mut ret = iv.to_vec();
@@ -120,7 +118,7 @@ pub struct AsymmetricKeyPair {
 
 impl AsymmetricKeyPair {
     pub fn generate_keypair() -> Result<AsymmetricKeyPair> {
-        let rsa = Rsa::generate(3072).unwrap();
+        let rsa = Rsa::generate(3072)?;
         Ok(AsymmetricKeyPair {
             rsa,
         })
@@ -129,18 +127,18 @@ impl AsymmetricKeyPair {
     pub fn from_der(skey: &[u8], _pkey: &[u8]) -> Result<AsymmetricKeyPair> {
         // FIXME: Hack. For some reason the from_der variant doesn't work, but moving to PEM does.
         let pem = format!("-----BEGIN RSA PRIVATE KEY-----\n{}\n-----END RSA PRIVATE KEY-----", base64::encode(skey));
-        let rsa = Rsa::private_key_from_pem(&pem.as_bytes()).unwrap();
+        let rsa = Rsa::private_key_from_pem(&pem.as_bytes())?;
         Ok(AsymmetricKeyPair {
             rsa,
         })
     }
 
     pub fn get_skey(&self) -> Result<Vec<u8>> {
-        Ok(self.rsa.private_key_to_der().unwrap())
+        Ok(self.rsa.private_key_to_der()?)
     }
 
     pub fn get_pkey(&self) -> Result<Vec<u8>> {
-        Ok(self.rsa.public_key_to_der().unwrap())
+        Ok(self.rsa.public_key_to_der()?)
     }
 }
 
@@ -156,9 +154,9 @@ impl AsymmetricCryptoManager {
     }
 
     pub fn encrypt(&self, pkey: &[u8], message: &[u8]) -> Result<Vec<u8>> {
-        let rsa = Rsa::public_key_from_der(pkey).unwrap();
+        let rsa = Rsa::public_key_from_der(pkey)?;
         let mut buf = vec![0; rsa.size() as usize];
-        let result_len = rsa.public_encrypt(message, &mut buf, Padding::PKCS1_OAEP).unwrap();
+        let result_len = rsa.public_encrypt(message, &mut buf, Padding::PKCS1_OAEP)?;
         buf.truncate(result_len);
 
         Ok(buf)
@@ -167,7 +165,7 @@ impl AsymmetricCryptoManager {
     pub fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
         let rsa = &self.keypair.rsa;
         let mut buf = vec![0; rsa.size() as usize];
-        let result_len = rsa.private_decrypt(ciphertext, &mut buf, Padding::PKCS1_OAEP).unwrap();
+        let result_len = rsa.private_decrypt(ciphertext, &mut buf, Padding::PKCS1_OAEP)?;
         buf.truncate(result_len);
 
         Ok(buf)
