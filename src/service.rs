@@ -115,7 +115,7 @@ fn get_base_headers(auth_token: &str, capacity: usize) -> header::HeaderMap<head
 struct JournalJson {
     uid: String,
     version: u8,
-    owner: String,
+    owner: Option<String>,
     content: String,
     read_only: Option<bool>,
     key: Option<String>,
@@ -126,7 +126,7 @@ struct JournalJson {
 pub struct Journal {
     pub uid: String,
     pub version: u8,
-    pub owner: String,
+    pub owner: Option<String>,
     pub content: Vec<u8>,
     pub key: Option<Vec<u8>>,
 
@@ -135,11 +135,11 @@ pub struct Journal {
 }
 
 impl Journal {
-    pub fn new(uid: &str, version: u8, owner: &str) -> Journal {
+    pub fn new(uid: &str, version: u8) -> Journal {
         Journal {
             uid: uid.to_owned(),
             version,
-            owner: owner.to_owned(),
+            owner: None,
             content: vec![],
             key: None,
 

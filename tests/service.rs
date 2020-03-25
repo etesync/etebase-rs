@@ -50,8 +50,7 @@ fn simple_sync() {
 
     let mut journal = Journal::new(
         "f3436f50b2f7f1613ad142dbce1d24801d9daaabc45ecb2db909251a214c9841",
-        crypto::CURRENT_VERSION,
-        USER);
+        crypto::CURRENT_VERSION);
 
     let crypto_manager = journal.get_crypto_manager(&derived, &keypair).unwrap();
 

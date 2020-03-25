@@ -171,9 +171,16 @@ pub extern fn etesync_journal_get_version(journal: *const Journal) -> u8 {
 pub extern fn etesync_journal_get_owner(journal: *const Journal) -> *mut c_char {
     let journal = unsafe { &*journal };
 
-    let ret = CString::new(&journal.owner[..]).unwrap();
+    match &journal.owner {
+        Some(owner) => {
+            let ret = CString::new(&owner[..]).unwrap();
 
-    ret.into_raw()
+            ret.into_raw()
+        },
+        None => {
+            std::ptr::null_mut()
+        }
+    }
 }
 
 #[no_mangle]
