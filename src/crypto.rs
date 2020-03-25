@@ -120,7 +120,9 @@ impl AsymmetricKeyPair {
     }
 
     pub fn from_der(skey: &[u8], _pkey: &[u8]) -> Result<AsymmetricKeyPair> {
-        let rsa = Rsa::private_key_from_der(skey).unwrap();
+        // FIXME: Hack. For some reason the from_der variant doesn't work, but moving to PEM does.
+        let pem = format!("-----BEGIN RSA PRIVATE KEY-----\n{}\n-----END RSA PRIVATE KEY-----", base64::encode(skey));
+        let rsa = Rsa::private_key_from_pem(&pem.as_bytes()).unwrap();
         Ok(AsymmetricKeyPair {
             rsa,
         })
