@@ -24,6 +24,7 @@ use super::{
         UserInfo,
     },
     content::{
+        DEFAULT_COLOR,
         CollectionInfo,
         SyncEntry,
     }
@@ -31,6 +32,9 @@ use super::{
 
 #[no_mangle]
 pub static ETESYNC_CURRENT_VERSION: u8 = CURRENT_VERSION;
+
+#[no_mangle]
+pub static ETESYNC_COLLECTION_DEFAULT_COLOR: i32 = DEFAULT_COLOR;
 
 #[no_mangle]
 pub extern fn etesync_get_server_url() -> *const c_char {
@@ -271,7 +275,7 @@ pub extern fn etesync_collection_info_get_color(info: *const CollectionInfo) -> 
 
     match info.color {
         Some(color) => color,
-        None => -0x743cb6,
+        None => DEFAULT_COLOR,
     }
 }
 
