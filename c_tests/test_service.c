@@ -3,7 +3,7 @@
 const char *username = "test@localhost";
 const char *password = "SomePassword";
 const char *key64 = "Gpn6j6WJ/9JJbVkWhmEfZjlqSps5rwEOzjUOO0rqufvb4vtT4UfRgx0uMivuGwjF7/8Y1z1glIASX7Oz/4l2jucgf+lAzg2oTZFodWkXRZCDmFa7c9a8/04xIs7koFmUH34Rl9XXW6V2/GDVigQhQU8uWnrGo795tupoNQMbtB8RgMX5GyuxR55FvcybHpYBbwrDIsKvXcBxWFEscdNU8zyeq3yjvDo/W/y24dApW3mnNo7vswoL2rpkZj3dqw==";
-const char *server_url = "http://localhost:12345";
+const char *server_url = "http://localhost:8000";
 
 int
 test_auth_token() {
