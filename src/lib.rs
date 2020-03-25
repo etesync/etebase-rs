@@ -4,5 +4,8 @@ extern crate base64;
 pub mod crypto;
 pub mod service;
 pub mod content;
+pub mod error;
+
+pub use error::Error;
 
 mod capi;
