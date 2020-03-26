@@ -7,7 +7,16 @@ use std::env;
 
 fn main() {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    cbindgen::generate(&crate_dir)
-      .unwrap()
-      .write_to_file("target/etesync.h");
+    match cbindgen::generate(&crate_dir) {
+        Ok(gen) => gen,
+        Err(e) => match e {
+            // Ignore syntax errors because those will be handled later on by cargo build.
+            cbindgen::Error::ParseSyntaxError {
+                crate_name: _,
+                src_path: _,
+                error: _,
+            } => return,
+            _ => panic!("{:?}", e),
+        },
+    }.write_to_file("target/etesync.h");
 }
