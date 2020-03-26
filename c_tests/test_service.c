@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: © 2020 EteSync Authors
+// SPDX-License-Identifier: LGPL-2.1-only
+
 #include "test_common.h"
 
 const char *username = "test@localhost";

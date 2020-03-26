@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: © 2020 EteSync Authors
+// SPDX-License-Identifier: LGPL-2.1-only
+
 use serde::{Serialize, Deserialize};
 
 pub const DEFAULT_COLOR: i32 = -0x743cb6;

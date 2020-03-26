@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: © 2020 EteSync Authors
+// SPDX-License-Identifier: LGPL-2.1-only
+
 // Compilation instructions:
 // gcc example.c -o ./target/example -L. -l:target/debug/libetesync.so
 // Running:
