@@ -19,7 +19,8 @@ To build:
 $ cargo build
 ```
 
-To run the tests you first need an [EteSync server running](https://github.com/etesync/server) locally.
+To run the tests you first need an [EteSync server running](https://github.com/etesync/server) locally, because the tests test against a real server.
+You will also need to create a special user called `test@localhost` with password `SomePassword`, which the test suite expects.
 ```
 $ cargo test -- --test-threads 1
 ```
