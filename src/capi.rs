@@ -36,6 +36,15 @@ use super::{
     },
 };
 
+macro_rules! try_null {
+    ($x:expr) => {
+        match $x {
+            Ok(val) => val,
+            Err(_e) => return std::ptr::null_mut(),
+        };
+    };
+}
+
 fn res_to_c_ret<T>(res: Result<T>) -> i32 {
     match res {
         Ok(_) => 0,
@@ -68,7 +77,7 @@ pub extern fn etesync_new(client_name: *const c_char, server_url: *const c_char)
 
     Box::into_raw(
         Box::new(EteSync {
-            client: Client::new(&client_name, &server_url[..], None).unwrap(),
+            client: try_null!(Client::new(&client_name, &server_url[..], None)),
         })
     )
 }
@@ -97,19 +106,20 @@ pub extern fn etesync_crypto_derive_key(_etesync: &EteSync, salt: *const c_char,
     let salt = (unsafe { CStr::from_ptr(salt) }).to_string_lossy();
     let password = (unsafe { CStr::from_ptr(password) }).to_string_lossy();
 
-    let derived = derive_key(&salt, &password).unwrap();
+    let derived = try_null!(derive_key(&salt, &password));
 
-    CString::new(base64::encode(&derived)).unwrap().into_raw()
+    try_null!(CString::new(base64::encode(&derived))).into_raw()
 }
 
 #[no_mangle]
 pub extern fn etesync_gen_uid() -> *mut c_char {
-    CString::new(gen_uid().unwrap()).unwrap().into_raw()
+    let uid = try_null!(gen_uid());
+    try_null!(CString::new(uid)).into_raw()
 }
 
 #[no_mangle]
 pub extern fn etesync_crypto_generate_keypair(_etesync: &EteSync) -> *mut AsymmetricKeyPair {
-    let keypair = AsymmetricKeyPair::generate_keypair().unwrap();
+    let keypair = try_null!(AsymmetricKeyPair::generate_keypair());
 
     Box::into_raw(
         Box::new(keypair)
@@ -122,9 +132,9 @@ pub extern fn etesync_auth_get_token(etesync: &EteSync, username: *const c_char,
     let password = (unsafe { CStr::from_ptr(password) }).to_string_lossy();
 
     let authenticator = Authenticator::new(&etesync.client);
-    let token = authenticator.get_token(&username, &password).unwrap();
+    let token = try_null!(authenticator.get_token(&username, &password));
 
-    CString::new(&token[..]).unwrap().into_raw()
+    try_null!(CString::new(&token[..])).into_raw()
 }
 
 #[no_mangle]
@@ -153,7 +163,7 @@ pub extern fn etesync_journal_manager_destroy(journal_manager: &mut JournalManag
 #[no_mangle]
 pub extern fn etesync_journal_manager_fetch(journal_manager: &JournalManager, journal_uid: *const c_char) -> *mut Journal {
     let journal_uid = (unsafe { CStr::from_ptr(journal_uid) }).to_string_lossy();
-    let journal = journal_manager.fetch(&journal_uid).unwrap();
+    let journal = try_null!(journal_manager.fetch(&journal_uid));
 
     Box::into_raw(
         Box::new(journal)
@@ -162,7 +172,7 @@ pub extern fn etesync_journal_manager_fetch(journal_manager: &JournalManager, jo
 
 #[no_mangle]
 pub extern fn etesync_journal_manager_list(journal_manager: &JournalManager) -> *mut *mut Journal {
-    let journals = journal_manager.list().unwrap();
+    let journals = try_null!(journal_manager.list());
     let mut journals: Vec<*mut Journal> = journals.into_iter().map(|journal| {
         Box::into_raw(
             Box::new(journal)
@@ -203,7 +213,7 @@ pub extern fn etesync_journal_new(uid: *const c_char, version: u8) -> *mut Journ
 
 #[no_mangle]
 pub extern fn etesync_journal_get_uid(journal: &Journal) -> *mut c_char {
-    CString::new(&journal.uid[..]).unwrap().into_raw()
+    try_null!(CString::new(&journal.uid[..])).into_raw()
 }
 
 #[no_mangle]
@@ -232,7 +242,7 @@ pub extern fn etesync_journal_get_last_uid(journal: &Journal) -> *mut c_char {
 
 #[no_mangle]
 pub extern fn etesync_journal_get_info(journal: &Journal, crypto_manager: &CryptoManager) -> *mut CollectionInfo {
-    let info = journal.get_info(&crypto_manager).unwrap();
+    let info = try_null!(journal.get_info(&crypto_manager));
 
     Box::into_raw(
         Box::new(info)
@@ -247,8 +257,8 @@ pub extern fn etesync_journal_set_info(journal: &mut Journal, crypto_manager: &C
 #[no_mangle]
 pub extern fn etesync_journal_get_crypto_manager(journal: &Journal, key: *const c_char, keypair: &AsymmetricKeyPair) -> *mut CryptoManager {
     let key = (unsafe { CStr::from_ptr(key) }).to_string_lossy();
-    let key = base64::decode(&key[..]).unwrap();
-    let crypto_manager = journal.get_crypto_manager(&key, &keypair).unwrap();
+    let key = try_null!(base64::decode(&key[..]));
+    let crypto_manager = try_null!(journal.get_crypto_manager(&key, &keypair));
 
     Box::into_raw(
         Box::new(crypto_manager)
@@ -289,12 +299,12 @@ pub extern fn etesync_collection_info_new(col_type: *const c_char, display_name:
 
 #[no_mangle]
 pub extern fn etesync_collection_info_get_type(info: &CollectionInfo) -> *mut c_char {
-    CString::new(&info.col_type[..]).unwrap().into_raw()
+    try_null!(CString::new(&info.col_type[..])).into_raw()
 }
 
 #[no_mangle]
 pub extern fn etesync_collection_info_get_display_name(info: &CollectionInfo) -> *mut c_char {
-    CString::new(&info.display_name[..]).unwrap().into_raw()
+    try_null!(CString::new(&info.display_name[..])).into_raw()
 }
 
 #[no_mangle]
@@ -338,7 +348,7 @@ pub extern fn etesync_entry_manager_list(entry_manager: &EntryManager, prev_uid:
         Some(limit)
     };
 
-    let entries = entry_manager.list(prev_uid.as_deref(), limit).unwrap();
+    let entries = try_null!(entry_manager.list(prev_uid.as_deref(), limit));
     let mut entries: Vec<*mut Entry> = entries.into_iter().map(|entry| {
         Box::into_raw(
             Box::new(entry)
@@ -382,7 +392,7 @@ pub extern fn etesync_entry_from_sync_entry(crypto_manager: &CryptoManager, sync
         prev_uid.as_ref().and_then(|prev_uid| Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()))
     };
 
-    let entry = Entry::from_sync_entry(crypto_manager, sync_entry, prev_uid.as_deref()).unwrap();
+    let entry = try_null!(Entry::from_sync_entry(crypto_manager, sync_entry, prev_uid.as_deref()));
 
     Box::into_raw(
         Box::new(entry)
@@ -391,7 +401,7 @@ pub extern fn etesync_entry_from_sync_entry(crypto_manager: &CryptoManager, sync
 
 #[no_mangle]
 pub extern fn etesync_entry_get_uid(entry: &Entry) -> *mut c_char {
-    CString::new(&entry.uid[..]).unwrap().into_raw()
+    try_null!(CString::new(&entry.uid[..])).into_raw()
 }
 
 #[no_mangle]
@@ -399,7 +409,7 @@ pub extern fn etesync_entry_get_sync_entry(entry: &Entry, crypto_manager: &Crypt
     let prev_uid = unsafe {
         prev_uid.as_ref().and_then(|prev_uid| Some(CStr::from_ptr(prev_uid).to_string_lossy().to_string()))
     };
-    let sync_entry = entry.get_sync_entry(&crypto_manager, prev_uid.as_deref()).unwrap();
+    let sync_entry = try_null!(entry.get_sync_entry(&crypto_manager, prev_uid.as_deref()));
 
     Box::into_raw(
         Box::new(sync_entry)
@@ -423,12 +433,12 @@ pub extern fn etesync_sync_entry_new(action: *const c_char, content: *const c_ch
 
 #[no_mangle]
 pub extern fn etesync_sync_entry_get_action(sync_entry: &SyncEntry) -> *mut c_char {
-    CString::new(&sync_entry.action[..]).unwrap().into_raw()
+    try_null!(CString::new(&sync_entry.action[..])).into_raw()
 }
 
 #[no_mangle]
 pub extern fn etesync_sync_entry_get_content(sync_entry: &SyncEntry) -> *mut c_char {
-    CString::new(&sync_entry.content[..]).unwrap().into_raw()
+    try_null!(CString::new(&sync_entry.content[..])).into_raw()
 }
 
 #[no_mangle]
@@ -458,7 +468,7 @@ pub extern fn etesync_user_info_manager_new(etesync: &EteSync) -> *mut UserInfoM
 #[no_mangle]
 pub extern fn etesync_user_info_manager_fetch(user_info_manager: &UserInfoManager, owner: *const c_char) -> *mut UserInfo {
     let owner = (unsafe { CStr::from_ptr(owner) }).to_string_lossy();
-    let user_info = user_info_manager.fetch(&owner).unwrap();
+    let user_info = try_null!(user_info_manager.fetch(&owner));
 
     Box::into_raw(
         Box::new(user_info)
@@ -468,8 +478,8 @@ pub extern fn etesync_user_info_manager_fetch(user_info_manager: &UserInfoManage
 #[no_mangle]
 pub extern fn etesync_user_info_get_crypto_manager(user_info: &UserInfo, key: *const c_char) -> *mut CryptoManager {
     let key = (unsafe { CStr::from_ptr(key) }).to_string_lossy();
-    let key = base64::decode(&key[..]).unwrap();
-    let crypto_manager = user_info.get_crypto_manager(&key).unwrap();
+    let key = try_null!(base64::decode(&key[..]));
+    let crypto_manager = try_null!(user_info.get_crypto_manager(&key));
 
     Box::into_raw(
         Box::new(crypto_manager)
@@ -478,7 +488,7 @@ pub extern fn etesync_user_info_get_crypto_manager(user_info: &UserInfo, key: *c
 
 #[no_mangle]
 pub extern fn etesync_user_info_get_keypair(user_info: &UserInfo, crypto_manager: &CryptoManager) -> *mut AsymmetricKeyPair {
-    let keypair = user_info.get_keypair(&crypto_manager).unwrap();
+    let keypair = try_null!(user_info.get_keypair(&crypto_manager));
 
     Box::into_raw(
         Box::new(keypair)
