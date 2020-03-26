@@ -30,8 +30,18 @@ use super::{
         DEFAULT_COLOR,
         CollectionInfo,
         SyncEntry,
-    }
+    },
+    error:: {
+        Result,
+    },
 };
+
+fn res_to_c_ret<T>(res: Result<T>) -> i32 {
+    match res {
+        Ok(_) => 0,
+        Err(_e) => -1,
+    }
+}
 
 #[no_mangle]
 pub static ETESYNC_CURRENT_VERSION: u8 = CURRENT_VERSION;
@@ -78,9 +88,7 @@ pub extern fn etesync_destroy(etesync: &mut EteSync) {
 
 #[no_mangle]
 pub extern fn etesync_test_reset(etesync: &EteSync) -> i32 {
-    test_reset(&etesync.client).unwrap();
-
-    0
+    res_to_c_ret(test_reset(&etesync.client))
 }
 
 
@@ -124,9 +132,7 @@ pub extern fn etesync_auth_invalidate_token(etesync: &EteSync, token: *const c_c
     let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
 
     let authenticator = Authenticator::new(&etesync.client);
-    authenticator.invalidate_token(&token).unwrap();
-
-    0
+    res_to_c_ret(authenticator.invalidate_token(&token))
 }
 
 #[no_mangle]
@@ -172,23 +178,17 @@ pub extern fn etesync_journal_manager_list(journal_manager: &JournalManager) -> 
 
 #[no_mangle]
 pub extern fn etesync_journal_manager_create(journal_manager: &JournalManager, journal: &Journal) -> i32 {
-    journal_manager.create(&journal).unwrap();
-
-    0
+    res_to_c_ret(journal_manager.create(&journal))
 }
 
 #[no_mangle]
 pub extern fn etesync_journal_manager_update(journal_manager: &JournalManager, journal: &Journal) -> i32 {
-    journal_manager.update(&journal).unwrap();
-
-    0
+    res_to_c_ret(journal_manager.update(&journal))
 }
 
 #[no_mangle]
 pub extern fn etesync_journal_manager_delete(journal_manager: &JournalManager, journal: &Journal) -> i32 {
-    journal_manager.delete(&journal).unwrap();
-
-    0
+    res_to_c_ret(journal_manager.delete(&journal))
 }
 
 #[no_mangle]
@@ -241,9 +241,7 @@ pub extern fn etesync_journal_get_info(journal: &Journal, crypto_manager: &Crypt
 
 #[no_mangle]
 pub extern fn etesync_journal_set_info(journal: &mut Journal, crypto_manager: &CryptoManager, info: &CollectionInfo) -> i32 {
-    journal.set_info(&crypto_manager, &info).unwrap();
-
-    0
+    res_to_c_ret(journal.set_info(&crypto_manager, &info))
 }
 
 #[no_mangle]
@@ -369,9 +367,7 @@ pub extern fn etesync_entry_manager_create(entry_manager: &EntryManager, entries
             }
         }
     }
-    entry_manager.create(&to_create, prev_uid.as_deref()).unwrap();
-
-    0
+    res_to_c_ret(entry_manager.create(&to_create, prev_uid.as_deref()))
 }
 
 #[no_mangle]
@@ -493,9 +489,7 @@ pub extern fn etesync_user_info_get_keypair(user_info: &UserInfo, crypto_manager
 pub extern fn etesync_user_info_set_keypair(user_info: *mut UserInfo, crypto_manager: &CryptoManager, keypair: &AsymmetricKeyPair) -> i32 {
     let mut user_info = unsafe { Box::from_raw(user_info) };
 
-    user_info.set_keypair(&crypto_manager, &keypair).unwrap();
-
-    0
+    res_to_c_ret(user_info.set_keypair(&crypto_manager, &keypair))
 }
 
 #[no_mangle]
