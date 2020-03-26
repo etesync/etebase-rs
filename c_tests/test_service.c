@@ -25,7 +25,6 @@ test_auth_token() {
 
 int
 test_simple() {
-    const char *encryption_password = password;
     EteSync *etesync = etesync_new("test_service", server_url);
 
     char *token = etesync_auth_get_token(etesync, username, password);
