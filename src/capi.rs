@@ -240,8 +240,6 @@ pub extern fn etesync_journal_get_info(journal: &Journal, crypto_manager: &Crypt
 pub extern fn etesync_journal_set_info(journal: &mut Journal, crypto_manager: &CryptoManager, info: &CollectionInfo) -> i32 {
     journal.set_info(&crypto_manager, &info).unwrap();
 
-    std::mem::forget(journal); // We don't want it freed
-
     0
 }
 
@@ -493,8 +491,6 @@ pub extern fn etesync_user_info_set_keypair(user_info: *mut UserInfo, crypto_man
     let mut user_info = unsafe { Box::from_raw(user_info) };
 
     user_info.set_keypair(&crypto_manager, &keypair).unwrap();
-
-    std::mem::forget(user_info); // We don't want it freed
 
     0
 }
