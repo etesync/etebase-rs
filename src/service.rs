@@ -134,7 +134,7 @@ impl Authenticator {
 
     pub fn invalidate_token(&self, auth_token: &str) -> Result<String> {
         let url = self.client.api_base.join("api/logout/")?;
-        let res = self.client.post(url.as_str())
+        let res = self.client.req_client.post(url.as_str())
             .header(header::AUTHORIZATION, format!("Token {}", auth_token))
             .send()?;
 
