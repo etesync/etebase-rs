@@ -5,7 +5,7 @@ use etesync::{
         derive_key,
     },
     service::{
-        get_client,
+        Client,
         Authenticator,
         JournalManager,
         Journal,
@@ -42,24 +42,26 @@ fn main() {
     let enc_password = &args[3];
     let server_url = &args[4];
 
-    let client = get_client(CLIENT_NAME).unwrap();
-    let authenticator = Authenticator::new(&client, &server_url);
+    let mut client = Client::new(CLIENT_NAME, server_url, None).unwrap();
+    let authenticator = Authenticator::new(&client);
     let token = authenticator.get_token(&username, &password).unwrap();
+
+    client.set_token(&token);
 
     let derived = derive_key(&username, &enc_password).unwrap();
     let keypair = {
-        let user_info_manager = UserInfoManager::new(&client, &token, server_url);
+        let user_info_manager = UserInfoManager::new(&client);
         let user_info = user_info_manager.fetch(username).unwrap();
 
         let user_crypto_manager = user_info.get_crypto_manager(&derived).unwrap();
         user_info.get_keypair(&user_crypto_manager).unwrap()
     };
 
-    let journal_manager = JournalManager::new(&client, &token, &server_url);
+    let journal_manager = JournalManager::new(&client);
 
     if args.len() >= 6 {
         let journal = journal_manager.fetch(&args[5]).unwrap();
-        let entry_manager = EntryManager::new(&client, &token, &journal.uid, &server_url);
+        let entry_manager = EntryManager::new(&client, &journal.uid);
 
         let crypto_manager = journal.get_crypto_manager(&derived, &keypair).unwrap();
         let info = journal.get_info(&crypto_manager).unwrap();

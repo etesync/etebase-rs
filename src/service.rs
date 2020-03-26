@@ -6,7 +6,10 @@ use url::Url;
 use serde::{Serialize, Deserialize};
 
 use reqwest::{
-    blocking::Client,
+    blocking:: {
+        Client as ReqwestClient,
+        RequestBuilder,
+    },
     header,
 };
 
@@ -37,20 +40,10 @@ pub const SERVICE_API_URL: &str = "https://api.etesync.com";
 
 const HMAC_SIZE: usize = 32;
 
-pub fn get_client(client_name: &str) -> Result<Client> {
-    let client = Client::builder()
-        .user_agent(format!("{} {}", client_name, APP_USER_AGENT))
-        .build()?;
-
-    Ok(client)
-}
-
-pub fn test_reset(client: &Client, auth_token: &str, api_base: &str) -> Result<()> {
-    let api_base = Url::parse(api_base)?;
-    let url = api_base.join("reset/")?;
+pub fn test_reset(client: &Client) -> Result<()> {
+    let url = client.api_base.join("reset/")?;
 
     let res = client.post(url.as_str())
-        .header(header::AUTHORIZATION, format!("Token {}", auth_token))
         .send()?;
 
     res.error_for_status()?;
@@ -58,21 +51,67 @@ pub fn test_reset(client: &Client, auth_token: &str, api_base: &str) -> Result<(
     Ok(())
 }
 
-pub struct Authenticator<'a> {
+#[derive(Clone)]
+pub struct Client {
+    req_client: ReqwestClient,
+    auth_token: Option<String>,
     api_base: Url,
-    client: &'a Client,
 }
 
-impl Authenticator<'_> {
-    pub fn new<'a>(client: &'a Client, api_base: &str) -> Authenticator<'a> {
+impl Client {
+    pub fn new(client_name: &str, server_url: &str, token: Option<&str>) -> Result<Client> {
+        let req_client = ReqwestClient::builder()
+            .user_agent(format!("{} {}", client_name, APP_USER_AGENT))
+            .build()?;
+
+        Ok(Client {
+            req_client,
+            api_base: Url::parse(server_url)?,
+            auth_token: token.and_then(|token| Some(token.to_owned())),
+        })
+    }
+
+    pub fn set_token(&mut self, token: &str) {
+        self.auth_token = Some(token.to_owned());
+    }
+
+    fn with_auth_header(&self, builder: RequestBuilder) -> RequestBuilder {
+        match &self.auth_token {
+            Some(auth_token) => builder.header(header::AUTHORIZATION, format!("Token {}", auth_token)),
+            None => builder,
+        }
+    }
+
+    pub fn get(&self, url: &str) -> RequestBuilder {
+        self.with_auth_header(self.req_client.get(url))
+    }
+
+    pub fn post(&self, url: &str) -> RequestBuilder {
+        self.with_auth_header(self.req_client.post(url))
+    }
+
+    pub fn put(&self, url: &str) -> RequestBuilder {
+        self.with_auth_header(self.req_client.put(url))
+    }
+
+    pub fn delete(&self, url: &str) -> RequestBuilder {
+        self.with_auth_header(self.req_client.delete(url))
+    }
+}
+
+pub struct Authenticator {
+    client: Client,
+}
+
+impl Authenticator {
+    pub fn new(client: &Client) -> Authenticator {
         Authenticator {
-            api_base: Url::parse(api_base).unwrap(),
-            client,
+            client: client.clone(),
         }
     }
 
     pub fn get_token(&self, username: &str, password: &str) -> Result<String> {
-        let url = self.api_base.join("api-token-auth/")?;
+        let url = self.client.api_base.join("api-token-auth/")?;
         let params = [("username", username), ("password", password)];
         let res = self.client.post(url.as_str())
             .form(&params)
@@ -91,7 +130,7 @@ impl Authenticator<'_> {
     }
 
     pub fn invalidate_token(&self, auth_token: &str) -> Result<String> {
-        let url = self.api_base.join("api/logout/")?;
+        let url = self.client.api_base.join("api/logout/")?;
         let res = self.client.post(url.as_str())
             .header(header::AUTHORIZATION, format!("Token {}", auth_token))
             .send()?;
@@ -100,14 +139,10 @@ impl Authenticator<'_> {
     }
 }
 
-fn get_base_headers(auth_token: &str, capacity: usize) -> header::HeaderMap<header::HeaderValue> {
-    let capacity = capacity + 3;
-    let mut map = header::HeaderMap::with_capacity(capacity);
-    map.insert(header::CONTENT_TYPE, "application/json;charset=UTF-8".parse().unwrap());
-    map.insert(header::ACCEPT, "application/json".parse().unwrap());
-    map.insert(header::AUTHORIZATION, format!("Token {}", auth_token).parse().unwrap());
-
-    map
+fn with_base_headers(builder: RequestBuilder) -> RequestBuilder {
+    builder
+        .header(header::CONTENT_TYPE, "application/json;charset=UTF-8")
+        .header(header::ACCEPT, "application/json")
 }
 
 #[derive(Serialize, Deserialize)]
@@ -237,25 +272,20 @@ impl Journal {
 pub struct JournalManager {
     api_base: Url,
     client: Client,
-    auth_token: String,
 }
 
 impl JournalManager {
-    pub fn new(client: &Client, auth_token: &str, api_base: &str) -> JournalManager {
-        let api_base = Url::parse(api_base).unwrap();
-        let api_base = api_base.join("api/v1/journals/").unwrap();
+    pub fn new(client: &Client) -> JournalManager {
+        let api_base = client.api_base.join("api/v1/journals/").unwrap();
         JournalManager {
             api_base,
             client: client.clone(),
-            auth_token: auth_token.to_owned(),
         }
     }
 
     pub fn fetch(&self, journal_uid: &str) -> Result<Journal> {
         let url = self.api_base.join(&format!{"{}/", journal_uid})?;
-        let headers = get_base_headers(&self.auth_token, 0);
-        let res = self.client.get(url.as_str())
-            .headers(headers)
+        let res = with_base_headers(self.client.get(url.as_str()))
             .send()?;
 
         let res = res.error_for_status()?;
@@ -266,9 +296,7 @@ impl JournalManager {
 
     pub fn list(&self) -> Result<Vec<Journal>> {
         let url = &self.api_base;
-        let headers = get_base_headers(&self.auth_token, 0);
-        let res = self.client.get(url.as_str())
-            .headers(headers)
+        let res = with_base_headers(self.client.get(url.as_str()))
             .send()?;
 
         let res = res.error_for_status()?;
@@ -279,12 +307,10 @@ impl JournalManager {
 
     pub fn create(&self, journal: &Journal) -> Result<()> {
         let url = &self.api_base;
-        let headers = get_base_headers(&self.auth_token, 0);
 
         let journal_json = journal.to_json();
 
-        let res = self.client.post(url.as_str())
-            .headers(headers)
+        let res = with_base_headers(self.client.post(url.as_str()))
             .json(&journal_json)
             .send()?;
 
@@ -295,12 +321,10 @@ impl JournalManager {
 
     pub fn update(&self, journal: &Journal) -> Result<()> {
         let url = self.api_base.join(&format!{"{}/", &journal.uid})?;
-        let headers = get_base_headers(&self.auth_token, 0);
 
         let journal_json = journal.to_json();
 
-        let res = self.client.put(url.as_str())
-            .headers(headers)
+        let res = with_base_headers(self.client.put(url.as_str()))
             .json(&journal_json)
             .send()?;
 
@@ -311,10 +335,8 @@ impl JournalManager {
 
     pub fn delete(&self, journal: &Journal) -> Result<()> {
         let url = self.api_base.join(&format!{"{}/", &journal.uid})?;
-        let headers = get_base_headers(&self.auth_token, 0);
 
-        let res = self.client.delete(url.as_str())
-            .headers(headers)
+        let res = with_base_headers(self.client.delete(url.as_str()))
             .send()?;
 
         res.error_for_status()?;
@@ -403,17 +425,14 @@ impl Entry {
 pub struct EntryManager {
     api_base: Url,
     client: Client,
-    auth_token: String,
 }
 
 impl EntryManager {
-    pub fn new(client: &Client, auth_token: &str, journal_uid: &str, api_base: &str) -> EntryManager {
-        let api_base = Url::parse(api_base).unwrap();
-        let api_base = api_base.join(&format!("api/v1/journals/{}/entries/", &journal_uid)).unwrap();
+    pub fn new(client: &Client, journal_uid: &str) -> EntryManager {
+        let api_base = client.api_base.join(&format!("api/v1/journals/{}/entries/", &journal_uid)).unwrap();
         EntryManager {
             api_base,
             client: client.clone(),
-            auth_token: auth_token.to_owned(),
         }
     }
 
@@ -429,9 +448,7 @@ impl EntryManager {
             query.append_pair("limit", &limit.to_string());
         }
 
-        let headers = get_base_headers(&self.auth_token, 0);
-        let res = self.client.get(url.as_str())
-            .headers(headers)
+        let res = with_base_headers(self.client.get(url.as_str()))
             .send()?;
 
         let res = res.error_for_status()?;
@@ -447,12 +464,10 @@ impl EntryManager {
             let mut query = url.query_pairs_mut();
             query.append_pair("last", &last_uid);
         }
-        let headers = get_base_headers(&self.auth_token, 0);
 
         let entries_json: Vec<EntryJson> = entries.into_iter().map(|entry| entry.to_json()).collect();
 
-        let res = self.client.post(url.as_str())
-            .headers(headers)
+        let res = with_base_headers(self.client.post(url.as_str()))
             .json(&entries_json)
             .send()?;
 
@@ -568,25 +583,21 @@ impl UserInfo {
 pub struct UserInfoManager {
     api_base: Url,
     client: Client,
-    auth_token: String,
 }
 
 impl UserInfoManager {
-    pub fn new(client: &Client, auth_token: &str, api_base: &str) -> UserInfoManager {
-        let api_base = Url::parse(api_base).unwrap();
-        let api_base = api_base.join("api/v1/user/").unwrap();
+    pub fn new(client: &Client) -> UserInfoManager {
+        let api_base = client.api_base.join("api/v1/user/").unwrap();
         UserInfoManager {
             api_base,
             client: client.clone(),
-            auth_token: auth_token.to_owned(),
         }
     }
 
     pub fn fetch(&self, owner: &str) -> Result<UserInfo> {
         let url = self.api_base.join(&format!{"{}/", owner})?;
-        let headers = get_base_headers(&self.auth_token, 0);
-        let res = self.client.get(url.as_str())
-            .headers(headers)
+
+        let res = with_base_headers(self.client.get(url.as_str()))
             .send()?;
 
         let res = res.error_for_status()?;
@@ -597,12 +608,10 @@ impl UserInfoManager {
 
     pub fn create(&self, user_info: &UserInfo) -> Result<()> {
         let url = &self.api_base;
-        let headers = get_base_headers(&self.auth_token, 0);
 
         let user_info_json = user_info.to_json();
 
-        let res = self.client.post(url.as_str())
-            .headers(headers)
+        let res = with_base_headers(self.client.post(url.as_str()))
             .json(&user_info_json)
             .send()?;
 
@@ -618,12 +627,10 @@ impl UserInfoManager {
         };
 
         let url = self.api_base.join(&format!{"{}/", owner})?;
-        let headers = get_base_headers(&self.auth_token, 0);
 
         let user_info_json = user_info.to_json();
 
-        let res = self.client.put(url.as_str())
-            .headers(headers)
+        let res = with_base_headers(self.client.put(url.as_str()))
             .json(&user_info_json)
             .send()?;
 
@@ -639,10 +646,8 @@ impl UserInfoManager {
         };
 
         let url = self.api_base.join(&format!{"{}/", owner})?;
-        let headers = get_base_headers(&self.auth_token, 0);
 
-        let res = self.client.delete(url.as_str())
-            .headers(headers)
+        let res = with_base_headers(self.client.delete(url.as_str()))
             .send()?;
 
         res.error_for_status()?;

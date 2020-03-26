@@ -2,7 +2,7 @@ use etesync::{
     crypto,
     service::{
         test_reset,
-        get_client,
+        Client,
         Authenticator,
         JournalManager,
         Journal,
@@ -29,24 +29,28 @@ const CLIENT_NAME: &str = "etesync-tests";
 
 #[test]
 fn auth_token() {
-    let client = get_client(CLIENT_NAME).unwrap();
-    let authenticator = Authenticator::new(&client, TEST_API_URL);
+    let mut client = Client::new(CLIENT_NAME, TEST_API_URL, None).unwrap();
+    let authenticator = Authenticator::new(&client);
     let token = authenticator.get_token(USER, PASSWORD).unwrap();
+
+    client.set_token(&token);
 
     authenticator.invalidate_token(&token).unwrap();
 }
 
 #[test]
 fn simple_sync() {
-    let client = get_client(CLIENT_NAME).unwrap();
-    let authenticator = Authenticator::new(&client, TEST_API_URL);
+    let mut client = Client::new(CLIENT_NAME, TEST_API_URL, None).unwrap();
+    let authenticator = Authenticator::new(&client);
     let token = authenticator.get_token(USER, PASSWORD).unwrap();
-    test_reset(&client, &token, TEST_API_URL).unwrap();
+    client.set_token(&token);
+
+    test_reset(&client).unwrap();
 
     let derived = get_encryption_key();
     let keypair = crypto::AsymmetricKeyPair::generate_keypair().unwrap();
 
-    let journal_manager = JournalManager::new(&client, &token, TEST_API_URL);
+    let journal_manager = JournalManager::new(&client);
 
     let mut journal = Journal::new(
         &crypto::gen_uid().unwrap(),
@@ -100,7 +104,7 @@ fn simple_sync() {
     }
 
     {
-        let entry_manager = EntryManager::new(&client, &token, &journal.uid, TEST_API_URL);
+        let entry_manager = EntryManager::new(&client, &journal.uid);
 
         let sync_entry = SyncEntry {
             action: ACTION_ADD.to_owned(),

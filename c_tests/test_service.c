@@ -27,10 +27,13 @@ test_simple() {
 
     char *token = etesync_auth_get_token(etesync, username, password);
 
-    etesync_test_reset(etesync, token);
+    etesync_set_auth_token(etesync, token);
+
+
+    etesync_test_reset(etesync);
 
     EteSyncAsymmetricKeyPair *keypair = etesync_crypto_generate_keypair(etesync);
-    EteSyncJournalManager *journal_manager = etesync_journal_manager_new(etesync, token);
+    EteSyncJournalManager *journal_manager = etesync_journal_manager_new(etesync);
 
     char *uid = etesync_gen_uid();
     EteSyncJournal *journal = etesync_journal_new(uid, ETESYNC_CURRENT_VERSION);
@@ -111,7 +114,7 @@ test_simple() {
 
     {
         char *journal_uid = etesync_journal_get_uid(journal);
-        EteSyncEntryManager *entry_manager = etesync_entry_manager_new(etesync, token, journal_uid);
+        EteSyncEntryManager *entry_manager = etesync_entry_manager_new(etesync, journal_uid);
 
         EteSyncSyncEntry *sync_entry = etesync_sync_entry_new("ADD", "Test");
         char *prev_uid = NULL;

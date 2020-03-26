@@ -47,13 +47,15 @@ int main(int argc, char *argv[]) {
 
     char *token = etesync_auth_get_token(etesync, username, password);
 
-    EteSyncJournalManager *journal_manager = etesync_journal_manager_new(etesync, token);
+    etesync_set_auth_token(etesync, token);
+
+    EteSyncJournalManager *journal_manager = etesync_journal_manager_new(etesync);
     printf("%s\n", etesync_get_server_url());
 
     EteSyncAsymmetricKeyPair *keypair = NULL;
 
     {
-        EteSyncUserInfoManager *user_info_manager = etesync_user_info_manager_new(etesync, token);
+        EteSyncUserInfoManager *user_info_manager = etesync_user_info_manager_new(etesync);
         EteSyncUserInfo *user_info = etesync_user_info_manager_fetch(user_info_manager, username);
         EteSyncCryptoManager *user_info_crypto_manager = etesync_user_info_get_crypto_manager(user_info, derived);
 
@@ -74,7 +76,7 @@ int main(int argc, char *argv[]) {
 
         print_journal(journal, info);
 
-        EteSyncEntryManager *entry_manager = etesync_entry_manager_new(etesync, token, journal_uid);
+        EteSyncEntryManager *entry_manager = etesync_entry_manager_new(etesync, journal_uid);
 
         int limit = 5;
         EteSyncEntry **entries = etesync_entry_manager_list(entry_manager, NULL, limit);

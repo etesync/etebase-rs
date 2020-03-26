@@ -4,8 +4,6 @@ extern crate base64;
 use std::os::raw::c_char;
 use std::ffi::{CString, CStr};
 
-use reqwest::blocking::Client;
-
 use super::{
     crypto::{
         gen_uid,
@@ -16,7 +14,7 @@ use super::{
     },
     service::{
         test_reset,
-        get_client,
+        Client,
         Authenticator,
         JournalManager,
         Journal,
@@ -48,20 +46,25 @@ pub extern fn etesync_get_server_url() -> *const c_char {
 #[no_mangle]
 pub struct EteSync {
     client: Client,
-    server_url: String,
 }
 
 #[no_mangle]
 pub extern fn etesync_new(client_name: *const c_char, server_url: *const c_char) -> *mut EteSync {
-    let server_url = (unsafe { CStr::from_ptr(server_url) }).to_string_lossy().into_owned();
+    let server_url = (unsafe { CStr::from_ptr(server_url) }).to_string_lossy();
     let client_name = (unsafe { CStr::from_ptr(client_name) }).to_string_lossy();
 
     Box::into_raw(
         Box::new(EteSync {
-            client: get_client(&client_name).unwrap(),
-            server_url,
+            client: Client::new(&client_name, &server_url[..], None).unwrap(),
         })
     )
+}
+
+#[no_mangle]
+pub extern fn etesync_set_auth_token(etesync: &mut EteSync, token: *const c_char) {
+    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
+
+    etesync.client.set_token(&token[..])
 }
 
 #[no_mangle]
@@ -71,10 +74,8 @@ pub extern fn etesync_destroy(etesync: &mut EteSync) {
 }
 
 #[no_mangle]
-pub extern fn etesync_test_reset(etesync: &EteSync, token: *const c_char) -> i32 {
-    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
-
-    test_reset(&etesync.client, &token, &etesync.server_url).unwrap();
+pub extern fn etesync_test_reset(etesync: &EteSync) -> i32 {
+    test_reset(&etesync.client).unwrap();
 
     0
 }
@@ -109,7 +110,7 @@ pub extern fn etesync_auth_get_token(etesync: &EteSync, username: *const c_char,
     let username = (unsafe { CStr::from_ptr(username) }).to_string_lossy();
     let password = (unsafe { CStr::from_ptr(password) }).to_string_lossy();
 
-    let authenticator = Authenticator::new(&etesync.client, &etesync.server_url);
+    let authenticator = Authenticator::new(&etesync.client);
     let token = authenticator.get_token(&username, &password).unwrap();
 
     CString::new(&token[..]).unwrap().into_raw()
@@ -119,16 +120,15 @@ pub extern fn etesync_auth_get_token(etesync: &EteSync, username: *const c_char,
 pub extern fn etesync_auth_invalidate_token(etesync: &EteSync, token: *const c_char) -> i32 {
     let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
 
-    let authenticator = Authenticator::new(&etesync.client, &etesync.server_url);
+    let authenticator = Authenticator::new(&etesync.client);
     authenticator.invalidate_token(&token).unwrap();
 
     0
 }
 
 #[no_mangle]
-pub extern fn etesync_journal_manager_new(etesync: &EteSync, token: *const c_char) -> *mut JournalManager {
-    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
-    let journal_manager = JournalManager::new(&etesync.client, &token, &etesync.server_url);
+pub extern fn etesync_journal_manager_new(etesync: &EteSync) -> *mut JournalManager {
+    let journal_manager = JournalManager::new(&etesync.client);
 
     Box::into_raw(
         Box::new(journal_manager)
@@ -319,10 +319,9 @@ pub extern fn etesync_collection_info_destroy(info: &mut CollectionInfo) {
 
 
 #[no_mangle]
-pub extern fn etesync_entry_manager_new(etesync: &EteSync, token: *const c_char, journal_uid: *const c_char) -> *mut EntryManager {
-    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
+pub extern fn etesync_entry_manager_new(etesync: &EteSync, journal_uid: *const c_char) -> *mut EntryManager {
     let journal_uid = (unsafe { CStr::from_ptr(journal_uid) }).to_string_lossy();
-    let entry_manager = EntryManager::new(&etesync.client, &token, &journal_uid, &etesync.server_url);
+    let entry_manager = EntryManager::new(&etesync.client, &journal_uid);
 
     Box::into_raw(
         Box::new(entry_manager)
@@ -451,9 +450,8 @@ pub extern fn etesync_entry_destroy(entry: &mut Entry) {
 
 
 #[no_mangle]
-pub extern fn etesync_user_info_manager_new(etesync: &EteSync, token: *const c_char) -> *mut UserInfoManager {
-    let token = (unsafe { CStr::from_ptr(token) }).to_string_lossy();
-    let user_info_manager = UserInfoManager::new(&etesync.client, &token, &etesync.server_url);
+pub extern fn etesync_user_info_manager_new(etesync: &EteSync) -> *mut UserInfoManager {
+    let user_info_manager = UserInfoManager::new(&etesync.client);
 
     Box::into_raw(
         Box::new(user_info_manager)
