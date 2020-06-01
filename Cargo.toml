@@ -14,7 +14,7 @@ readme = "README.md"
 crate-type = ["lib", "staticlib", "cdylib"]
 
 [build-dependencies]
-cbindgen = "^0.13.2"
+cbindgen = "^0.14.2"
 
 [dependencies]
 openssl = "^0.10.28"
