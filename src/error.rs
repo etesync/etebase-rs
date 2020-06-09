@@ -62,3 +62,15 @@ impl From<serde_json::Error> for Error {
         Error::Dynamic(err.to_string())
     }
 }
+
+impl From<std::ffi::NulError> for Error {
+    fn from(err: std::ffi::NulError) -> Error {
+        Error::Dynamic(err.to_string())
+    }
+}
+
+impl From<base64::DecodeError> for Error {
+    fn from(err: base64::DecodeError) -> Error {
+        Error::Dynamic(err.to_string())
+    }
+}

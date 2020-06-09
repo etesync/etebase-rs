@@ -4,6 +4,7 @@
 extern crate openssl;
 extern crate base64;
 
+use std::cell::RefCell;
 use std::os::raw::c_char;
 use std::ffi::{CString, CStr};
 
@@ -33,6 +34,7 @@ use super::{
     },
     error:: {
         Result,
+        Error,
     },
 };
 
@@ -40,10 +42,44 @@ macro_rules! try_null {
     ($x:expr) => {
         match $x {
             Ok(val) => val,
-            Err(_e) => return std::ptr::null_mut(),
+            Err(err) => {
+                update_last_error(Error::from(err));
+                return std::ptr::null_mut();
+            }
         };
     };
 }
+
+thread_local! {
+    #[allow(non_upper_case_globals)]
+    static LAST_ERROR: RefCell<Option<Error>> = RefCell::new(None);
+}
+
+fn update_last_error(err: Error) {
+    LAST_ERROR.with(|prev| {
+        *prev.borrow_mut() = Some(err);
+    });
+}
+
+fn take_last_error() -> Option<Error> {
+    LAST_ERROR.with(|prev| prev.borrow_mut().take())
+}
+
+#[no_mangle]
+pub extern fn etesync_get_error_message() -> *const c_char {
+    let last_error = take_last_error();
+    return match last_error {
+        Some(ref err) => {
+            // FIXME: currently leaks, but can be easily be fixed with the same API
+            return match CString::new(err.to_string()) {
+                Ok(val) => val.into_raw(),
+                Err(_err) => std::ptr::null(),
+            };
+        },
+        None => std::ptr::null(),
+    }
+}
+
 
 fn res_to_c_ret<T>(res: Result<T>) -> i32 {
     match res {
