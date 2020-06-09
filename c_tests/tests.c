@@ -5,6 +5,7 @@
 
 int test_auth_token();
 int test_simple();
+int test_errors();
 
 int
 main() {
@@ -12,6 +13,7 @@ main() {
 
     RUN_TEST(test_auth_token);
     RUN_TEST(test_simple);
+    RUN_TEST(test_errors);
 
     return ret;
 }

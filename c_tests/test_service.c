@@ -234,3 +234,22 @@ test_simple() {
 
     return 0;
 }
+
+int
+test_errors() {
+    EteSync *etesync = etesync_new("test_service", "http://invalidhost");
+
+    char *token = etesync_auth_get_token(etesync, username, password);
+    fail_if(token);
+
+    etesync_destroy(etesync);
+
+    etesync = etesync_new("test_service", server_url);
+
+    token = etesync_auth_get_token(etesync, "Bad username", password);
+    fail_if(token);
+
+    etesync_destroy(etesync);
+
+    return 0;
+}
