@@ -8,15 +8,33 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Clone)]
 pub enum Error {
-    Static(&'static str),
-    Dynamic(String),
+    Generic(String),
+    Encoding(String),
+    Integrity(&'static str),
+    Encryption(String),
+    EncryptionMac(&'static str),
+    PermissionDenied(&'static str),
+    InvalidData(&'static str),
+
+    Connection(String),
+    Http(String),
+    Json(String),
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::Static(s) => s.fmt(f),
-            Error::Dynamic(s) => s.fmt(f),
+            Error::Generic(s) => s.fmt(f),
+            Error::Encoding(s) => s.fmt(f),
+            Error::Integrity(s) => s.fmt(f),
+            Error::Encryption(s) => s.fmt(f),
+            Error::EncryptionMac(s) => s.fmt(f),
+            Error::PermissionDenied(s) => s.fmt(f),
+            Error::InvalidData(s) => s.fmt(f),
+
+            Error::Connection(s) => s.fmt(f),
+            Error::Http(s) => s.fmt(f),
+            Error::Json(s) => s.fmt(f),
         }
     }
 }
@@ -27,50 +45,56 @@ impl error::Error for Error {
     }
 }
 
-impl From<&'static str> for Error {
-    fn from(err: &'static str) -> Error {
-        Error::Static(err)
-    }
-}
-
 impl From<String> for Error {
     fn from(err: String) -> Error {
-        Error::Dynamic(err)
+        Error::Generic(err)
     }
 }
 
 impl From<reqwest::Error> for Error {
     fn from(err: reqwest::Error) -> Error {
-        Error::Dynamic(err.to_string())
+        if err.is_status() {
+            Error::Http(err.to_string())
+        } else if err.is_builder() || err.is_timeout() || err.is_redirect() {
+            Error::Generic(err.to_string())
+        } else {
+            Error::Connection(err.to_string())
+        }
     }
 }
 
 impl From<url::ParseError> for Error {
     fn from(err: url::ParseError) -> Error {
-        Error::Dynamic(err.to_string())
+        Error::Encoding(err.to_string())
     }
 }
 
 impl From<openssl::error::ErrorStack> for Error {
     fn from(err: openssl::error::ErrorStack) -> Error {
-        Error::Dynamic(err.to_string())
+        Error::Encryption(err.to_string())
     }
 }
 
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Error {
-        Error::Dynamic(err.to_string())
+        Error::Json(err.to_string())
     }
 }
 
 impl From<std::ffi::NulError> for Error {
     fn from(err: std::ffi::NulError) -> Error {
-        Error::Dynamic(err.to_string())
+        Error::Generic(err.to_string())
     }
 }
 
 impl From<base64::DecodeError> for Error {
     fn from(err: base64::DecodeError) -> Error {
-        Error::Dynamic(err.to_string())
+        Error::Encoding(err.to_string())
+    }
+}
+
+impl From<hex::FromHexError> for Error {
+    fn from(err: hex::FromHexError) -> Error {
+        Error::Encoding(err.to_string())
     }
 }

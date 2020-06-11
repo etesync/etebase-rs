@@ -269,7 +269,7 @@ impl Journal {
         if memcmp(&hmac, &calculated) {
             Ok(())
         } else {
-            Err(Error::from("HMAC mismatch"))
+            Err(Error::EncryptionMac("HMAC mismatch"))
         }
     }
 }
@@ -414,15 +414,12 @@ impl Entry {
 
     fn verify(&self, crypto_manager: &CryptoManager, prev_uid: Option<& str>) -> Result<()> {
         let calculated = Entry::calculate_hmac(crypto_manager, &self.content, prev_uid)?;
-        let hmac = match hex::decode(&self.uid) {
-            Ok(hmac) => hmac,
-            Err(_e) => return Err(Error::from("Failed decoding uid")),
-        };
+        let hmac = hex::decode(&self.uid)?;
 
         if memcmp(&hmac, &calculated) {
             Ok(())
         } else {
-            Err(Error::from("HMAC mismatch"))
+            Err(Error::EncryptionMac("HMAC mismatch"))
         }
     }
 }
@@ -547,7 +544,7 @@ impl UserInfo {
     pub fn get_keypair(&self, crypto_manager: &CryptoManager) -> Result<AsymmetricKeyPair> {
         let content = match &self.content {
             Some(content) => content,
-            None => return Err(Error::from("Can't get keypair for someone else's user info")),
+            None => return Err(Error::PermissionDenied("Can't get keypair for someone else's user info")),
         };
 
         self.verify(&crypto_manager)?;
@@ -570,7 +567,7 @@ impl UserInfo {
     fn verify(&self, crypto_manager: &CryptoManager) -> Result<()> {
         let content = match &self.content {
             Some(content) => content,
-            None => return Err(Error::from("Can't verify someone else's user info")),
+            None => return Err(Error::PermissionDenied("Can't verify someone else's user info")),
         };
 
         let hmac = &content[..HMAC_SIZE];
@@ -580,7 +577,7 @@ impl UserInfo {
         if memcmp(&hmac, &calculated) {
             Ok(())
         } else {
-            Err(Error::from("HMAC mismatch"))
+            Err(Error::EncryptionMac("HMAC mismatch"))
         }
     }
 }
@@ -628,7 +625,7 @@ impl UserInfoManager {
     pub fn update(&self, user_info: &UserInfo) -> Result<()> {
         let owner = match &user_info.owner {
             Some(owner) => owner,
-            None => return Err(Error::from("Owner is unset")),
+            None => return Err(Error::InvalidData("Owner is unset")),
         };
 
         let url = self.api_base.join(&format!{"{}/", owner})?;
@@ -647,7 +644,7 @@ impl UserInfoManager {
     pub fn delete(&self, user_info: &UserInfo) -> Result<()> {
         let owner = match &user_info.owner {
             Some(owner) => owner,
-            None => return Err(Error::from("Owner is unset")),
+            None => return Err(Error::InvalidData("Owner is unset")),
         };
 
         let url = self.api_base.join(&format!{"{}/", owner})?;

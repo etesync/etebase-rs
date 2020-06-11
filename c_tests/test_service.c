@@ -241,6 +241,7 @@ test_errors() {
 
     char *token = etesync_auth_get_token(etesync, username, password);
     fail_if(token);
+    assert_int_eq(etesync_get_error_code(), ETESYNC_ERROR_CODE_CONNECTION);
 
     etesync_destroy(etesync);
 
@@ -248,6 +249,11 @@ test_errors() {
 
     token = etesync_auth_get_token(etesync, "Bad username", password);
     fail_if(token);
+    assert_int_eq(etesync_get_error_code(), ETESYNC_ERROR_CODE_HTTP);
+
+    char *error_message = etesync_get_error_message();
+    fail_if(!error_message);
+    free(error_message);
 
     etesync_destroy(etesync);
 

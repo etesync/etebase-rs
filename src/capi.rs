@@ -51,7 +51,6 @@ macro_rules! try_null {
 }
 
 thread_local! {
-    #[allow(non_upper_case_globals)]
     static LAST_ERROR: RefCell<Option<Error>> = RefCell::new(None);
 }
 
@@ -61,23 +60,60 @@ fn update_last_error(err: Error) {
     });
 }
 
-fn take_last_error() -> Option<Error> {
-    LAST_ERROR.with(|prev| prev.borrow_mut().take())
+#[no_mangle]
+#[allow(non_camel_case_types)]
+#[repr(u32)]
+pub enum EtesyncErrorCode {
+    NoError,
+    Generic,
+
+    Encoding,
+    Integrity,
+    Encryption,
+    EncryptionMac,
+    PermissionDenied,
+    InvalidData,
+
+    Connection,
+    Http,
+    Json,
 }
 
 #[no_mangle]
-pub extern fn etesync_get_error_message() -> *const c_char {
-    let last_error = take_last_error();
-    return match last_error {
-        Some(ref err) => {
-            // FIXME: currently leaks, but can be easily be fixed with the same API
-            return match CString::new(err.to_string()) {
-                Ok(val) => val.into_raw(),
-                Err(_err) => std::ptr::null(),
-            };
-        },
-        None => std::ptr::null(),
-    }
+pub extern fn etesync_get_error_code() -> EtesyncErrorCode {
+    LAST_ERROR.with(|prev| {
+        match *prev.borrow() {
+            Some(ref err) => match err {
+                Error::Generic(_) => EtesyncErrorCode::Generic,
+                Error::Encoding(_) => EtesyncErrorCode::Encoding,
+                Error::Integrity(_) => EtesyncErrorCode::Integrity,
+                Error::Encryption(_) => EtesyncErrorCode::Encryption,
+                Error::EncryptionMac(_) => EtesyncErrorCode::EncryptionMac,
+                Error::PermissionDenied(_) => EtesyncErrorCode::PermissionDenied,
+                Error::InvalidData(_) => EtesyncErrorCode::InvalidData,
+
+                Error::Connection(_) => EtesyncErrorCode::Connection,
+                Error::Http(_) => EtesyncErrorCode::Http,
+                Error::Json(_) => EtesyncErrorCode::Json,
+            },
+            None => EtesyncErrorCode::NoError,
+        }
+    })
+}
+
+#[no_mangle]
+pub extern fn etesync_get_error_message() -> *mut c_char {
+    LAST_ERROR.with(|prev| {
+        match *prev.borrow() {
+            Some(ref err) => {
+                return match CString::new(err.to_string()) {
+                    Ok(val) => val.into_raw(),
+                    Err(_err) => std::ptr::null_mut(),
+                };
+            },
+            None => std::ptr::null_mut(),
+        }
+    })
 }
 
 

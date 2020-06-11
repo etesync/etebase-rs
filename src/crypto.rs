@@ -68,7 +68,7 @@ impl CryptoManager {
         let key = match version {
             1 => key.to_vec(),
             2 => hmac256(salt.as_bytes(), key, None)?,
-            _ => return Err(Error::from("Version mismatch")),
+            _ => return Err(Error::Integrity("Version mismatch")),
         };
 
         CryptoManager::from_derived_key(&key, version)
@@ -109,7 +109,7 @@ impl CryptoManager {
         match self.version {
             1 => hmac256(&self.hmac_key, data, None),
             2 => hmac256(&self.hmac_key, data, Some(&[self.version])),
-            _ => return Err(Error::from("Version mismatch")),
+            _ => return Err(Error::Integrity("Version mismatch")),
         }
     }
 }
