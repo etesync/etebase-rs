@@ -121,6 +121,7 @@ impl Authenticator {
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded;charset=UTF-8")
             .header(header::ACCEPT, "application/json")
             .send()?;
+        let res = res.error_for_status()?;
 
         #[derive(Deserialize)]
         struct TokenResponse {
@@ -137,6 +138,7 @@ impl Authenticator {
         let res = self.client.req_client.post(url.as_str())
             .header(header::AUTHORIZATION, format!("Token {}", auth_token))
             .send()?;
+        let res = res.error_for_status()?;
 
         Ok(res.text()?)
     }
