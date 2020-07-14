@@ -15,6 +15,8 @@ pub enum Error {
     EncryptionMac(&'static str),
     PermissionDenied(&'static str),
     InvalidData(&'static str),
+    Unauthorized(String),
+    Conflict(String),
 
     Connection(String),
     Http(String),
@@ -31,6 +33,8 @@ impl fmt::Display for Error {
             Error::EncryptionMac(s) => s.fmt(f),
             Error::PermissionDenied(s) => s.fmt(f),
             Error::InvalidData(s) => s.fmt(f),
+            Error::Unauthorized(s) => s.fmt(f),
+            Error::Conflict(s) => s.fmt(f),
 
             Error::Connection(s) => s.fmt(f),
             Error::Http(s) => s.fmt(f),
@@ -54,7 +58,11 @@ impl From<String> for Error {
 impl From<reqwest::Error> for Error {
     fn from(err: reqwest::Error) -> Error {
         if err.is_status() {
-            Error::Http(err.to_string())
+            match err.status() {
+                Some(reqwest::StatusCode::UNAUTHORIZED) => Error::Unauthorized(err.to_string()),
+                Some(reqwest::StatusCode::CONFLICT) => Error::Conflict(err.to_string()),
+                _ => Error::Http(err.to_string()),
+            }
         } else if err.is_builder() || err.is_timeout() || err.is_redirect() {
             Error::Generic(err.to_string())
         } else {

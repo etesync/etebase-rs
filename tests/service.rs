@@ -3,6 +3,7 @@
 
 use etesync::{
     crypto,
+    error::Error,
     service::{
         test_reset,
         Client,
@@ -129,6 +130,14 @@ fn simple_sync() {
             content: "bla3".to_owned(),
         };
         let entry3 = Entry::from_sync_entry(&crypto_manager, &tmp, Some(&entry2.uid)).unwrap();
+
+        match entry_manager.create(&[&entry2, &entry3], None) {
+            Err(e) => match e {
+                Error::Conflict(_) => (), // Do nothing, this is correct
+                _ => panic!("Test shouldn't get here"),
+            },
+            Ok(_) => panic!("Test shouldn't get here"),
+        }
 
         entry_manager.create(&[&entry2, &entry3], Some(&entry.uid)).unwrap();
         assert_eq!(entry_manager.list(None, None).unwrap().len(), 3);

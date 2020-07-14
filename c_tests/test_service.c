@@ -136,6 +136,10 @@ test_simple() {
         free(prev_uid);
 
         EteSyncEntry const *entries2[] = { entry2, entry3, NULL };
+        ret = etesync_entry_manager_create(entry_manager, entries2, NULL);
+        fail_if(!ret);
+        assert_int_eq(etesync_get_error_code(), ETESYNC_ERROR_CODE_CONFLICT);
+
         ret = etesync_entry_manager_create(entry_manager, entries2, push_uid);
         fail_if(ret);
 
@@ -254,6 +258,15 @@ test_errors() {
     char *error_message = etesync_get_error_message();
     fail_if(!error_message);
     free(error_message);
+
+    etesync_set_auth_token(etesync, "somebadtoken");
+    EteSyncJournalManager *journal_manager = etesync_journal_manager_new(etesync);
+
+    EteSyncJournal *journal = etesync_journal_manager_fetch(journal_manager, "whatever");
+    fail_if(journal);
+    assert_int_eq(etesync_get_error_code(), ETESYNC_ERROR_CODE_UNAUTHORIZED);
+
+    etesync_journal_manager_destroy(journal_manager);
 
     etesync_destroy(etesync);
 

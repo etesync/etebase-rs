@@ -73,6 +73,8 @@ pub enum EtesyncErrorCode {
     EncryptionMac,
     PermissionDenied,
     InvalidData,
+    Unauthorized,
+    Conflict,
 
     Connection,
     Http,
@@ -91,6 +93,8 @@ pub extern fn etesync_get_error_code() -> EtesyncErrorCode {
                 Error::EncryptionMac(_) => EtesyncErrorCode::EncryptionMac,
                 Error::PermissionDenied(_) => EtesyncErrorCode::PermissionDenied,
                 Error::InvalidData(_) => EtesyncErrorCode::InvalidData,
+                Error::Unauthorized(_) => EtesyncErrorCode::Unauthorized,
+                Error::Conflict(_) => EtesyncErrorCode::Conflict,
 
                 Error::Connection(_) => EtesyncErrorCode::Connection,
                 Error::Http(_) => EtesyncErrorCode::Http,
