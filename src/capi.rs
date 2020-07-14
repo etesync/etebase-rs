@@ -124,7 +124,10 @@ pub extern fn etesync_get_error_message() -> *mut c_char {
 fn res_to_c_ret<T>(res: Result<T>) -> i32 {
     match res {
         Ok(_) => 0,
-        Err(_e) => -1,
+        Err(err) => {
+            update_last_error(err);
+            -1
+        },
     }
 }
 
