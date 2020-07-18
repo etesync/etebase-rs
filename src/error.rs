@@ -16,6 +16,7 @@ pub enum Error {
     PermissionDenied(&'static str),
     InvalidData(&'static str),
     Unauthorized(String),
+    NotFound(String),
     Conflict(String),
 
     Connection(String),
@@ -34,6 +35,7 @@ impl fmt::Display for Error {
             Error::PermissionDenied(s) => s.fmt(f),
             Error::InvalidData(s) => s.fmt(f),
             Error::Unauthorized(s) => s.fmt(f),
+            Error::NotFound(s) => s.fmt(f),
             Error::Conflict(s) => s.fmt(f),
 
             Error::Connection(s) => s.fmt(f),
@@ -60,6 +62,7 @@ impl From<reqwest::Error> for Error {
         if err.is_status() {
             match err.status() {
                 Some(reqwest::StatusCode::UNAUTHORIZED) => Error::Unauthorized(err.to_string()),
+                Some(reqwest::StatusCode::NOT_FOUND) => Error::NotFound(err.to_string()),
                 Some(reqwest::StatusCode::CONFLICT) => Error::Conflict(err.to_string()),
                 _ => Error::Http(err.to_string()),
             }

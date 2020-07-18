@@ -74,6 +74,7 @@ pub enum EtesyncErrorCode {
     PermissionDenied,
     InvalidData,
     Unauthorized,
+    NotFound,
     Conflict,
 
     Connection,
@@ -94,6 +95,7 @@ pub extern fn etesync_get_error_code() -> EtesyncErrorCode {
                 Error::PermissionDenied(_) => EtesyncErrorCode::PermissionDenied,
                 Error::InvalidData(_) => EtesyncErrorCode::InvalidData,
                 Error::Unauthorized(_) => EtesyncErrorCode::Unauthorized,
+                Error::NotFound(_) => EtesyncErrorCode::NotFound,
                 Error::Conflict(_) => EtesyncErrorCode::Conflict,
 
                 Error::Connection(_) => EtesyncErrorCode::Connection,

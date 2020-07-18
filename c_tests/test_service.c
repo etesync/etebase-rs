@@ -270,5 +270,22 @@ test_errors() {
 
     etesync_destroy(etesync);
 
+
+    etesync = etesync_new("test_service", server_url);
+
+    token = etesync_auth_get_token(etesync, username, password);
+
+    etesync_set_auth_token(etesync, token);
+
+    EteSyncUserInfoManager *user_info_manager = etesync_user_info_manager_new(etesync);
+
+    EteSyncUserInfo *user_info = etesync_user_info_manager_fetch(user_info_manager, "does_not_exist");
+    fail_if(user_info);
+    assert_int_eq(etesync_get_error_code(), ETESYNC_ERROR_CODE_NOT_FOUND);
+
+    etesync_user_info_manager_destroy(user_info_manager);
+
+    etesync_destroy(etesync);
+
     return 0;
 }
