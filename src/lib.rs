@@ -7,6 +7,8 @@ pub mod content;
 pub mod utils;
 pub mod error;
 
+pub const CURRENT_VERSION: u8 = 1;
+
 pub use error::Error;
 
 pub fn init() -> error::Result<()> {
