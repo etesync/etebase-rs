@@ -1,8 +1,5 @@
-// SPDX-FileCopyrightText: © 2020 EteSync Authors
+// SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
-
-extern crate openssl;
-extern crate base64;
 
 pub mod crypto;
 pub mod service;

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: © 2020 EteSync Authors
+// SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
 use serde::{Serialize, Deserialize};

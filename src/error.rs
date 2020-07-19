@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: © 2020 EteSync Authors
+// SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
 use std::error;
@@ -77,12 +77,6 @@ impl From<url::ParseError> for Error {
     }
 }
 
-impl From<openssl::error::ErrorStack> for Error {
-    fn from(err: openssl::error::ErrorStack) -> Error {
-        Error::Encryption(err.to_string())
-    }
-}
-
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Error {
         Error::Json(err.to_string())
@@ -92,17 +86,5 @@ impl From<serde_json::Error> for Error {
 impl From<std::ffi::NulError> for Error {
     fn from(err: std::ffi::NulError) -> Error {
         Error::Generic(err.to_string())
-    }
-}
-
-impl From<base64::DecodeError> for Error {
-    fn from(err: base64::DecodeError) -> Error {
-        Error::Encoding(err.to_string())
-    }
-}
-
-impl From<hex::FromHexError> for Error {
-    fn from(err: hex::FromHexError) -> Error {
-        Error::Encoding(err.to_string())
     }
 }
