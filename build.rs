@@ -18,5 +18,5 @@ fn main() {
             } => return,
             _ => panic!("{:?}", e),
         },
-    }.write_to_file("target/etesync.h");
+    }.write_to_file("target/etebase.h");
 }

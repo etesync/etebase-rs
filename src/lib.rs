@@ -4,8 +4,13 @@
 pub mod crypto;
 pub mod service;
 pub mod content;
+pub mod utils;
 pub mod error;
 
 pub use error::Error;
+
+pub fn init() -> error::Result<()> {
+    crypto::init()
+}
 
 mod capi;

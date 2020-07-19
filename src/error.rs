@@ -10,8 +10,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     Generic(String),
     Encoding(String),
+    Base64(&'static str),
     Integrity(&'static str),
-    Encryption(String),
+    Encryption(&'static str),
     EncryptionMac(&'static str),
     PermissionDenied(&'static str),
     InvalidData(&'static str),
@@ -28,6 +29,7 @@ impl fmt::Display for Error {
         match self {
             Error::Generic(s) => s.fmt(f),
             Error::Encoding(s) => s.fmt(f),
+            Error::Base64(s) => s.fmt(f),
             Error::Integrity(s) => s.fmt(f),
             Error::Encryption(s) => s.fmt(f),
             Error::EncryptionMac(s) => s.fmt(f),
