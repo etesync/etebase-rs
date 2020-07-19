@@ -56,3 +56,15 @@ fn crypto_manager() {
 
     crypto_manager.verify(&cipher, tag, None).unwrap();
 }
+
+#[test]
+fn login_crypto_manager() {
+    etebase::init().unwrap();
+
+    let login_crypto_manager = crypto::LoginCryptoManager::keygen(&[0; 32]).unwrap();
+
+    let msg = b"This Is Some Test Cleartext.";
+    let signature = login_crypto_manager.sign_detached(msg).unwrap();
+    let pubkey = login_crypto_manager.get_pubkey();
+    assert!(login_crypto_manager.verify_detached(msg, &signature, (&pubkey[..]).try_into().unwrap()).unwrap());
+}

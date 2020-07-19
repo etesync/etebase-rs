@@ -7,6 +7,7 @@ use sodiumoxide::crypto::{
     aead::xchacha20poly1305_ietf as aead,
     generichash,
     kdf,
+    sign,
     pwhash::argon2id13,
 };
 
@@ -136,5 +137,42 @@ impl CryptoManager {
 
     pub fn calculate_hash(&self, msg: &[u8]) -> Result<Vec<u8>> {
         generichash_quick(msg, None)
+    }
+}
+
+pub struct LoginCryptoManager {
+    pubkey: sign::PublicKey,
+    privkey: sign::SecretKey,
+}
+
+impl LoginCryptoManager {
+    pub fn keygen(seed: &[u8; 32]) -> Result<LoginCryptoManager> {
+        let seed = sign::Seed(*seed);
+        let (pubkey, privkey) = sign::keypair_from_seed(&seed);
+
+        Ok(LoginCryptoManager {
+            privkey,
+            pubkey,
+        })
+    }
+
+    pub fn sign_detached(&self, msg: &[u8]) -> Result<Vec<u8>> {
+        let ret = sign::sign_detached(msg, &self.privkey);
+
+        Ok(ret[..].to_vec())
+    }
+
+    pub fn verify_detached(&self, msg: &[u8], signature: &[u8], pubkey: &[u8; sign::PUBLICKEYBYTES]) -> Result<bool> {
+        let mut signature_copy = [0; 64];
+        signature_copy[..].copy_from_slice(&signature[..]);
+        let signature = sign::Signature(signature_copy);
+        let pubkey = sign::PublicKey(*pubkey);
+        let ret = sign::verify_detached(&signature, msg, &pubkey);
+
+        Ok(ret)
+    }
+
+    pub fn get_pubkey(&self) -> Vec<u8> {
+        self.pubkey[..].to_vec()
     }
 }
