@@ -12,6 +12,8 @@ use etesync::{
         Journal,
         EntryManager,
         Entry,
+        UserInfo,
+        UserInfoManager,
     },
     content::{
         ACTION_ADD,
@@ -155,4 +157,24 @@ fn simple_sync() {
 
 
     authenticator.invalidate_token(&token).unwrap();
+}
+
+#[test]
+fn user_info() {
+    let mut client = Client::new(CLIENT_NAME, TEST_API_URL, None).unwrap();
+    let authenticator = Authenticator::new(&client);
+    let token = authenticator.get_token(USER, PASSWORD).unwrap();
+    client.set_token(&token);
+
+    test_reset(&client).unwrap();
+
+    let derived = get_encryption_key();
+    let keypair = crypto::AsymmetricKeyPair::generate_keypair().unwrap();
+
+    let mut user_info = UserInfo::new(USER, crypto::CURRENT_VERSION);
+    let crypto_manager = user_info.get_crypto_manager(&derived).unwrap();
+    user_info.set_keypair(&crypto_manager, &keypair).unwrap();
+    let user_info_manager = UserInfoManager::new(&client);
+
+    user_info_manager.create(&user_info).unwrap();
 }

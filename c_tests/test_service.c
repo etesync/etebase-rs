@@ -289,3 +289,39 @@ test_errors() {
 
     return 0;
 }
+
+int
+test_user_info() {
+    EteSync *etesync = etesync_new("test_service", server_url);
+
+    char *token = etesync_auth_get_token(etesync, username, password);
+
+    etesync_set_auth_token(etesync, token);
+
+    etesync_test_reset(etesync);
+
+    EteSyncAsymmetricKeyPair *keypair = etesync_crypto_generate_keypair(etesync);
+    EteSyncUserInfo *user_info = etesync_user_info_new(username, ETESYNC_CURRENT_VERSION);
+    fail_if(!user_info);
+    EteSyncCryptoManager *crypto_manager = etesync_user_info_get_crypto_manager(user_info, key64);
+    fail_if(etesync_user_info_set_keypair(user_info, crypto_manager, keypair));
+    {
+        EteSyncAsymmetricKeyPair *keypair = etesync_user_info_get_keypair(user_info, crypto_manager);
+        fail_if(!keypair);
+        etesync_keypair_destroy(keypair);
+    }
+
+    EteSyncUserInfoManager *user_info_manager = etesync_user_info_manager_new(etesync);
+
+    fail_if(etesync_user_info_manager_create(user_info_manager, user_info));
+
+    etesync_crypto_manager_destroy(crypto_manager);
+    etesync_user_info_manager_destroy(user_info_manager);
+    etesync_user_info_destroy(user_info);
+    etesync_keypair_destroy(keypair);
+    etesync_auth_invalidate_token(etesync, token);
+    free(token);
+    etesync_destroy(etesync);
+
+    return 0;
+}

@@ -557,6 +557,21 @@ pub extern fn etesync_user_info_manager_fetch(user_info_manager: &UserInfoManage
 }
 
 #[no_mangle]
+pub extern fn etesync_user_info_manager_create(user_info_manager: &UserInfoManager, user_info: &UserInfo) -> i32 {
+    res_to_c_ret(user_info_manager.create(&user_info))
+}
+
+#[no_mangle]
+pub extern fn etesync_user_info_new(owner: *const c_char, version: u8) -> *mut UserInfo {
+    let owner = (unsafe { CStr::from_ptr(owner) }).to_string_lossy();
+    let user_info = UserInfo::new(&owner[..], version);
+
+    Box::into_raw(
+        Box::new(user_info)
+    )
+}
+
+#[no_mangle]
 pub extern fn etesync_user_info_get_crypto_manager(user_info: &UserInfo, key: *const c_char) -> *mut CryptoManager {
     let key = (unsafe { CStr::from_ptr(key) }).to_string_lossy();
     let key = try_null!(base64::decode(&key[..]));
@@ -580,7 +595,10 @@ pub extern fn etesync_user_info_get_keypair(user_info: &UserInfo, crypto_manager
 pub extern fn etesync_user_info_set_keypair(user_info: *mut UserInfo, crypto_manager: &CryptoManager, keypair: &AsymmetricKeyPair) -> i32 {
     let mut user_info = unsafe { Box::from_raw(user_info) };
 
-    res_to_c_ret(user_info.set_keypair(&crypto_manager, &keypair))
+    let ret = res_to_c_ret(user_info.set_keypair(&crypto_manager, &keypair));
+    std::mem::forget(user_info);
+
+    ret
 }
 
 #[no_mangle]
