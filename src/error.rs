@@ -10,6 +10,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     Generic(String),
     Encoding(String),
+    Padding(&'static str),
     Base64(&'static str),
     Integrity(&'static str),
     Encryption(&'static str),
@@ -29,6 +30,7 @@ impl fmt::Display for Error {
         match self {
             Error::Generic(s) => s.fmt(f),
             Error::Encoding(s) => s.fmt(f),
+            Error::Padding(s) => s.fmt(f),
             Error::Base64(s) => s.fmt(f),
             Error::Integrity(s) => s.fmt(f),
             Error::Encryption(s) => s.fmt(f),
@@ -88,5 +90,17 @@ impl From<serde_json::Error> for Error {
 impl From<std::ffi::NulError> for Error {
     fn from(err: std::ffi::NulError) -> Error {
         Error::Generic(err.to_string())
+    }
+}
+
+impl From<block_padding::PadError> for Error {
+    fn from(_err: block_padding::PadError) -> Error {
+        Error::Padding("Failed padding")
+    }
+}
+
+impl From<block_padding::UnpadError> for Error {
+    fn from(_err: block_padding::UnpadError) -> Error {
+        Error::Padding("Failed unpadding")
     }
 }

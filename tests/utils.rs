@@ -1,7 +1,11 @@
 // SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
-use etebase::utils::get_padding;
+use etebase::utils::{
+    get_padding,
+    buffer_pad,
+    buffer_unpad,
+};
 
 
 #[test]
@@ -19,4 +23,15 @@ fn padding() {
     }
 
     assert_eq!(get_padding(2343242), 2359296);
+}
+
+
+#[test]
+fn pad_unpad() {
+    etebase::init().unwrap();
+
+    let buf = [0; 1076];
+    let padded = buffer_pad(&buf).unwrap();
+    let unpadded = buffer_unpad(&padded[..]).unwrap();
+    assert_eq!(unpadded, &buf[..]);
 }

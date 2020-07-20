@@ -1,5 +1,7 @@
 use sodiumoxide::base64;
 
+use block_padding::{Iso7816, Padding};
+
 use super::error::{
     Error,
     Result,
@@ -34,3 +36,25 @@ pub fn get_padding(length: u32) -> u32 {
     return (length + bit_mask) & !bit_mask;
 }
 
+pub fn buffer_pad(buf: &[u8]) -> Result<Vec<u8>> {
+    let len = buf.len();
+    let padding = get_padding(len as u32) as usize;
+    let mut ret = vec![0; padding];
+    ret[..len].copy_from_slice(buf);
+
+    Iso7816::pad_block(&mut ret[..], len)?;
+
+    Ok(ret)
+}
+
+pub fn buffer_unpad(buf: &[u8]) -> Result<Vec<u8>> {
+    let len = buf.len();
+    let mut buf = buf.to_vec();
+
+    if len == 0 {
+        return Ok(vec![0; 0]);
+    }
+
+    // We pass the buffer's length as the block size because due to padme there's always some variable-sized padding.
+    Ok(Iso7816::unpad(&mut buf[..])?.to_vec())
+}

@@ -17,6 +17,7 @@ crate-type = ["lib", "cdylib"]
 cbindgen = "^0.14.2"
 
 [dependencies]
+block-padding= "^0.2.0"
 sodiumoxide = { git = "https://github.com/sodiumoxide/sodiumoxide" }
 http = "^0.2.0"
 url = "^2.1.1"
