@@ -28,6 +28,10 @@ pub fn randombytes(size: usize) -> Vec<u8> {
     sodiumoxide::randombytes::randombytes(size)
 }
 
+pub fn memcmp(x: &[u8], y: &[u8]) -> bool {
+    sodiumoxide::utils::memcmp(x, y)
+}
+
 pub fn from_base64(string: &StrBase64) -> Result<Vec<u8>> {
     match base64::decode(string, base64::Variant::UrlSafeNoPadding) {
         Ok(bytes) => Ok(bytes),
@@ -55,6 +59,18 @@ pub fn get_padding(length: u32) -> u32 {
     let last_bits = (e as u32) - s;
     let bit_mask = (1 << last_bits) - 1;
     return (length + bit_mask) & !bit_mask;
+}
+
+// FIXME: we should properly pad the meta and probably change these functions
+pub fn buffer_pad_meta(buf: &[u8]) -> Result<Vec<u8>> {
+    let len = buf.len();
+    let padding = len + 1;
+    let mut ret = vec![0; padding];
+    ret[..len].copy_from_slice(buf);
+
+    Iso7816::pad_block(&mut ret[..], len)?;
+
+    Ok(ret)
 }
 
 pub fn buffer_pad(buf: &[u8]) -> Result<Vec<u8>> {

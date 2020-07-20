@@ -15,7 +15,7 @@ pub enum Error {
     Padding(&'static str),
     Base64(&'static str),
     TryInto(&'static str),
-    Integrity(&'static str),
+    Integrity(String),
     Encryption(&'static str),
     EncryptionMac(&'static str),
     PermissionDenied(&'static str),
