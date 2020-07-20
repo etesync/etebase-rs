@@ -27,7 +27,7 @@ pub fn test_reset(client: &Client, body_struct: SignupBody) -> Result<()> {
     let body = rmp_serde::to_vec_named(&body_struct)?;
     let url = client.api_base.join("api/v1/test/authentication/reset/")?;
 
-    let res = client.post(url.as_str())?
+    let res = client.post(&url)?
         .body(body)
         .send()?;
 
@@ -91,24 +91,20 @@ impl Client {
         self.with_base_headers(self.with_auth_header(builder))
     }
 
-    pub fn get(&self, suffix: &str) -> Result<RequestBuilder> {
-        let url = self.api_base.join(suffix)?;
-        Ok(self.prep_client(self.req_client.get(url)))
+    pub fn get(&self, url: &Url) -> Result<RequestBuilder> {
+        Ok(self.prep_client(self.req_client.get(url.as_str())))
     }
 
-    pub fn post(&self, suffix: &str) -> Result<RequestBuilder> {
-        let url = self.api_base.join(suffix)?;
-        Ok(self.prep_client(self.req_client.post(url)))
+    pub fn post(&self, url: &Url) -> Result<RequestBuilder> {
+        Ok(self.prep_client(self.req_client.post(url.as_str())))
     }
 
-    pub fn put(&self, suffix: &str) -> Result<RequestBuilder> {
-        let url = self.api_base.join(suffix)?;
-        Ok(self.prep_client(self.req_client.put(url)))
+    pub fn put(&self, url: &Url) -> Result<RequestBuilder> {
+        Ok(self.prep_client(self.req_client.put(url.as_str())))
     }
 
-    pub fn delete(&self, suffix: &str) -> Result<RequestBuilder> {
-        let url = self.api_base.join(suffix)?;
-        Ok(self.prep_client(self.req_client.delete(url)))
+    pub fn delete(&self, url: &Url) -> Result<RequestBuilder> {
+        Ok(self.prep_client(self.req_client.delete(url.as_str())))
     }
 }
 
@@ -177,14 +173,14 @@ pub struct User<'a> {
 }
 
 pub struct Authenticator<'a> {
-    api_base: &'static str,
+    api_base: Url,
     client: &'a Client,
 }
 
 impl<'a> Authenticator<'a> {
     pub fn new(client: &'a Client) -> Self {
         Self {
-            api_base: "api/v1/authentication/",
+            api_base: client.api_base.join("api/v1/authentication/").unwrap(),
             client,
         }
     }
@@ -200,7 +196,7 @@ impl<'a> Authenticator<'a> {
         };
         let body = rmp_serde::to_vec_named(&body_struct)?;
 
-        let url = [self.api_base, "login_challenge/"].concat();
+        let url = self.api_base.join("login_challenge/")?;
         let res = self.client.post(&url)?
             .body(body)
             .send()?;
@@ -221,7 +217,7 @@ impl<'a> Authenticator<'a> {
         };
         let body = rmp_serde::to_vec_named(&body_struct)?;
 
-        let url = [self.api_base, "signup/"].concat();
+        let url = self.api_base.join("signup/")?;
         let res = self.client.post(&url)?
             .body(body)
             .send()?;
@@ -239,7 +235,7 @@ impl<'a> Authenticator<'a> {
         };
         let body = rmp_serde::to_vec_named(&body_struct)?;
 
-        let url = [self.api_base, "login/"].concat();
+        let url = self.api_base.join("login/")?;
         let res = self.client.post(&url)?
             .body(body)
             .send()?;
@@ -251,7 +247,7 @@ impl<'a> Authenticator<'a> {
     }
 
     pub fn logout(&self) -> Result<()> {
-        let url = [self.api_base, "logout/"].concat();
+        let url = self.api_base.join("logout/")?;
         let res = self.client.post(&url)?
             .send()?;
         res.error_for_status()?;
@@ -266,7 +262,7 @@ impl<'a> Authenticator<'a> {
         };
         let body = rmp_serde::to_vec_named(&body_struct)?;
 
-        let url = [self.api_base, "change_password/"].concat();
+        let url = self.api_base.join("change_password/")?;
         let res = self.client.post(&url)?
             .body(body)
             .send()?;
