@@ -65,6 +65,16 @@ impl Client {
         self.auth_token = token.and_then(|x| Some(x.to_string()));
     }
 
+    pub fn get_token<'a>(&'a self) -> Option<&'a str> {
+        self.auth_token.as_deref().and_then(|x| Some(&x[..]))
+    }
+
+    pub fn set_api_base(&mut self, server_url: &str) -> Result<()> {
+        self.api_base = Url::parse(server_url)?;
+
+        Ok(())
+    }
+
     pub fn get_api_base(&self) -> &Url {
         &self.api_base
     }
@@ -148,7 +158,7 @@ pub struct LoginBodyResponse<'a> {
     pub action: &'a str,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub struct LoginResponseUser {
     pub username: String,

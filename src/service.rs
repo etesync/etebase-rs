@@ -5,6 +5,8 @@ extern crate rmp_serde;
 
 use std::convert::TryInto;
 
+use serde::{Serialize, Deserialize};
+
 use super::{
     try_into,
     crypto::{
@@ -18,6 +20,8 @@ use super::{
         Result,
     },
     utils::{
+        from_base64,
+        to_base64,
         randombytes,
         SYMMETRIC_KEY_SIZE,
     },
@@ -46,6 +50,39 @@ impl MainCryptoManager {
     pub fn get_login_crypto_manager(&self) -> Result<LoginCryptoManager> {
         LoginCryptoManager::keygen(&self.manager.asym_key_seed)
     }
+}
+
+struct StorageCryptoManager {
+    pub manager: CryptoManager,
+}
+
+impl StorageCryptoManager {
+    pub fn new(key: &[u8; 32], version: u8) -> Result<Self> {
+        let context = b"Stor    ";
+
+        Ok(Self {
+            manager: CryptoManager::new(key, &context, version)?,
+        })
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+#[allow(non_snake_case)]
+pub struct AccountData<'a> {
+    pub version: u8,
+    #[serde(with = "serde_bytes")]
+    pub key: &'a [u8],
+    pub user: LoginResponseUser,
+    pub serverUrl: &'a str,
+    pub authToken: Option<&'a str>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[allow(non_snake_case)]
+pub struct AccountDataStored<'a> {
+    pub version: u8,
+    #[serde(with = "serde_bytes")]
+    pub encryptedData: &'a [u8],
 }
 
 pub struct Account {
@@ -152,6 +189,49 @@ impl Account {
         self.client.set_token(Some(&login_response.token));
 
         Ok(())
+    }
+
+    pub fn save(&self, encryption_key: Option<&[u8]>) -> Result<String> {
+        let version = super::CURRENT_VERSION;
+        let encryption_key = encryption_key.unwrap_or(&[0; 32]);
+        let crypto_manager = StorageCryptoManager::new(try_into!(encryption_key)?, version)?;
+        let account_data = AccountData {
+            user: self.user.clone(),
+            version,
+            key: &crypto_manager.manager.encrypt(&self.main_key, None)?,
+            authToken: self.client.get_token(),
+            serverUrl: self.client.get_api_base().as_str(),
+        };
+        let serialized = rmp_serde::to_vec_named(&account_data)?;
+
+        let ret = AccountDataStored {
+            version,
+            encryptedData: &crypto_manager.manager.encrypt(&serialized, Some(&[version]))?,
+        };
+        let serialized = rmp_serde::to_vec_named(&ret)?;
+
+        to_base64(&serialized)
+    }
+
+    pub fn restore(client: Client, account_data_stored: &str, encryption_key: Option<&[u8]>) -> Result<Account> {
+        let encryption_key = encryption_key.unwrap_or(&[0; 32]);
+        let account_data_stored = from_base64(account_data_stored)?;
+        let account_data_stored: AccountDataStored = rmp_serde::from_read_ref(&account_data_stored)?;
+        let version = account_data_stored.version;
+
+        let crypto_manager = StorageCryptoManager::new(try_into!(encryption_key)?, version)?;
+        let decrypted = crypto_manager.manager.decrypt(&account_data_stored.encryptedData, Some(&[version]))?;
+        let account_data: AccountData = rmp_serde::from_read_ref(&decrypted)?;
+
+        let mut client = client;
+        client.set_token(account_data.authToken);
+        client.set_api_base(account_data.serverUrl)?;
+        Ok(Self {
+            user: account_data.user,
+            version: account_data.version,
+            main_key: crypto_manager.manager.decrypt(account_data.key, None)?,
+            client,
+        })
     }
 
     pub fn logout(self) -> Result<()> {

@@ -9,7 +9,10 @@ use etebase::utils::from_base64;
 #[allow(dead_code)]
 mod common;
 
-use common::USER;
+use common::{
+    USER,
+    sessionStorageKey,
+};
 
 fn user_reset(user: &common::TestUser) {
     let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
@@ -29,7 +32,7 @@ fn user_reset(user: &common::TestUser) {
 
 #[test]
 #[ignore]
-fn get_login_challenge() {
+fn login_and_password_change() {
     etebase::init().unwrap();
     user_reset(&USER);
 
@@ -46,4 +49,35 @@ fn get_login_challenge() {
     }
 
     // FIXME: incomplete!!!
+}
+
+
+#[test]
+fn session_save_and_restore() {
+    etebase::init().unwrap();
+    user_reset(&USER);
+
+    // FIXME: move to prepare user for test
+    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let session_key = from_base64(sessionStorageKey).unwrap();
+    let etebase = etebase::Account::restore(client.clone(), USER.storedSession, Some(&session_key)).unwrap();
+
+    // Verify we can store and restore without an encryption key
+    {
+        let saved = etebase.save(None).unwrap();
+        let mut etebase2 = etebase::Account::restore(client.clone(), &saved, None).unwrap();
+
+        // FIXME: we should verify we can access data instead
+        &etebase2.fetch_token().unwrap();
+    }
+
+    // Verify we can store and restore with an encryption key
+    {
+        let key = etebase::utils::randombytes(32);
+        let saved = etebase.save(Some(&key)).unwrap();
+        let mut etebase2 = etebase::Account::restore(client.clone(), &saved, Some(&key)).unwrap();
+
+        // FIXME: we should verify we can access data instead
+        &etebase2.fetch_token().unwrap();
+    }
 }
