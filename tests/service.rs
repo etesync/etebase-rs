@@ -6,11 +6,14 @@ const CLIENT_NAME: &str = "etebase-tests";
 
 use etebase::utils::from_base64;
 
+use etebase::error::Error;
+
 #[allow(dead_code)]
 mod common;
 
 use common::{
     USER,
+    USER2,
     sessionStorageKey,
 };
 
@@ -36,19 +39,25 @@ fn login_and_password_change() {
     etebase::init().unwrap();
     user_reset(&USER);
 
+    let another_password = "AnotherPassword";
     let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
-    let mut etebase = etebase::Account::login(client.clone(), USER.username, USER.password).unwrap();
+    let mut etebase2 = etebase::Account::login(client.clone(), USER2.username, USER2.password).unwrap();
 
-    &etebase.fetch_token().unwrap();
+    etebase2.change_password(another_password).unwrap();
 
-    etebase.logout().unwrap();
+    etebase2.logout().unwrap();
 
-    match etebase::Account::login(client.clone(), USER.username, "BadPassword") {
-        Err(_e) => (),
+    match etebase::Account::login(client.clone(), USER2.username, "BadPassword") {
+        Err(Error::Http(_)) => (),
         _ => assert!(false),
     }
 
-    // FIXME: incomplete!!!
+    // FIXME: add tests to verify that we can actually manipulate the data
+    let mut etebase2 = etebase::Account::login(client.clone(), USER2.username, another_password).unwrap();
+
+    etebase2.change_password(USER2.password).unwrap();
+
+    etebase2.logout().unwrap();
 }
 
 

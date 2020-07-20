@@ -167,7 +167,7 @@ impl Account {
         let authenticator = Authenticator::new(&self.client);
         let login_challenge = authenticator.get_login_challenge(&self.user.username)?;
 
-        let version = login_challenge.version;
+        let version = self.version;
 
         let username = &self.user.username;
         let main_key = &self.main_key;
@@ -188,6 +188,59 @@ impl Account {
 
         self.client.set_token(Some(&login_response.token));
 
+        Ok(())
+    }
+
+    pub fn change_password(&mut self, password: &str) -> Result<()> {
+        let authenticator = Authenticator::new(&self.client);
+        let version = self.version;
+        let username = &self.user.username;
+        let main_key = &self.main_key;
+        let login_challenge = authenticator.get_login_challenge(username)?;
+
+        let old_main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
+        let content = old_main_crypto_manager.manager.decrypt(&self.user.encryptedContent, None)?;
+        let old_login_crypto_manager = old_main_crypto_manager.get_login_crypto_manager()?;
+
+        let main_key = derive_key(&login_challenge.salt, &password)?;
+        let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
+        let login_crypto_manager = main_crypto_manager.get_login_crypto_manager()?;
+
+        let encrypted_content = main_crypto_manager.manager.encrypt(&content, None)?;
+
+
+        #[derive(Serialize)]
+        #[allow(non_snake_case)]
+        pub struct Body<'a> {
+            pub username: &'a str,
+            #[serde(with = "serde_bytes")]
+            pub challenge: &'a [u8],
+            pub host: &'a str,
+            pub action: &'a str,
+
+            #[serde(with = "serde_bytes")]
+            pub loginPubkey: &'a [u8],
+            #[serde(with = "serde_bytes")]
+            pub encryptedContent: &'a [u8],
+        }
+
+        let response_struct = Body {
+            username,
+            challenge: &login_challenge.challenge,
+            host: &self.client.get_api_base().host_str().unwrap_or(&self.client.get_api_base().as_str()),
+            action: "changePassword",
+
+            loginPubkey: &login_crypto_manager.get_pubkey(),
+            encryptedContent: &encrypted_content,
+        };
+        let response = rmp_serde::to_vec_named(&response_struct)?;
+
+        let signature = old_login_crypto_manager.sign_detached(&response)?;
+
+        authenticator.change_password(&response, &signature)?;
+
+        self.main_key = main_key;
+        self.user.encryptedContent = encrypted_content;
         Ok(())
     }
 
