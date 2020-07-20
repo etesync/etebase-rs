@@ -17,6 +17,9 @@ macro_rules! try_into {
     }
 }
 
+pub type StrBase64 = str;
+pub type StringBase64 = String;
+
 pub const SYMMETRIC_KEY_SIZE: usize = 32; // sodium.crypto_aead_xchacha20poly1305_ietf_KEYBYTES;
 pub const SYMMETRIC_TAG_SIZE: usize = 16; // sodium.crypto_aead_xchacha20poly1305_ietf_ABYTES;
 pub const SYMMETRIC_NONCE_SIZE: usize = 24; // sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
@@ -25,14 +28,14 @@ pub fn randombytes(size: usize) -> Vec<u8> {
     sodiumoxide::randombytes::randombytes(size)
 }
 
-pub fn from_base64(string: &str) -> Result<Vec<u8>> {
+pub fn from_base64(string: &StrBase64) -> Result<Vec<u8>> {
     match base64::decode(string, base64::Variant::UrlSafeNoPadding) {
         Ok(bytes) => Ok(bytes),
         Err(_) => Err(Error::Base64("Failed decoding base64 string")),
     }
 }
 
-pub fn to_base64(bytes: &[u8]) -> Result<String> {
+pub fn to_base64(bytes: &[u8]) -> Result<StringBase64> {
     Ok(base64::encode(bytes, base64::Variant::UrlSafeNoPadding))
 }
 
