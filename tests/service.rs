@@ -12,9 +12,9 @@ mod common;
 use common::USER;
 
 fn user_reset(user: &common::TestUser) {
-    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL, None).unwrap();
-    let body_struct = etebase::online_managers::SignupBody {
-        user: &etebase::online_managers::User {
+    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let body_struct = etebase::test_helpers::SignupBody {
+        user: &etebase::User {
             username: user.username,
             email: user.email,
         },
@@ -23,7 +23,7 @@ fn user_reset(user: &common::TestUser) {
         loginPubkey: &from_base64(user.loginPubkey).unwrap(),
         encryptedContent: &from_base64(user.encryptedContent).unwrap(),
     };
-    etebase::online_managers::test_reset(&client, body_struct).unwrap();
+    etebase::test_helpers::test_reset(&client, body_struct).unwrap();
 }
 
 
@@ -32,9 +32,12 @@ fn get_login_challenge() {
     etebase::init().unwrap();
     user_reset(&USER);
 
-    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL, None).unwrap();
-    let authenticator = etebase::online_managers::Authenticator::new(&client);
+    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let mut etebase = etebase::Account::login(&client, USER.username, USER.password).unwrap();
 
-    let login_challenge = authenticator.get_login_challenge(USER.username).unwrap();
-    assert_eq!(login_challenge.salt, from_base64(USER.salt).unwrap());
+    &etebase.fetch_token().unwrap();
+
+    etebase.logout().unwrap();
+
+    // FIXME: incomplete!!!
 }

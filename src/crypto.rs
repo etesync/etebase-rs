@@ -48,7 +48,7 @@ pub struct CryptoManager {
     pub version: u8,
     cipher_key: [u8; 32],
     mac_key: [u8; 32],
-    asym_key_seed: [u8; 32],
+    pub asym_key_seed: [u8; 32],
     sub_derivation_key: [u8; 32],
 }
 

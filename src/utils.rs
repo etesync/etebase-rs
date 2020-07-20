@@ -10,6 +10,21 @@ use super::error::{
     Result,
 };
 
+#[macro_export]
+macro_rules! try_into {
+    ($x:expr) => {
+        ($x).try_into().or(Err(Error::TryInto("Try into failed")))
+    }
+}
+
+pub const SYMMETRIC_KEY_SIZE: usize = 32; // sodium.crypto_aead_xchacha20poly1305_ietf_KEYBYTES;
+pub const SYMMETRIC_TAG_SIZE: usize = 16; // sodium.crypto_aead_xchacha20poly1305_ietf_ABYTES;
+pub const SYMMETRIC_NONCE_SIZE: usize = 24; // sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
+
+pub fn randombytes(size: usize) -> Vec<u8> {
+    sodiumoxide::randombytes::randombytes(size)
+}
+
 pub fn from_base64(string: &str) -> Result<Vec<u8>> {
     match base64::decode(string, base64::Variant::UrlSafeNoPadding) {
         Ok(bytes) => Ok(bytes),

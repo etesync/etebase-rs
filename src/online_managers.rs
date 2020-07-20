@@ -28,8 +28,6 @@ static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_VERSION"),
 );
 
-pub const SERVICE_API_URL: &str = "https://api.etebase.com";
-
 pub fn test_reset(client: &Client, body_struct: SignupBody) -> Result<()> {
     let body = rmp_serde::to_vec_named(&body_struct)?;
     let url = client.api_base.join("api/v1/test/authentication/reset/")?;
@@ -51,7 +49,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(client_name: &str, server_url: &str, token: Option<&str>) -> Result<Client> {
+    pub fn new(client_name: &str, server_url: &str) -> Result<Client> {
         let req_client = ReqwestClient::builder()
             .user_agent(format!("{} {}", client_name, APP_USER_AGENT))
             .build()?;
@@ -59,12 +57,16 @@ impl Client {
         Ok(Client {
             req_client,
             api_base: Url::parse(server_url)?,
-            auth_token: token.and_then(|token| Some(token.to_owned())),
+            auth_token: None,
         })
     }
 
     pub fn set_token(&mut self, token: Option<&str>) {
         self.auth_token = token.and_then(|x| Some(x.to_string()));
+    }
+
+    pub fn get_api_base(&self) -> &Url {
+        &self.api_base
     }
 
     fn with_auth_header(&self, builder: RequestBuilder) -> RequestBuilder {
@@ -131,8 +133,19 @@ pub struct SignupBody<'a> {
 
 #[derive(Serialize)]
 struct LoginBody<'a> {
+    #[serde(with = "serde_bytes")]
     response: &'a [u8],
+    #[serde(with = "serde_bytes")]
     signature: &'a [u8],
+}
+
+#[derive(Serialize)]
+pub struct LoginBodyResponse<'a> {
+    pub username: &'a str,
+    #[serde(with = "serde_bytes")]
+    pub challenge: &'a [u8],
+    pub host: &'a str,
+    pub action: &'a str,
 }
 
 #[derive(Deserialize)]
