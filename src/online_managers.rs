@@ -30,10 +30,12 @@ static APP_USER_AGENT: &str = concat!(
 
 pub const SERVICE_API_URL: &str = "https://api.etebase.com";
 
-pub fn test_reset(client: &Client) -> Result<()> {
-    let url = client.api_base.join("test/authentication/reset/")?;
+pub fn test_reset(client: &Client, body_struct: SignupBody) -> Result<()> {
+    let body = rmp_serde::to_vec_named(&body_struct)?;
+    let url = client.api_base.join("api/v1/test/authentication/reset/")?;
 
     let res = client.post(url.as_str())?
+        .body(body)
         .send()?;
 
     res.error_for_status()?;
@@ -103,14 +105,57 @@ impl Client {
     }
 }
 
+
 #[derive(Deserialize)]
-#[allow(dead_code)]
 pub struct LoginChallange {
     #[serde(with = "serde_bytes")]
     pub challenge: Vec<u8>,
     #[serde(with = "serde_bytes")]
     pub salt: Vec<u8>,
     pub version: u8,
+}
+
+#[derive(Serialize)]
+#[allow(non_snake_case)]
+pub struct SignupBody<'a> {
+    pub user: &'a User<'a>,
+    #[serde(with = "serde_bytes")]
+    pub salt: &'a[u8],
+    #[serde(with = "serde_bytes")]
+    pub loginPubkey: &'a[u8],
+    #[serde(with = "serde_bytes")]
+    pub pubkey: &'a[u8],
+    #[serde(with = "serde_bytes")]
+    pub encryptedContent: &'a[u8],
+}
+
+#[derive(Serialize)]
+struct LoginBody<'a> {
+    response: &'a [u8],
+    signature: &'a [u8],
+}
+
+#[derive(Deserialize)]
+#[allow(non_snake_case)]
+pub struct LoginResponseUser {
+    pub username: String,
+    pub email: String,
+    #[serde(with = "serde_bytes")]
+    pub pubkey: Vec<u8>,
+    #[serde(with = "serde_bytes")]
+    pub encryptedContent: Vec<u8>,
+}
+
+#[derive(Deserialize)]
+pub struct LoginResponse {
+    pub token: String,
+    pub user: LoginResponseUser,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct User<'a> {
+    pub username: &'a str,
+    pub email: &'a str,
 }
 
 pub struct Authenticator {
@@ -146,5 +191,69 @@ impl Authenticator {
         let ret: LoginChallange = rmp_serde::from_read_ref(&res)?;
 
         Ok(ret)
+    }
+
+    pub fn signup(&self, user: &User, salt: &[u8], login_pubkey: &[u8], pubkey: &[u8], encrypted_content: &[u8]) -> Result<LoginResponse> {
+        let body_struct = SignupBody {
+            user,
+            salt,
+            loginPubkey: login_pubkey,
+            pubkey,
+            encryptedContent: encrypted_content,
+        };
+        let body = rmp_serde::to_vec_named(&body_struct)?;
+
+        let url = [self.api_base, "signup/"].concat();
+        let res = self.client.post(&url)?
+            .body(body)
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let ret: LoginResponse = rmp_serde::from_read_ref(&res)?;
+
+        Ok(ret)
+    }
+
+    pub fn login(&self, response: &[u8], signature: &[u8]) -> Result<LoginResponse> {
+        let body_struct = LoginBody {
+            response,
+            signature,
+        };
+        let body = rmp_serde::to_vec_named(&body_struct)?;
+
+        let url = [self.api_base, "login/"].concat();
+        let res = self.client.post(&url)?
+            .body(body)
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let ret: LoginResponse = rmp_serde::from_read_ref(&res)?;
+
+        Ok(ret)
+    }
+
+    pub fn logout(&self) -> Result<()> {
+        let url = [self.api_base, "logout/"].concat();
+        let res = self.client.post(&url)?
+            .send()?;
+        res.error_for_status()?;
+
+        Ok(())
+    }
+
+    pub fn change_password(&self, response: &[u8], signature: &[u8]) -> Result<()> {
+        let body_struct = LoginBody {
+            response,
+            signature,
+        };
+        let body = rmp_serde::to_vec_named(&body_struct)?;
+
+        let url = [self.api_base, "change_password/"].concat();
+        let res = self.client.post(&url)?
+            .body(body)
+            .send()?;
+        res.error_for_status()?;
+
+        Ok(())
     }
 }

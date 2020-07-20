@@ -11,9 +11,26 @@ mod common;
 
 use common::USER;
 
+fn user_reset(user: &common::TestUser) {
+    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL, None).unwrap();
+    let body_struct = etebase::online_managers::SignupBody {
+        user: &etebase::online_managers::User {
+            username: user.username,
+            email: user.email,
+        },
+        salt: &from_base64(user.salt).unwrap(),
+        pubkey: &from_base64(user.pubkey).unwrap(),
+        loginPubkey: &from_base64(user.loginPubkey).unwrap(),
+        encryptedContent: &from_base64(user.encryptedContent).unwrap(),
+    };
+    etebase::online_managers::test_reset(&client, body_struct).unwrap();
+}
+
+
 #[test]
 fn get_login_challenge() {
     etebase::init().unwrap();
+    user_reset(&USER);
 
     let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL, None).unwrap();
     let authenticator = etebase::online_managers::Authenticator::new(&client);
