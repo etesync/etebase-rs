@@ -6,12 +6,10 @@ const CLIENT_NAME: &str = "etebase-tests";
 
 use etebase::utils::from_base64;
 
+#[allow(dead_code)]
 mod common;
 
-use common::{
-    USER,
-    SALT_BASE64,
-};
+use common::USER;
 
 #[test]
 fn get_login_challenge() {
@@ -20,6 +18,6 @@ fn get_login_challenge() {
     let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL, None).unwrap();
     let authenticator = etebase::online_managers::Authenticator::new(&client);
 
-    let login_challenge = authenticator.get_login_challenge(USER).unwrap();
-    assert_eq!(login_challenge.salt, from_base64(SALT_BASE64).unwrap());
+    let login_challenge = authenticator.get_login_challenge(USER.username).unwrap();
+    assert_eq!(login_challenge.salt, from_base64(USER.salt).unwrap());
 }
