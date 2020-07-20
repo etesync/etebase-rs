@@ -15,12 +15,7 @@ use reqwest::{
     header,
 };
 
-use super::{
-    error::{
-        Result,
-        Error,
-    }
-};
+use super::error::Result;
 
 static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_NAME"),
@@ -49,12 +44,12 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(client_name: &str, server_url: &str) -> Result<Client> {
+    pub fn new(client_name: &str, server_url: &str) -> Result<Self> {
         let req_client = ReqwestClient::builder()
             .user_agent(format!("{} {}", client_name, APP_USER_AGENT))
             .build()?;
 
-        Ok(Client {
+        Ok(Self{
             req_client,
             api_base: Url::parse(server_url)?,
             auth_token: None,

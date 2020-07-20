@@ -53,7 +53,7 @@ pub struct CryptoManager {
 }
 
 impl CryptoManager {
-    pub fn new(key: &[u8; 32], context: &[u8; 8], version: u8) -> Result<CryptoManager> {
+    pub fn new(key: &[u8; 32], context: &[u8; 8], version: u8) -> Result<Self> {
         let key = kdf::Key(*key);
         let mut cipher_key = [0; 32];
         let mut mac_key = [0; 32];
@@ -65,7 +65,7 @@ impl CryptoManager {
         to_enc_error!(kdf::derive_from_key(&mut asym_key_seed, 3, *context, &key), "Failed deriving key")?;
         to_enc_error!(kdf::derive_from_key(&mut sub_derivation_key, 4, *context, &key), "Failed deriving key")?;
 
-        Ok(CryptoManager {
+        Ok(Self {
             version,
             cipher_key,
             mac_key,
@@ -148,11 +148,11 @@ pub struct LoginCryptoManager {
 }
 
 impl LoginCryptoManager {
-    pub fn keygen(seed: &[u8; 32]) -> Result<LoginCryptoManager> {
+    pub fn keygen(seed: &[u8; 32]) -> Result<Self> {
         let seed = sign::Seed(*seed);
         let (pubkey, privkey) = sign::keypair_from_seed(&seed);
 
-        Ok(LoginCryptoManager {
+        Ok(Self {
             privkey,
             pubkey,
         })
@@ -185,7 +185,7 @@ pub struct BoxCryptoManager {
 }
 
 impl BoxCryptoManager {
-    pub fn keygen(seed: Option<&[u8; 32]>) -> Result<BoxCryptoManager> {
+    pub fn keygen(seed: Option<&[u8; 32]>) -> Result<Self> {
         let (pubkey, privkey) = match seed {
             Some(seed) => {
                 let seed = box_::Seed(*seed);
@@ -194,7 +194,7 @@ impl BoxCryptoManager {
             None => box_::gen_keypair(),
         };
 
-        Ok(BoxCryptoManager {
+        Ok(Self {
             privkey,
             pubkey,
         })
@@ -245,10 +245,10 @@ pub struct CryptoMac {
 }
 
 impl CryptoMac {
-    pub fn new(key: Option<&[u8]>) -> Result<CryptoMac> {
+    pub fn new(key: Option<&[u8]>) -> Result<Self> {
         let state = to_enc_error!(generichash::State::new(32, key), "Failed to init hash")?;
 
-        Ok(CryptoMac {
+        Ok(Self {
             state,
         })
     }

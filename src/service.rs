@@ -93,7 +93,7 @@ pub struct Account {
 }
 
 impl Account {
-    pub fn signup(client: Client, user: &User, password: &str) -> Result<Account> {
+    pub fn signup(client: Client, user: &User, password: &str) -> Result<Self> {
         super::init()?;
 
         let authenticator = Authenticator::new(&client);
@@ -116,7 +116,7 @@ impl Account {
         let mut client = client.clone();
         client.set_token(Some(&login_response.token));
 
-        let ret = Account {
+        let ret = Self {
             main_key,
             version,
             user: login_response.user,
@@ -126,7 +126,7 @@ impl Account {
         Ok(ret)
     }
 
-    pub fn login(client: Client, username: &str, password: &str) -> Result<Account> {
+    pub fn login(client: Client, username: &str, password: &str) -> Result<Self> {
         super::init()?;
 
         let authenticator = Authenticator::new(&client);
@@ -153,7 +153,7 @@ impl Account {
         let mut client = client.clone();
         client.set_token(Some(&login_response.token));
 
-        let ret = Account {
+        let ret = Self {
             main_key,
             version,
             user: login_response.user,
@@ -266,7 +266,7 @@ impl Account {
         to_base64(&serialized)
     }
 
-    pub fn restore(client: Client, account_data_stored: &str, encryption_key: Option<&[u8]>) -> Result<Account> {
+    pub fn restore(client: Client, account_data_stored: &str, encryption_key: Option<&[u8]>) -> Result<Self> {
         let encryption_key = encryption_key.unwrap_or(&[0; 32]);
         let account_data_stored = from_base64(account_data_stored)?;
         let account_data_stored: AccountDataStored = rmp_serde::from_read_ref(&account_data_stored)?;
