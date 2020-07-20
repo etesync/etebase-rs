@@ -34,34 +34,30 @@ use super::{
     },
 };
 
-struct MainCryptoManager {
-    pub manager: CryptoManager,
-}
+struct MainCryptoManager(CryptoManager);
 
 impl MainCryptoManager {
     pub fn new(key: &[u8; 32], version: u8) -> Result<MainCryptoManager> {
         let context = b"Main    ";
 
         Ok(MainCryptoManager {
-            manager: CryptoManager::new(key, &context, version)?,
+            0: CryptoManager::new(key, &context, version)?,
         })
     }
 
     pub fn get_login_crypto_manager(&self) -> Result<LoginCryptoManager> {
-        LoginCryptoManager::keygen(&self.manager.asym_key_seed)
+        LoginCryptoManager::keygen(&self.0.asym_key_seed)
     }
 }
 
-struct StorageCryptoManager {
-    pub manager: CryptoManager,
-}
+struct StorageCryptoManager(CryptoManager);
 
 impl StorageCryptoManager {
     pub fn new(key: &[u8; 32], version: u8) -> Result<Self> {
         let context = b"Stor    ";
 
         Ok(Self {
-            manager: CryptoManager::new(key, &context, version)?,
+            0: CryptoManager::new(key, &context, version)?,
         })
     }
 }
@@ -108,7 +104,7 @@ impl Account {
 
         let account_key = randombytes(SYMMETRIC_KEY_SIZE);
         let content = [&account_key, &identity_crypto_manager.get_privkey()[..]].concat();
-        let encrypted_content = main_crypto_manager.manager.encrypt(&content, None)?;
+        let encrypted_content = main_crypto_manager.0.encrypt(&content, None)?;
 
         let login_response = authenticator.signup(user, &salt, &login_crypto_manager.get_pubkey(),
                                                   &identity_crypto_manager.get_pubkey(), &encrypted_content)?;
@@ -199,14 +195,14 @@ impl Account {
         let login_challenge = authenticator.get_login_challenge(username)?;
 
         let old_main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
-        let content = old_main_crypto_manager.manager.decrypt(&self.user.encryptedContent, None)?;
+        let content = old_main_crypto_manager.0.decrypt(&self.user.encryptedContent, None)?;
         let old_login_crypto_manager = old_main_crypto_manager.get_login_crypto_manager()?;
 
         let main_key = derive_key(&login_challenge.salt, &password)?;
         let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
         let login_crypto_manager = main_crypto_manager.get_login_crypto_manager()?;
 
-        let encrypted_content = main_crypto_manager.manager.encrypt(&content, None)?;
+        let encrypted_content = main_crypto_manager.0.encrypt(&content, None)?;
 
 
         #[derive(Serialize)]
@@ -251,7 +247,7 @@ impl Account {
         let account_data = AccountData {
             user: self.user.clone(),
             version,
-            key: &crypto_manager.manager.encrypt(&self.main_key, None)?,
+            key: &crypto_manager.0.encrypt(&self.main_key, None)?,
             authToken: self.client.get_token(),
             serverUrl: self.client.get_api_base().as_str(),
         };
@@ -259,7 +255,7 @@ impl Account {
 
         let ret = AccountDataStored {
             version,
-            encryptedData: &crypto_manager.manager.encrypt(&serialized, Some(&[version]))?,
+            encryptedData: &crypto_manager.0.encrypt(&serialized, Some(&[version]))?,
         };
         let serialized = rmp_serde::to_vec_named(&ret)?;
 
@@ -273,7 +269,7 @@ impl Account {
         let version = account_data_stored.version;
 
         let crypto_manager = StorageCryptoManager::new(try_into!(encryption_key)?, version)?;
-        let decrypted = crypto_manager.manager.decrypt(&account_data_stored.encryptedData, Some(&[version]))?;
+        let decrypted = crypto_manager.0.decrypt(&account_data_stored.encryptedData, Some(&[version]))?;
         let account_data: AccountData = rmp_serde::from_read_ref(&decrypted)?;
 
         let mut client = client;
@@ -282,7 +278,7 @@ impl Account {
         Ok(Self {
             user: account_data.user,
             version: account_data.version,
-            main_key: crypto_manager.manager.decrypt(account_data.key, None)?,
+            main_key: crypto_manager.0.decrypt(account_data.key, None)?,
             client,
         })
     }
