@@ -28,6 +28,7 @@ fn user_reset(user: &common::TestUser) {
 
 
 #[test]
+#[ignore]
 fn get_login_challenge() {
     etebase::init().unwrap();
     user_reset(&USER);
