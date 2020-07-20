@@ -17,6 +17,11 @@ use reqwest::{
 
 use super::error::Result;
 
+use super::encrypted_models::{
+    CollectionSerialRead,
+    EncryptedCollection,
+};
+
 static APP_USER_AGENT: &str = concat!(
     env!("CARGO_PKG_NAME"),
     "/",
@@ -108,6 +113,11 @@ impl Client {
     }
 }
 
+#[derive(Deserialize)]
+pub struct ListResponse<T> {
+    data: Vec<T>,
+    done: bool,
+}
 
 #[derive(Deserialize)]
 pub struct LoginChallange {
@@ -267,6 +277,134 @@ impl<'a> Authenticator<'a> {
             .body(body)
             .send()?;
         res.error_for_status()?;
+
+        Ok(())
+    }
+}
+
+pub struct FetchOptions<'a> {
+    limit: Option<usize>,
+    stoken: Option<&'a str>,
+    iterator: Option<&'a str>,
+    prefetch: Option<bool>,
+    with_collection: Option<bool>,
+}
+
+impl<'a> FetchOptions<'a> {
+    pub fn new() -> Self {
+        Self {
+            limit: None,
+            stoken: None,
+            iterator: None,
+            prefetch: None,
+            with_collection: None,
+        }
+    }
+
+    pub fn limit(mut self, limit: usize) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    pub fn prefetch(mut self, prefetch: bool) -> Self {
+        self.prefetch = Some(prefetch);
+        self
+    }
+
+    pub fn with_collection(mut self, with_collection: bool) -> Self {
+        self.with_collection = Some(with_collection);
+        self
+    }
+
+    pub fn iterator(mut self, iterator: Option<&'a str>) -> Self {
+        self.iterator = iterator;
+        self
+    }
+
+    pub fn stoken(mut self, stoken: Option<&'a str>) -> Self {
+        self.stoken = stoken;
+        self
+    }
+}
+
+pub fn apply_fetch_options(url: Url, options: Option<&FetchOptions>) -> Url {
+    let options = match options {
+        Some(options) => options,
+        None => return url,
+    };
+
+    let mut url = url;
+    {
+        let mut query = url.query_pairs_mut();
+        if let Some(limit) = options.limit {
+            query.append_pair("limit", &limit.to_string());
+        }
+        if let Some(prefetch) = options.prefetch {
+            query.append_pair("prefetch", &prefetch.to_string());
+        }
+        if let Some(with_collection) = options.with_collection {
+            query.append_pair("withCollection", &with_collection.to_string());
+        }
+        if let Some(stoken) = options.stoken {
+            query.append_pair("stoken", stoken);
+        }
+        if let Some(iterator) = options.iterator {
+            query.append_pair("iterator", iterator);
+        }
+    }
+
+    url
+}
+
+
+pub struct CollectionManagerOnline<'a> {
+    api_base: Url,
+    client: &'a Client,
+}
+
+impl<'a> CollectionManagerOnline<'a> {
+    pub fn new(client: &'a Client) -> Self {
+        Self {
+            api_base: client.api_base.join("api/v1/collection/").unwrap(),
+            client,
+        }
+    }
+
+    pub fn fetch(&self, col_uid: &str, options: Option<&FetchOptions>) -> Result<EncryptedCollection> {
+        let url = apply_fetch_options(self.api_base.join(col_uid)?, options);
+        let res = self.client.get(&url)?
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let serialized: CollectionSerialRead = rmp_serde::from_read_ref(&res)?;
+
+        Ok(EncryptedCollection::deserialize(serialized))
+    }
+
+    pub fn list(&self, options: Option<&FetchOptions>) -> Result<ListResponse<EncryptedCollection>> {
+        let url = apply_fetch_options(self.api_base.clone(), options);
+        let res = self.client.get(&url)?
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let serialized: ListResponse<CollectionSerialRead> = rmp_serde::from_read_ref(&res)?;
+
+        let ret = ListResponse {
+            data: serialized.data.into_iter().map(move |x| EncryptedCollection::deserialize(x)).collect(),
+            done: serialized.done,
+        };
+
+        Ok(ret)
+    }
+
+    pub fn create(&self, collection: &EncryptedCollection, options: Option<&FetchOptions>) -> Result<()> {
+        let url = apply_fetch_options(self.api_base.clone(), options);
+        let body = rmp_serde::to_vec_named(&collection.serialize())?;
+
+        let res = self.client.get(&url)?
+            .body(body)
+            .send()?;
+        res.error_for_status()?.bytes()?;
 
         Ok(())
     }
