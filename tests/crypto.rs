@@ -68,3 +68,16 @@ fn login_crypto_manager() {
     let pubkey = login_crypto_manager.get_pubkey();
     assert!(login_crypto_manager.verify_detached(msg, &signature, (&pubkey[..]).try_into().unwrap()).unwrap());
 }
+
+#[test]
+fn box_crypto_manager() {
+    etebase::init().unwrap();
+
+    let box_crypto_manager = crypto::BoxCryptoManager::keygen(None).unwrap();
+    let box_crypto_manager2 = crypto::BoxCryptoManager::keygen(None).unwrap();
+
+    let msg = b"This Is Some Test Cleartext.";
+    let cipher = box_crypto_manager.encrypt(msg, (&box_crypto_manager2.get_pubkey()[..]).try_into().unwrap()).unwrap();
+    let decrypted = box_crypto_manager2.decrypt(&cipher[..], (&box_crypto_manager.get_pubkey()[..]).try_into().unwrap()).unwrap();
+    assert_eq!(decrypted, msg);
+}

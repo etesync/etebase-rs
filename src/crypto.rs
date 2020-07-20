@@ -5,9 +5,11 @@ use std::convert::TryInto;
 
 use sodiumoxide::crypto::{
     aead::xchacha20poly1305_ietf as aead,
+    box_,
     generichash,
     kdf,
     sign,
+    scalarmult,
     pwhash::argon2id13,
 };
 
@@ -174,5 +176,68 @@ impl LoginCryptoManager {
 
     pub fn get_pubkey(&self) -> Vec<u8> {
         self.pubkey[..].to_vec()
+    }
+}
+
+pub struct BoxCryptoManager {
+    pubkey: box_::PublicKey,
+    privkey: box_::SecretKey,
+}
+
+impl BoxCryptoManager {
+    pub fn keygen(seed: Option<&[u8; 32]>) -> Result<BoxCryptoManager> {
+        let (pubkey, privkey) = match seed {
+            Some(seed) => {
+                let seed = box_::Seed(*seed);
+                box_::keypair_from_seed(&seed)
+            }
+            None => box_::gen_keypair(),
+        };
+
+        Ok(BoxCryptoManager {
+            privkey,
+            pubkey,
+        })
+    }
+
+    pub fn from_privkey(privkey: &[u8; box_::SECRETKEYBYTES]) -> Result<BoxCryptoManager> {
+        let privkey_scalar = scalarmult::Scalar(*privkey);
+        let privkey = box_::SecretKey(*privkey);
+        let pubkey_scalar = scalarmult::scalarmult_base(&privkey_scalar);
+        let pubkey = box_::PublicKey(pubkey_scalar[..].try_into().unwrap());
+
+        Ok(BoxCryptoManager {
+            privkey,
+            pubkey,
+        })
+    }
+
+    pub fn encrypt(&self, msg: &[u8], pubkey: &[u8; box_::PUBLICKEYBYTES]) -> Result<Vec<u8>> {
+        let pubkey = box_::PublicKey(pubkey[..].try_into().unwrap());
+        let privkey = box_::SecretKey(self.privkey[..].try_into().unwrap());
+        let nonce = box_::gen_nonce();
+        let encrypted = box_::seal(msg, &nonce, &pubkey, &privkey);
+        let mut ret = vec![0; box_::NONCEBYTES + encrypted.len()];
+        ret[..box_::NONCEBYTES].copy_from_slice(nonce.as_ref());
+        ret[box_::NONCEBYTES..].copy_from_slice(&encrypted);
+
+        Ok(ret)
+    }
+
+    pub fn decrypt(&self, cipher: &[u8], pubkey: &[u8; sign::PUBLICKEYBYTES]) -> Result<Vec<u8>> {
+        let pubkey = box_::PublicKey(pubkey[..].try_into().unwrap());
+        let privkey = box_::SecretKey(self.privkey[..].try_into().unwrap());
+        let nonce = &cipher[..box_::NONCEBYTES];
+        let nonce: &[u8; box_::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
+        let cipher = &cipher[box_::NONCEBYTES..];
+        Ok(to_enc_error!(box_::open(cipher, &box_::Nonce(*nonce), &pubkey, &privkey), "decryption failed")?)
+    }
+
+    pub fn get_pubkey(&self) -> Vec<u8> {
+        self.pubkey[..].to_vec()
+    }
+
+    pub fn get_privkey(&self) -> Vec<u8> {
+        self.privkey[..].to_vec()
     }
 }
