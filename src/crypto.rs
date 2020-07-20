@@ -78,9 +78,7 @@ impl CryptoManager {
         let key = aead::Key(self.cipher_key);
         let nonce = aead::gen_nonce();
         let encrypted = aead::seal(msg, additional_data, &nonce, &key);
-        let mut ret = vec![0; aead::NONCEBYTES + encrypted.len()];
-        ret[..aead::NONCEBYTES].copy_from_slice(nonce.as_ref());
-        ret[aead::NONCEBYTES..].copy_from_slice(&encrypted);
+        let ret = [nonce.as_ref(), &encrypted].concat();
 
         Ok(ret)
     }
@@ -98,9 +96,7 @@ impl CryptoManager {
         let nonce = aead::gen_nonce();
         let mut encrypted = msg.clone().to_owned();
         let tag = aead::seal_detached(&mut encrypted[..], additional_data, &nonce, &key);
-        let mut ret = vec![0; aead::NONCEBYTES + encrypted.len()];
-        ret[..aead::NONCEBYTES].copy_from_slice(nonce.as_ref());
-        ret[aead::NONCEBYTES..].copy_from_slice(&encrypted);
+        let ret = [nonce.as_ref(), &encrypted].concat();
 
         Ok((tag[..].to_owned(), ret))
     }
@@ -221,9 +217,7 @@ impl BoxCryptoManager {
         let privkey = box_::SecretKey(self.privkey[..].try_into().unwrap());
         let nonce = box_::gen_nonce();
         let encrypted = box_::seal(msg, &nonce, &pubkey, &privkey);
-        let mut ret = vec![0; box_::NONCEBYTES + encrypted.len()];
-        ret[..box_::NONCEBYTES].copy_from_slice(nonce.as_ref());
-        ret[box_::NONCEBYTES..].copy_from_slice(&encrypted);
+        let ret = [nonce.as_ref(), &encrypted].concat();
 
         Ok(ret)
     }
