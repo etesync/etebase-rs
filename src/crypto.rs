@@ -133,6 +133,10 @@ impl CryptoManager {
         generichash_quick(&self.sub_derivation_key, Some(salt))
     }
 
+    pub fn get_crypto_mac(&self) -> Result<CryptoMac> {
+        CryptoMac::new(Some(&self.mac_key))
+    }
+
     pub fn calculate_mac(&self, msg: &[u8]) -> Result<Vec<u8>> {
         generichash_quick(msg, Some(&self.mac_key))
     }
@@ -239,6 +243,36 @@ impl BoxCryptoManager {
 
     pub fn get_privkey(&self) -> Vec<u8> {
         self.privkey[..].to_vec()
+    }
+}
+
+pub struct CryptoMac {
+    state: generichash::State,
+}
+
+impl CryptoMac {
+    pub fn new(key: Option<&[u8]>) -> Result<CryptoMac> {
+        let state = to_enc_error!(generichash::State::new(32, key), "Failed to init hash")?;
+
+        Ok(CryptoMac {
+            state,
+        })
+    }
+
+    pub fn update(&mut self, msg: &[u8]) -> Result<()> {
+        Ok(to_enc_error!(self.state.update(msg), "Failed to update hash")?)
+    }
+
+    pub fn update_with_len_prefix(&mut self, msg: &[u8]) -> Result<()> {
+        let len = msg.len() as u32;
+        to_enc_error!(self.state.update(&len.to_le_bytes()), "Failed to update hash")?;
+        to_enc_error!(self.state.update(msg), "Failed to update hash")?;
+
+        Ok(())
+    }
+
+    pub fn finalize(self) -> Result<Vec<u8>> {
+        Ok(to_enc_error!(self.state.finalize(), "Failed to finalize hash")?.as_ref().to_vec())
     }
 }
 

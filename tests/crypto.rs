@@ -56,6 +56,10 @@ fn crypto_manager() {
     assert_eq!(clear_text, &decrypted[..]);
 
     crypto_manager.verify(&cipher, tag, None).unwrap();
+
+    let mut crypto_mac = crypto_manager.get_crypto_mac().unwrap();
+    crypto_mac.update(&[0; 4]).unwrap();
+    assert_eq!(crypto_mac.finalize().unwrap(), from_base64("y5nYZ75gDUna4bnaAHobXUlgQoTKOnueNW_KCYxcAg4").unwrap());
 }
 
 #[test]
@@ -81,6 +85,23 @@ fn box_crypto_manager() {
     let cipher = box_crypto_manager.encrypt(msg, (&box_crypto_manager2.get_pubkey()[..]).try_into().unwrap()).unwrap();
     let decrypted = box_crypto_manager2.decrypt(&cipher[..], (&box_crypto_manager.get_pubkey()[..]).try_into().unwrap()).unwrap();
     assert_eq!(decrypted, msg);
+}
+
+#[test]
+fn crypto_mac() {
+    etebase::init().unwrap();
+
+    let key = from_base64(KEY_BASE64).unwrap();
+
+    let mut crypto_mac = crypto::CryptoMac::new(None).unwrap();
+    crypto_mac.update(&[0; 4]).unwrap();
+    crypto_mac.update_with_len_prefix(&[0; 8]).unwrap();
+    assert_eq!(crypto_mac.finalize().unwrap(), from_base64("P-Hpzo86RG6Ps4R1gGXmQrzmdJC2OotqqreKmB8G45A").unwrap());
+
+    let mut crypto_mac = crypto::CryptoMac::new(Some(&key)).unwrap();
+    crypto_mac.update(&[0; 4]).unwrap();
+    crypto_mac.update_with_len_prefix(&[0; 8]).unwrap();
+    assert_eq!(crypto_mac.finalize().unwrap(), from_base64("rgL6d_XDiBfbzevFdtktc61XB5-PkS1uQ1cj5DgfFc8").unwrap());
 }
 
 #[test]
