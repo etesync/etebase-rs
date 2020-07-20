@@ -5,6 +5,7 @@ use etebase::utils::from_base64;
 
 pub const USER: &str = "test_user";
 pub const PASSWORD: &str = "SomePassword";
+pub const PUBKEY_BASE64: &str = "CXNdzeU6FgHz9ei64wJbKDhHc0fkoJ1p_c8zGuFeuGA";
 pub const KEY_BASE64: &str = "Eq9b_rdbzeiU3P4sg5qN24KXbNgy8GgCeC74nFF99hI";
 pub const SALT_BASE64: &str = "6y7jUaojtLq6FISBWPjwXTeiYk5cTiz1oe6HVNGvn2E";
 

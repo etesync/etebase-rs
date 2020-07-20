@@ -241,3 +241,28 @@ impl BoxCryptoManager {
         self.privkey[..].to_vec()
     }
 }
+
+pub fn get_pretty_fingerprint(content: &[u8]) -> String {
+    let delimiter = "   ";
+    let fingerprint = generichash_quick(content, None).unwrap();
+
+    /* A 5 digit number can be stored in 16 bits, so a 256bit pubkey needs 16 5 digit numbers. */
+    let parts = (0..16).into_iter().map(|i| {
+        let i = i * 2;
+        let left = fingerprint[i] as u16;
+        let right = fingerprint[i + 1] as u16;
+        let num = (left << 8) + right;
+        let suffix = if i == 30 {
+            ""
+        } else if (i + 2) % 8 == 0 {
+            "\n"
+        } else {
+            delimiter
+        };
+        let part = format!("{:0>5}{}", num, suffix);
+
+        part
+    });
+
+    parts.collect::<String>()
+}

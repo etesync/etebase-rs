@@ -11,6 +11,7 @@ mod common;
 
 use common::{
     PASSWORD,
+    PUBKEY_BASE64,
     KEY_BASE64,
     SALT_BASE64,
     get_encryption_key
@@ -80,4 +81,14 @@ fn box_crypto_manager() {
     let cipher = box_crypto_manager.encrypt(msg, (&box_crypto_manager2.get_pubkey()[..]).try_into().unwrap()).unwrap();
     let decrypted = box_crypto_manager2.decrypt(&cipher[..], (&box_crypto_manager.get_pubkey()[..]).try_into().unwrap()).unwrap();
     assert_eq!(decrypted, msg);
+}
+
+#[test]
+fn pretty_fingerprint() {
+    etebase::init().unwrap();
+
+    let pubkey = from_base64(PUBKEY_BASE64).unwrap();
+
+    let fingerprint = crypto::get_pretty_fingerprint(&pubkey);
+    assert_eq!(fingerprint, "17756   37089   25897   42924\n06835   62184   63746   54689\n32947   01272   14138   19749\n00577   54359   44439   58177");
 }
