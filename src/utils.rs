@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: © 2020 Etebase Authors
+// SPDX-License-Identifier: LGPL-2.1-only
+
 use sodiumoxide::base64;
 
 use block_padding::{Iso7816, Padding};
