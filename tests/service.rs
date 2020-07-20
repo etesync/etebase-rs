@@ -33,11 +33,16 @@ fn get_login_challenge() {
     user_reset(&USER);
 
     let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
-    let mut etebase = etebase::Account::login(&client, USER.username, USER.password).unwrap();
+    let mut etebase = etebase::Account::login(client.clone(), USER.username, USER.password).unwrap();
 
     &etebase.fetch_token().unwrap();
 
     etebase.logout().unwrap();
+
+    match etebase::Account::login(client.clone(), USER.username, "BadPassword") {
+        Err(_e) => (),
+        _ => assert!(false),
+    }
 
     // FIXME: incomplete!!!
 }

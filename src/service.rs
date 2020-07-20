@@ -56,7 +56,7 @@ pub struct Account {
 }
 
 impl Account {
-    pub fn signup(client: &Client, user: &User, password: &str) -> Result<Account> {
+    pub fn signup(client: Client, user: &User, password: &str) -> Result<Account> {
         super::init()?;
 
         let authenticator = Authenticator::new(&client);
@@ -89,7 +89,7 @@ impl Account {
         Ok(ret)
     }
 
-    pub fn login(client: &Client, username: &str, password: &str) -> Result<Account> {
+    pub fn login(client: Client, username: &str, password: &str) -> Result<Account> {
         super::init()?;
 
         let authenticator = Authenticator::new(&client);

@@ -171,16 +171,16 @@ pub struct User<'a> {
     pub email: &'a str,
 }
 
-pub struct Authenticator {
+pub struct Authenticator<'a> {
     api_base: &'static str,
-    client: Client,
+    client: &'a Client,
 }
 
-impl Authenticator {
-    pub fn new(client: &Client) -> Authenticator {
-        Authenticator {
+impl<'a> Authenticator<'a> {
+    pub fn new(client: &'a Client) -> Self {
+        Self {
             api_base: "api/v1/authentication/",
-            client: client.clone(),
+            client,
         }
     }
 
