@@ -9,7 +9,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, Clone)]
 pub enum Error {
     Generic(String),
-    Encoding(String),
+    UrlParse(String),
+    MsgPackEncode(String),
+    MsgPackDecode(String),
     Padding(&'static str),
     Base64(&'static str),
     Integrity(&'static str),
@@ -22,14 +24,15 @@ pub enum Error {
 
     Connection(String),
     Http(String),
-    Json(String),
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::Generic(s) => s.fmt(f),
-            Error::Encoding(s) => s.fmt(f),
+            Error::UrlParse(s) => s.fmt(f),
+            Error::MsgPackEncode(s) => s.fmt(f),
+            Error::MsgPackDecode(s) => s.fmt(f),
             Error::Padding(s) => s.fmt(f),
             Error::Base64(s) => s.fmt(f),
             Error::Integrity(s) => s.fmt(f),
@@ -42,7 +45,6 @@ impl fmt::Display for Error {
 
             Error::Connection(s) => s.fmt(f),
             Error::Http(s) => s.fmt(f),
-            Error::Json(s) => s.fmt(f),
         }
     }
 }
@@ -77,13 +79,7 @@ impl From<reqwest::Error> for Error {
 
 impl From<url::ParseError> for Error {
     fn from(err: url::ParseError) -> Error {
-        Error::Encoding(err.to_string())
-    }
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(err: serde_json::Error) -> Error {
-        Error::Json(err.to_string())
+        Error::UrlParse(err.to_string())
     }
 }
 
@@ -102,5 +98,17 @@ impl From<block_padding::PadError> for Error {
 impl From<block_padding::UnpadError> for Error {
     fn from(_err: block_padding::UnpadError) -> Error {
         Error::Padding("Failed unpadding")
+    }
+}
+
+impl From<rmp_serde::encode::Error> for Error {
+    fn from(err: rmp_serde::encode::Error) -> Error {
+        Error::MsgPackEncode(err.to_string())
+    }
+}
+
+impl From<rmp_serde::decode::Error> for Error {
+    fn from(err: rmp_serde::decode::Error) -> Error {
+        Error::MsgPackDecode(err.to_string())
     }
 }

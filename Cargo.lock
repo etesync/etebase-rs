@@ -148,7 +148,7 @@ dependencies = [
  "reqwest",
  "rmp-serde",
  "serde",
- "serde_json",
+ "serde_bytes",
  "sodiumoxide",
  "url",
 ]
@@ -801,6 +801,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e707fbbf255b8fc8c3b99abb91e7257a622caeb20a9818cbadbeeede4e0932ff"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde_bytes"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16ae07dd2f88a366f15bd0632ba725227018c69a1c8550a927324f8eb8368bb9"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
