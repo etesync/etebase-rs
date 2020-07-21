@@ -14,10 +14,11 @@ mod common;
 use common::{
     USER,
     USER2,
+    TestUser,
     sessionStorageKey,
 };
 
-fn user_reset(user: &common::TestUser) {
+fn user_reset(user: &TestUser) {
     let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
     let body_struct = etebase::test_helpers::SignupBody {
         user: &etebase::User {
@@ -32,12 +33,21 @@ fn user_reset(user: &common::TestUser) {
     etebase::test_helpers::test_reset(&client, body_struct).unwrap();
 }
 
+fn init_test(user: &TestUser) -> etebase::Account {
+    etebase::init().unwrap();
+    user_reset(&user);
+
+    // FIXME: move to prepare user for test
+    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let session_key = from_base64(sessionStorageKey).unwrap();
+
+    etebase::Account::restore(client, user.storedSession, Some(&session_key)).unwrap()
+}
 
 #[test]
 #[ignore]
 fn login_and_password_change() {
-    etebase::init().unwrap();
-    user_reset(&USER);
+    init_test(&USER);
 
     let another_password = "AnotherPassword";
     let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
@@ -63,13 +73,8 @@ fn login_and_password_change() {
 
 #[test]
 fn session_save_and_restore() {
-    etebase::init().unwrap();
-    user_reset(&USER);
-
-    // FIXME: move to prepare user for test
     let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
-    let session_key = from_base64(sessionStorageKey).unwrap();
-    let etebase = etebase::Account::restore(client.clone(), USER.storedSession, Some(&session_key)).unwrap();
+    let etebase = init_test(&USER);
 
     // Verify we can store and restore without an encryption key
     {
