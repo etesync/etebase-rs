@@ -390,7 +390,7 @@ impl<'a> CollectionManagerOnline<'a> {
         let serialized: ListResponse<CollectionSerialRead> = rmp_serde::from_read_ref(&res)?;
 
         let ret = ListResponse {
-            data: serialized.data.into_iter().map(move |x| EncryptedCollection::deserialize(x)).collect(),
+            data: serialized.data.into_iter().map(|x| EncryptedCollection::deserialize(x)).collect(),
             done: serialized.done,
         };
 
