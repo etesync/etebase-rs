@@ -33,63 +33,38 @@ pub fn gen_uid_base64() -> StringBase64 {
   return to_base64(&randombytes(24)).unwrap();
 }
 
-#[derive(Deserialize)]
+pub type CollectionSerialWrite = EncryptedCollection;
+pub type CollectionSerialRead = EncryptedCollection;
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct CollectionSerialRead {
-    pub access_level: String,
-    #[serde(with = "serde_bytes")]
-    pub collection_key: Vec<u8>,
-    pub stoken: Option<String>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CollectionSerialWrite {
-    pub access_level: String,
-    pub stoken: Option<String>,
-}
-
-
 pub struct EncryptedCollection {
-    pub access_level: String,
-    pub collection_key: Vec<u8>,
-    pub stoken: Option<String>,
+    access_level: String,
+    #[serde(with = "serde_bytes")]
+    collection_key: Vec<u8>,
+    stoken: Option<String>,
 }
 
 impl EncryptedCollection {
     pub fn deserialize(serialized: CollectionSerialRead) -> Self {
-        Self {
-            access_level: serialized.access_level,
-            collection_key: serialized.collection_key,
-            stoken: serialized.stoken,
-        }
+        serialized
     }
 
-    pub fn serialize(&self) -> CollectionSerialWrite {
-        CollectionSerialWrite {
-            access_level: self.access_level.to_owned(),
-            stoken: self.stoken.clone(),
-        }
+    pub fn serialize(&self) -> &CollectionSerialWrite {
+        self
     }
 }
 
 
 type ChunkArrayItem = (StringBase64, Option<Vec<u8>>);
 
-#[derive(Serialize, Deserialize)]
-pub struct RevisionSerialRead {
-    uid: StringBase64,
-    #[serde(with = "serde_bytes")]
-    pub meta: Vec<u8>,
-    pub chunks: Vec<ChunkArrayItem>,
-    pub deleted: bool,
-}
+pub type RevisionSerialWrite = EncryptedRevision;
+pub type RevisionSerialRead = EncryptedRevision;
 
-type RevisionSerialWrite = RevisionSerialRead;
-
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct EncryptedRevision {
     uid: StringBase64,
+    #[serde(with = "serde_bytes")]
     meta: Vec<u8>,
     deleted: bool,
 
@@ -113,21 +88,11 @@ impl EncryptedRevision {
     }
 
     pub fn deserialize(serialized: RevisionSerialRead) -> Self {
-        Self {
-            uid: serialized.uid,
-            meta: serialized.meta,
-            deleted: serialized.deleted,
-            chunks: serialized.chunks,
-        }
+        serialized
     }
 
-    pub fn serialize(&self) -> RevisionSerialWrite {
-        RevisionSerialWrite {
-            uid: self.uid.clone(),
-            meta: self.meta.clone(),
-            deleted: self.deleted,
-            chunks: self.chunks.clone(),
-        }
+    pub fn serialize(&self) -> &RevisionSerialWrite {
+        self
     }
 
     fn calculate_hash(&self, crypto_manager: &CryptoManager, additional_data: &[u8]) -> Result<Vec<u8>> {
