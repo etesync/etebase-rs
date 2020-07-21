@@ -27,6 +27,7 @@ use super::{
         from_base64,
         to_base64,
         StringBase64,
+        SYMMETRIC_KEY_SIZE,
     },
 };
 
@@ -74,21 +75,99 @@ pub type CollectionSerialWrite = EncryptedCollection;
 pub type CollectionSerialRead = EncryptedCollection;
 
 #[derive(Serialize, Deserialize, Clone)]
+enum CollectionAccessLevel {
+    #[serde(rename = "adm")]
+    Admin,
+    #[serde(rename = "rw")]
+    ReadWrite,
+    #[serde(rename = "ro")]
+    ReadOnly,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EncryptedCollection {
-    access_level: String,
+    item: EncryptedItem,
+    access_level: CollectionAccessLevel,
     #[serde(with = "serde_bytes")]
     collection_key: Vec<u8>,
     stoken: Option<String>,
 }
 
 impl EncryptedCollection {
+    // FIXME: meta should be a special struct that we have that we let people manipulate
+    pub fn new(parent_crypto_manager: &AccountCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
+        let version = CURRENT_VERSION;
+        let collection_key = parent_crypto_manager.0.encrypt(&randombytes(SYMMETRIC_KEY_SIZE), None)?;
+        let crypto_manager = Self::get_crypto_manager_static(parent_crypto_manager, version, &collection_key)?;
+        let item = EncryptedItem::new(&crypto_manager, meta, content)?;
+
+        Ok(Self {
+            item,
+            access_level: CollectionAccessLevel::Admin,
+            collection_key,
+
+            stoken: None,
+        })
+    }
+
     pub fn deserialize(serialized: CollectionSerialRead) -> Self {
         serialized
     }
 
     pub fn serialize(&self) -> &CollectionSerialWrite {
         self
+    }
+
+    pub(crate) fn mark_saved(&mut self) {
+        self.item.mark_saved();
+    }
+
+    pub fn verify(&self, crypto_manager: &CollectionCryptoManager) -> Result<bool> {
+        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        self.item.verify(&item_crypto_manager)
+    }
+
+    // FIXME: meta should be a special struct that we have that we let people manipulate
+    pub fn set_meta(&mut self, crypto_manager: &CollectionCryptoManager, meta: &[u8]) -> Result<()> {
+        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        self.item.set_meta(&item_crypto_manager, meta)
+    }
+
+    pub fn decrypt_meta(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
+        self.verify(crypto_manager)?;
+        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        self.item.decrypt_meta(&item_crypto_manager)
+    }
+
+    pub fn set_content(&mut self, crypto_manager: &CollectionCryptoManager, content: &[u8]) -> Result<()> {
+        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        self.item.set_content(&item_crypto_manager, content)
+    }
+
+    pub fn decrypt_content(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
+        self.verify(crypto_manager)?;
+        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        self.item.decrypt_content(&item_crypto_manager)
+    }
+
+    pub fn delete(&mut self, crypto_manager: &CollectionCryptoManager) -> Result<()> {
+        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        self.item.delete(&item_crypto_manager)
+    }
+
+    pub fn is_deleted(&self) -> bool {
+        self.item.is_deleted()
+    }
+
+    fn get_crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8]) -> Result<CollectionCryptoManager> {
+        let encryption_key = parent_crypto_manager.0.decrypt(encryption_key, None)?;
+
+        CollectionCryptoManager::new(try_into!(&encryption_key[..])?, version)
+    }
+
+    pub fn get_crypto_manager(&self, parent_crypto_manager: &AccountCryptoManager) -> Result<CollectionCryptoManager> {
+        Self::get_crypto_manager_static(parent_crypto_manager, self.item.version, &self.collection_key)
     }
 }
 
@@ -280,6 +359,7 @@ pub struct EncryptedItem {
 }
 
 impl EncryptedItem {
+    // FIXME: meta should be a special struct that we have that we let people manipulate
     pub fn new(parent_crypto_manager: &CollectionCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
         let uid = gen_uid_base64();
         let version = CURRENT_VERSION;
