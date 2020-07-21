@@ -129,17 +129,17 @@ pub struct LoginChallange {
 }
 
 #[derive(Serialize)]
-#[allow(non_snake_case)]
+#[serde(rename_all = "camelCase")]
 pub struct SignupBody<'a> {
     pub user: &'a User<'a>,
     #[serde(with = "serde_bytes")]
     pub salt: &'a[u8],
     #[serde(with = "serde_bytes")]
-    pub loginPubkey: &'a[u8],
+    pub login_pubkey: &'a[u8],
     #[serde(with = "serde_bytes")]
     pub pubkey: &'a[u8],
     #[serde(with = "serde_bytes")]
-    pub encryptedContent: &'a[u8],
+    pub encrypted_content: &'a[u8],
 }
 
 #[derive(Serialize)]
@@ -160,14 +160,14 @@ pub struct LoginBodyResponse<'a> {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-#[allow(non_snake_case)]
+#[serde(rename_all = "camelCase")]
 pub struct LoginResponseUser {
     pub username: String,
     pub email: String,
     #[serde(with = "serde_bytes")]
     pub pubkey: Vec<u8>,
     #[serde(with = "serde_bytes")]
-    pub encryptedContent: Vec<u8>,
+    pub encrypted_content: Vec<u8>,
 }
 
 #[derive(Deserialize)]
@@ -221,9 +221,9 @@ impl<'a> Authenticator<'a> {
         let body_struct = SignupBody {
             user,
             salt,
-            loginPubkey: login_pubkey,
+            login_pubkey,
             pubkey,
-            encryptedContent: encrypted_content,
+            encrypted_content,
         };
         let body = rmp_serde::to_vec_named(&body_struct)?;
 

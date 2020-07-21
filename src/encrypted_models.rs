@@ -34,18 +34,18 @@ pub fn gen_uid_base64() -> StringBase64 {
 }
 
 #[derive(Deserialize)]
-#[allow(non_snake_case)]
+#[serde(rename_all = "camelCase")]
 pub struct CollectionSerialRead {
-    pub accessLevel: String,
+    pub access_level: String,
     #[serde(with = "serde_bytes")]
-    pub collectionKey: Vec<u8>,
+    pub collection_key: Vec<u8>,
     pub stoken: Option<String>,
 }
 
 #[derive(Serialize)]
-#[allow(non_snake_case)]
+#[serde(rename_all = "camelCase")]
 pub struct CollectionSerialWrite {
-    pub accessLevel: String,
+    pub access_level: String,
     pub stoken: Option<String>,
 }
 
@@ -59,15 +59,15 @@ pub struct EncryptedCollection {
 impl EncryptedCollection {
     pub fn deserialize(serialized: CollectionSerialRead) -> Self {
         Self {
-            access_level: serialized.accessLevel,
-            collection_key: serialized.collectionKey,
+            access_level: serialized.access_level,
+            collection_key: serialized.collection_key,
             stoken: serialized.stoken,
         }
     }
 
     pub fn serialize(&self) -> CollectionSerialWrite {
         CollectionSerialWrite {
-            accessLevel: self.access_level.to_owned(),
+            access_level: self.access_level.to_owned(),
             stoken: self.stoken.clone(),
         }
     }
@@ -77,7 +77,6 @@ impl EncryptedCollection {
 type ChunkArrayItem = (StringBase64, Option<Vec<u8>>);
 
 #[derive(Serialize, Deserialize)]
-#[allow(non_snake_case)]
 pub struct RevisionSerialRead {
     uid: StringBase64,
     #[serde(with = "serde_bytes")]

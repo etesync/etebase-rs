@@ -26,8 +26,8 @@ fn user_reset(user: &common::TestUser) {
         },
         salt: &from_base64(user.salt).unwrap(),
         pubkey: &from_base64(user.pubkey).unwrap(),
-        loginPubkey: &from_base64(user.loginPubkey).unwrap(),
-        encryptedContent: &from_base64(user.encryptedContent).unwrap(),
+        login_pubkey: &from_base64(user.loginPubkey).unwrap(),
+        encrypted_content: &from_base64(user.encryptedContent).unwrap(),
     };
     etebase::test_helpers::test_reset(&client, body_struct).unwrap();
 }

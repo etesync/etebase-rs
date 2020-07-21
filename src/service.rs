@@ -63,22 +63,22 @@ impl StorageCryptoManager {
 }
 
 #[derive(Deserialize, Serialize)]
-#[allow(non_snake_case)]
+#[serde(rename_all = "camelCase")]
 pub struct AccountData<'a> {
     pub version: u8,
     #[serde(with = "serde_bytes")]
     pub key: &'a [u8],
     pub user: LoginResponseUser,
-    pub serverUrl: &'a str,
-    pub authToken: Option<&'a str>,
+    pub server_url: &'a str,
+    pub auth_token: Option<&'a str>,
 }
 
 #[derive(Deserialize, Serialize)]
-#[allow(non_snake_case)]
+#[serde(rename_all = "camelCase")]
 pub struct AccountDataStored<'a> {
     pub version: u8,
     #[serde(with = "serde_bytes")]
-    pub encryptedData: &'a [u8],
+    pub encrypted_data: &'a [u8],
 }
 
 pub struct Account {
@@ -195,7 +195,7 @@ impl Account {
         let login_challenge = authenticator.get_login_challenge(username)?;
 
         let old_main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
-        let content = old_main_crypto_manager.0.decrypt(&self.user.encryptedContent, None)?;
+        let content = old_main_crypto_manager.0.decrypt(&self.user.encrypted_content, None)?;
         let old_login_crypto_manager = old_main_crypto_manager.get_login_crypto_manager()?;
 
         let main_key = derive_key(&login_challenge.salt, &password)?;
@@ -206,7 +206,7 @@ impl Account {
 
 
         #[derive(Serialize)]
-        #[allow(non_snake_case)]
+        #[serde(rename_all = "camelCase")]
         pub struct Body<'a> {
             pub username: &'a str,
             #[serde(with = "serde_bytes")]
@@ -215,9 +215,9 @@ impl Account {
             pub action: &'a str,
 
             #[serde(with = "serde_bytes")]
-            pub loginPubkey: &'a [u8],
+            pub login_pubkey: &'a [u8],
             #[serde(with = "serde_bytes")]
-            pub encryptedContent: &'a [u8],
+            pub encrypted_content: &'a [u8],
         }
 
         let response_struct = Body {
@@ -226,8 +226,8 @@ impl Account {
             host: &self.client.get_api_base().host_str().unwrap_or(&self.client.get_api_base().as_str()),
             action: "changePassword",
 
-            loginPubkey: &login_crypto_manager.get_pubkey(),
-            encryptedContent: &encrypted_content,
+            login_pubkey: &login_crypto_manager.get_pubkey(),
+            encrypted_content: &encrypted_content,
         };
         let response = rmp_serde::to_vec_named(&response_struct)?;
 
@@ -236,7 +236,7 @@ impl Account {
         authenticator.change_password(&response, &signature)?;
 
         self.main_key = main_key;
-        self.user.encryptedContent = encrypted_content;
+        self.user.encrypted_content = encrypted_content;
         Ok(())
     }
 
@@ -248,14 +248,14 @@ impl Account {
             user: self.user.clone(),
             version,
             key: &crypto_manager.0.encrypt(&self.main_key, None)?,
-            authToken: self.client.get_token(),
-            serverUrl: self.client.get_api_base().as_str(),
+            auth_token: self.client.get_token(),
+            server_url: self.client.get_api_base().as_str(),
         };
         let serialized = rmp_serde::to_vec_named(&account_data)?;
 
         let ret = AccountDataStored {
             version,
-            encryptedData: &crypto_manager.0.encrypt(&serialized, Some(&[version]))?,
+            encrypted_data: &crypto_manager.0.encrypt(&serialized, Some(&[version]))?,
         };
         let serialized = rmp_serde::to_vec_named(&ret)?;
 
@@ -269,12 +269,12 @@ impl Account {
         let version = account_data_stored.version;
 
         let crypto_manager = StorageCryptoManager::new(try_into!(encryption_key)?, version)?;
-        let decrypted = crypto_manager.0.decrypt(&account_data_stored.encryptedData, Some(&[version]))?;
+        let decrypted = crypto_manager.0.decrypt(&account_data_stored.encrypted_data, Some(&[version]))?;
         let account_data: AccountData = rmp_serde::from_read_ref(&decrypted)?;
 
         let mut client = client;
-        client.set_token(account_data.authToken);
-        client.set_api_base(account_data.serverUrl)?;
+        client.set_token(account_data.auth_token);
+        client.set_api_base(account_data.server_url)?;
         Ok(Self {
             user: account_data.user,
             version: account_data.version,
