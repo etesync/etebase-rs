@@ -184,7 +184,9 @@ impl Account {
     }
 
     pub fn fetch_token(&mut self) -> Result<()> {
-        let authenticator = Authenticator::new(&self.client);
+        let mut client = (*self.client).clone();
+        client.set_token(None);
+        let authenticator = Authenticator::new(&client);
         let login_challenge = authenticator.get_login_challenge(&self.user.username)?;
 
         let version = self.version;
@@ -206,7 +208,6 @@ impl Account {
 
         let login_response = authenticator.login(&response, &signature)?;
 
-        let mut client = (*self.client).clone();
         client.set_token(Some(&login_response.token));
         self.client = Rc::new(client);
 
