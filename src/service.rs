@@ -240,6 +240,12 @@ impl Account {
         Ok(())
     }
 
+    pub fn logout(self) -> Result<()> {
+        let authenticator = Authenticator::new(&self.client);
+
+        authenticator.logout()
+    }
+
     pub fn save(&self, encryption_key: Option<&[u8]>) -> Result<String> {
         let version = super::CURRENT_VERSION;
         let encryption_key = encryption_key.unwrap_or(&[0; 32]);
@@ -281,11 +287,5 @@ impl Account {
             main_key: crypto_manager.0.decrypt(account_data.key, None)?,
             client,
         })
-    }
-
-    pub fn logout(self) -> Result<()> {
-        let authenticator = Authenticator::new(&self.client);
-
-        authenticator.logout()
     }
 }
