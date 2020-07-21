@@ -160,6 +160,10 @@ impl EncryptedCollection {
         self.item.is_deleted()
     }
 
+    pub fn get_uid(&self) -> &str {
+        self.item.get_uid()
+    }
+
     pub fn get_etag(&self) -> Option<&str> {
         self.item.get_etag()
     }
@@ -459,6 +463,10 @@ impl EncryptedItem {
 
     pub fn is_deleted(&self) -> bool {
         self.content.deleted
+    }
+
+    pub fn get_uid(&self) -> &str {
+        &self.uid
     }
 
     pub fn get_etag(&self) -> Option<&str> {

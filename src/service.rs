@@ -30,7 +30,9 @@ use super::{
     encrypted_models::{
         AccountCryptoManager,
         CollectionCryptoManager,
+        ItemCryptoManager,
         EncryptedCollection,
+        EncryptedItem,
     },
     online_managers::{
         Authenticator,
@@ -39,6 +41,7 @@ use super::{
         LoginResponseUser,
         LoginBodyResponse,
         CollectionManagerOnline,
+        ItemManagerOnline,
         ListResponse,
         FetchOptions,
     },
@@ -394,20 +397,159 @@ impl CollectionManager {
         Ok(())
     }
 
-    pub fn get_item_manager(&self) {
+    pub fn get_item_manager(&self, collection: &Collection) -> Result<ItemManager> {
+        ItemManager::new(Rc::clone(&self.client), Rc::clone(&collection.cm), collection)
+    }
+}
+
+pub struct ItemManager {
+    collection_crypto_manager: Rc<CollectionCryptoManager>,
+    item_manager_online: ItemManagerOnline,
+}
+
+impl ItemManager {
+    fn new(client: Rc<Client>, collection_crypto_manager: Rc<CollectionCryptoManager>, collection: &Collection) -> Result<Self> {
+        let item_manager_online = ItemManagerOnline::new(Rc::clone(&client), &collection.col);
+        Ok(Self {
+            collection_crypto_manager,
+            item_manager_online,
+        })
+    }
+
+    // FIXME: meta should be a special struct that we have that we let people manipulate
+    pub fn create(&self, meta: &[u8], content: &[u8]) -> Result<Item> {
+        let encrypted_item = EncryptedItem::new(&self.collection_crypto_manager, meta, content)?;
+        Item::new(encrypted_item.get_crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
+    }
+
+    pub fn fetch(&self, col_uid: &StrBase64, options: Option<&FetchOptions>) -> Result<Item> {
+        let encrypted_item = self.item_manager_online.fetch(&col_uid, options)?;
+        Item::new(encrypted_item.get_crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
+    }
+
+    pub fn list(&self, options: Option<&FetchOptions>) -> Result<ListResponse<Item>> {
+        let response = self.item_manager_online.list(options)?;
+
+        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.get_crypto_manager(&self.collection_crypto_manager)?, x)).collect();
+        Ok(ListResponse {
+            data: data?,
+            done: response.done,
+        })
+    }
+
+    pub fn batch(&self, items: &Vec<&Item>, deps: Option<&Vec<&Item>>, options: Option<&FetchOptions>) -> Result<()> {
+        // FIXME: self.item_manager_online.batch(items, deps, options)
+        Ok(())
+    }
+
+    pub fn transaction(&self, items: &Vec<&Item>, deps: Option<&Vec<&Item>>, options: Option<&FetchOptions>) -> Result<()> {
+        // FIXME: self.item_manager_online.transaction(items, deps, options)
+        Ok(())
     }
 }
 
 pub struct Collection {
     col: EncryptedCollection,
-    cm: CollectionCryptoManager,
+    cm: Rc<CollectionCryptoManager>,
 }
 
 impl Collection {
     fn new(crypto_manager: CollectionCryptoManager, encrypted_collection: EncryptedCollection) -> Result<Self> {
         Ok(Self {
             col: encrypted_collection,
+            cm: Rc::new(crypto_manager),
+        })
+    }
+
+    pub fn verify(&self) -> Result<bool> {
+        self.col.verify(&self.cm)
+    }
+
+    // FIXME: meta should be a special struct that we have that we let people manipulate
+    pub fn set_meta(&mut self, meta: &[u8]) -> Result<()> {
+        self.col.set_meta(&self.cm, meta)
+    }
+
+    pub fn decrypt_meta(&self) -> Result<Vec<u8>> {
+        self.col.decrypt_meta(&self.cm)
+    }
+
+    pub fn set_content(&mut self, content: &[u8]) -> Result<()> {
+        self.col.set_content(&self.cm, content)
+    }
+
+    pub fn decrypt_content(&self) -> Result<Vec<u8>> {
+        self.col.decrypt_content(&self.cm)
+    }
+
+    pub fn delete(&mut self) -> Result<()> {
+        self.col.delete(&self.cm)
+    }
+
+    pub fn is_deleted(&self) -> bool {
+        self.col.is_deleted()
+    }
+
+    pub fn get_uid(&self) -> &str {
+        self.col.get_uid()
+    }
+
+    pub fn get_etag(&self) -> Option<&str> {
+        self.col.get_etag()
+    }
+
+    pub fn get_stoken(&self) -> Option<&str> {
+        self.col.get_stoken()
+    }
+}
+
+pub struct Item {
+    item: EncryptedItem,
+    cm: ItemCryptoManager,
+}
+
+impl Item {
+    fn new(crypto_manager: ItemCryptoManager, encrypted_item: EncryptedItem) -> Result<Self> {
+        Ok(Self {
+            item: encrypted_item,
             cm: crypto_manager,
         })
+    }
+
+    pub fn verify(&self) -> Result<bool> {
+        self.item.verify(&self.cm)
+    }
+
+    // FIXME: meta should be a special struct that we have that we let people manipulate
+    pub fn set_meta(&mut self, meta: &[u8]) -> Result<()> {
+        self.item.set_meta(&self.cm, meta)
+    }
+
+    pub fn decrypt_meta(&self) -> Result<Vec<u8>> {
+        self.item.decrypt_meta(&self.cm)
+    }
+
+    pub fn set_content(&mut self, content: &[u8]) -> Result<()> {
+        self.item.set_content(&self.cm, content)
+    }
+
+    pub fn decrypt_content(&self) -> Result<Vec<u8>> {
+        self.item.decrypt_content(&self.cm)
+    }
+
+    pub fn delete(&mut self) -> Result<()> {
+        self.item.delete(&self.cm)
+    }
+
+    pub fn is_deleted(&self) -> bool {
+        self.item.is_deleted()
+    }
+
+    pub fn get_uid(&self) -> &str {
+        self.item.get_uid()
+    }
+
+    pub fn get_etag(&self) -> Option<&str> {
+        self.item.get_etag()
     }
 }

@@ -21,6 +21,9 @@ use super::error::Result;
 use super::encrypted_models::{
     CollectionSerialRead,
     EncryptedCollection,
+    ItemSerialRead,
+    ItemSerialWrite,
+    EncryptedItem,
 };
 
 static APP_USER_AGENT: &str = concat!(
@@ -401,6 +404,111 @@ impl CollectionManagerOnline {
     pub fn create(&self, collection: &EncryptedCollection, options: Option<&FetchOptions>) -> Result<()> {
         let url = apply_fetch_options(self.api_base.clone(), options);
         let body = rmp_serde::to_vec_named(&collection.serialize())?;
+
+        let res = self.client.get(&url)?
+            .body(body)
+            .send()?;
+        res.error_for_status()?.bytes()?;
+
+        Ok(())
+    }
+}
+
+#[derive(Serialize)]
+struct ItemBatchBodyDep<'a> {
+    uid: &'a str,
+    etag: Option<&'a str>,
+}
+
+#[derive(Serialize)]
+struct ItemBatchBody<'a> {
+    items: &'a Vec<&'a ItemSerialWrite>,
+    deps: Option<Vec<ItemBatchBodyDep<'a>>>,
+}
+
+pub struct ItemManagerOnline {
+    api_base: Url,
+    client: Rc<Client>,
+}
+
+impl ItemManagerOnline {
+    pub fn new(client: Rc<Client>, col: &EncryptedCollection) -> Self {
+        Self {
+            api_base: client.api_base.join(&format!("api/v1/collection/{}/item/", col.get_uid())).unwrap(),
+            client,
+        }
+    }
+
+    pub fn fetch(&self, item_uid: &str, options: Option<&FetchOptions>) -> Result<EncryptedItem> {
+        let url = apply_fetch_options(self.api_base.join(item_uid)?, options);
+        let res = self.client.get(&url)?
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let serialized: ItemSerialRead = rmp_serde::from_read_ref(&res)?;
+
+        Ok(EncryptedItem::deserialize(serialized))
+    }
+
+    pub fn list(&self, options: Option<&FetchOptions>) -> Result<ListResponse<EncryptedItem>> {
+        let url = apply_fetch_options(self.api_base.clone(), options);
+        let res = self.client.get(&url)?
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let serialized: ListResponse<ItemSerialRead> = rmp_serde::from_read_ref(&res)?;
+
+        let ret = ListResponse {
+            data: serialized.data.into_iter().map(|x| EncryptedItem::deserialize(x)).collect(),
+            done: serialized.done,
+        };
+
+        Ok(ret)
+    }
+
+    pub fn batch(&self, items: &Vec<&EncryptedItem>, deps: Option<&Vec<&EncryptedItem>>, options: Option<&FetchOptions>) -> Result<()> {
+        let url = apply_fetch_options(self.api_base.join("batch")?, options);
+
+        let deps = deps.and_then(|deps| {
+            let ret: Vec<ItemBatchBodyDep> = deps.iter().map(|x| {
+                ItemBatchBodyDep {
+                    uid: x.get_uid(),
+                    etag: x.get_etag(),
+                }
+            }).collect();
+            Some(ret)
+        });
+        let body_struct = ItemBatchBody {
+            items,
+            deps,
+        };
+        let body = rmp_serde::to_vec_named(&body_struct)?;
+
+        let res = self.client.get(&url)?
+            .body(body)
+            .send()?;
+        res.error_for_status()?.bytes()?;
+
+        Ok(())
+    }
+
+    pub fn transaction(&self, items: &Vec<&EncryptedItem>, deps: Option<&Vec<&EncryptedItem>>, options: Option<&FetchOptions>) -> Result<()> {
+        let url = apply_fetch_options(self.api_base.join("transaction")?, options);
+
+        let deps = deps.and_then(|deps| {
+            let ret: Vec<ItemBatchBodyDep> = deps.iter().map(|x| {
+                ItemBatchBodyDep {
+                    uid: x.get_uid(),
+                    etag: x.get_etag(),
+                }
+            }).collect();
+            Some(ret)
+        });
+        let body_struct = ItemBatchBody {
+            items,
+            deps,
+        };
+        let body = rmp_serde::to_vec_named(&body_struct)?;
 
         let res = self.client.get(&url)?
             .body(body)

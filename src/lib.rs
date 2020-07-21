@@ -16,6 +16,8 @@ pub use online_managers::{
 
 pub use service::{
     Account,
+    Collection,
+    Item,
 };
 
 pub mod test_helpers {

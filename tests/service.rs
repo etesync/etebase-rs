@@ -8,6 +8,13 @@ use etebase::utils::from_base64;
 
 use etebase::error::Error;
 
+use etebase::{
+    Account,
+    Client,
+    Collection,
+    Item,
+};
+
 #[allow(dead_code)]
 mod common;
 
@@ -19,7 +26,7 @@ use common::{
 };
 
 fn user_reset(user: &TestUser) {
-    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let client = Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
     let body_struct = etebase::test_helpers::SignupBody {
         user: &etebase::User {
             username: user.username,
@@ -33,72 +40,103 @@ fn user_reset(user: &TestUser) {
     etebase::test_helpers::test_reset(&client, body_struct).unwrap();
 }
 
-fn init_test(user: &TestUser) -> etebase::Account {
+fn init_test(user: &TestUser) -> Account {
     etebase::init().unwrap();
     user_reset(&user);
 
     // FIXME: move to prepare user for test
-    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let client = Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
     let session_key = from_base64(sessionStorageKey).unwrap();
 
-    etebase::Account::restore(client, user.storedSession, Some(&session_key)).unwrap()
+    let mut ret = Account::restore(client, user.storedSession, Some(&session_key)).unwrap();
+    ret.fetch_token().unwrap();
+
+    ret
+}
+
+fn verify_collection(col: &Collection, meta: &[u8], content: &[u8]) {
+    col.verify().unwrap();
+    assert_eq!(col.decrypt_meta().unwrap(), meta);
+    assert_eq!(col.decrypt_content().unwrap(), content);
+}
+
+fn verify_item(item: &Item, meta: &[u8], content: &[u8]) {
+    item.verify().unwrap();
+    assert_eq!(item.decrypt_meta().unwrap(), meta);
+    assert_eq!(item.decrypt_content().unwrap(), content);
 }
 
 #[test]
 fn simple_collection_handling() {
     let etebase = init_test(&USER);
+    let col_mgr = etebase.get_collection_manager().unwrap();
+    let meta = b"FIXME bad meta";
+    let content = b"SomeContent";
 
+    let mut col = col_mgr.create(meta, content).unwrap();
+    verify_collection(&col, meta, content);
+
+    let meta2 = b"FIXME bad meta second time";
+    col.set_meta(meta2).unwrap();
+    verify_collection(&col, meta2, content);
+
+    assert!(!col.is_deleted());
+    col.delete().unwrap();
+    assert!(col.is_deleted());
+    verify_collection(&col, meta2, content);
+
+    etebase.logout().unwrap();
 }
-it("Simple collection handling", async () => {
-  const collectionManager = etebase.getCollectionManager();
-  const meta: Etebase.CollectionMetadata = {
-    type: "COLTYPE",
-    name: "Calendar",
-    description: "Mine",
-    color: "#ffffff",
-  };
 
-  const content = Uint8Array.from([1, 2, 3, 5]);
-  const col = await collectionManager.create(meta, content);
-  await verifyCollection(col, meta, content);
+#[test]
+fn simple_item_handling() {
+    let etebase = init_test(&USER);
+    let col_mgr = etebase.get_collection_manager().unwrap();
+    let col_meta = b"FIXME bad meta";
+    let col_content = b"SomeContent";
 
-  const meta2 = {
-    type: "COLTYPE",
-    name: "Calendar2",
-    description: "Someone",
-    color: "#000000",
-  };
-  await col.setMeta(meta2);
+    let col = col_mgr.create(col_meta, col_content).unwrap();
 
-  await verifyCollection(col, meta2, content);
-  expect(meta).not.toEqual(await col.getMeta());
+    let it_mgr = col_mgr.get_item_manager(&col).unwrap();
 
-  expect(col.isDeleted).toBeFalsy();
-  await col.delete(true);
-  expect(col.isDeleted).toBeTruthy();
-  await verifyCollection(col, meta2, content);
-});
+    let meta = b"FIXME bad item meta";
+    let content = b"ItemContent";
+    let mut item = it_mgr.create(meta, content).unwrap();
+    verify_item(&item, meta, content);
+
+    let meta2 = b"FIXME bad item meta 2";
+    item.set_meta(meta2).unwrap();
+    verify_item(&item, meta2, content);
+
+    assert!(!item.is_deleted());
+    item.delete().unwrap();
+    assert!(item.is_deleted());
+    verify_item(&item, meta2, content);
+
+    etebase.logout().unwrap();
+}
 
 #[test]
 #[ignore]
 fn login_and_password_change() {
-    init_test(&USER);
+    let etebase = init_test(&USER);
+    etebase.logout().unwrap();
 
     let another_password = "AnotherPassword";
-    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
-    let mut etebase2 = etebase::Account::login(client.clone(), USER2.username, USER2.password).unwrap();
+    let client = Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let mut etebase2 = Account::login(client.clone(), USER2.username, USER2.password).unwrap();
 
     etebase2.change_password(another_password).unwrap();
 
     etebase2.logout().unwrap();
 
-    match etebase::Account::login(client.clone(), USER2.username, "BadPassword") {
+    match Account::login(client.clone(), USER2.username, "BadPassword") {
         Err(Error::Http(_)) => (),
         _ => assert!(false),
     }
 
     // FIXME: add tests to verify that we can actually manipulate the data
-    let mut etebase2 = etebase::Account::login(client.clone(), USER2.username, another_password).unwrap();
+    let mut etebase2 = Account::login(client.clone(), USER2.username, another_password).unwrap();
 
     etebase2.change_password(USER2.password).unwrap();
 
@@ -108,13 +146,13 @@ fn login_and_password_change() {
 
 #[test]
 fn session_save_and_restore() {
-    let client = etebase::Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let client = Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
     let etebase = init_test(&USER);
 
     // Verify we can store and restore without an encryption key
     {
         let saved = etebase.save(None).unwrap();
-        let mut etebase2 = etebase::Account::restore(client.clone(), &saved, None).unwrap();
+        let mut etebase2 = Account::restore(client.clone(), &saved, None).unwrap();
 
         // FIXME: we should verify we can access data instead
         &etebase2.fetch_token().unwrap();
@@ -124,9 +162,11 @@ fn session_save_and_restore() {
     {
         let key = etebase::utils::randombytes(32);
         let saved = etebase.save(Some(&key)).unwrap();
-        let mut etebase2 = etebase::Account::restore(client.clone(), &saved, Some(&key)).unwrap();
+        let mut etebase2 = Account::restore(client.clone(), &saved, Some(&key)).unwrap();
 
         // FIXME: we should verify we can access data instead
         &etebase2.fetch_token().unwrap();
     }
+
+    etebase.logout().unwrap();
 }
