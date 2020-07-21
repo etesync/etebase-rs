@@ -19,10 +19,7 @@ use reqwest::{
 use super::error::Result;
 
 use super::encrypted_models::{
-    CollectionSerialRead,
     EncryptedCollection,
-    ItemSerialRead,
-    ItemSerialWrite,
     EncryptedItem,
 };
 
@@ -380,9 +377,9 @@ impl CollectionManagerOnline {
             .send()?;
         let res = res.error_for_status()?.bytes()?;
 
-        let serialized: CollectionSerialRead = rmp_serde::from_read_ref(&res)?;
+        let serialized: EncryptedCollection = rmp_serde::from_read_ref(&res)?;
 
-        Ok(EncryptedCollection::deserialize(serialized))
+        Ok(serialized)
     }
 
     pub fn list(&self, options: Option<&FetchOptions>) -> Result<ListResponse<EncryptedCollection>> {
@@ -391,10 +388,10 @@ impl CollectionManagerOnline {
             .send()?;
         let res = res.error_for_status()?.bytes()?;
 
-        let serialized: ListResponse<CollectionSerialRead> = rmp_serde::from_read_ref(&res)?;
+        let serialized: ListResponse<EncryptedCollection> = rmp_serde::from_read_ref(&res)?;
 
         let ret = ListResponse {
-            data: serialized.data.into_iter().map(|x| EncryptedCollection::deserialize(x)).collect(),
+            data: serialized.data,
             done: serialized.done,
         };
 
@@ -403,7 +400,7 @@ impl CollectionManagerOnline {
 
     pub fn create(&self, collection: &EncryptedCollection, options: Option<&FetchOptions>) -> Result<()> {
         let url = apply_fetch_options(self.api_base.clone(), options);
-        let body = rmp_serde::to_vec_named(&collection.serialize())?;
+        let body = rmp_serde::to_vec_named(&collection)?;
 
         let res = self.client.get(&url)?
             .body(body)
@@ -422,7 +419,7 @@ struct ItemBatchBodyDep<'a> {
 
 #[derive(Serialize)]
 struct ItemBatchBody<'a> {
-    items: &'a Vec<&'a ItemSerialWrite>,
+    items: &'a Vec<&'a EncryptedItem>,
     deps: Option<Vec<ItemBatchBodyDep<'a>>>,
 }
 
@@ -445,9 +442,9 @@ impl ItemManagerOnline {
             .send()?;
         let res = res.error_for_status()?.bytes()?;
 
-        let serialized: ItemSerialRead = rmp_serde::from_read_ref(&res)?;
+        let serialized: EncryptedItem = rmp_serde::from_read_ref(&res)?;
 
-        Ok(EncryptedItem::deserialize(serialized))
+        Ok(serialized)
     }
 
     pub fn list(&self, options: Option<&FetchOptions>) -> Result<ListResponse<EncryptedItem>> {
@@ -456,10 +453,10 @@ impl ItemManagerOnline {
             .send()?;
         let res = res.error_for_status()?.bytes()?;
 
-        let serialized: ListResponse<ItemSerialRead> = rmp_serde::from_read_ref(&res)?;
+        let serialized: ListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
 
         let ret = ListResponse {
-            data: serialized.data.into_iter().map(|x| EncryptedItem::deserialize(x)).collect(),
+            data: serialized.data,
             done: serialized.done,
         };
 

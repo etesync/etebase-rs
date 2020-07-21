@@ -161,9 +161,6 @@ impl ItemMetadata {
 }
 
 
-pub type CollectionSerialWrite = EncryptedCollection;
-pub type CollectionSerialRead = EncryptedCollection;
-
 #[derive(Serialize, Deserialize, Clone)]
 enum CollectionAccessLevel {
     #[serde(rename = "adm")]
@@ -199,14 +196,6 @@ impl EncryptedCollection {
 
             stoken: None,
         })
-    }
-
-    pub fn deserialize(serialized: CollectionSerialRead) -> Self {
-        serialized
-    }
-
-    pub fn serialize(&self) -> &CollectionSerialWrite {
-        self
     }
 
     pub(crate) fn mark_saved(&mut self) {
@@ -279,9 +268,6 @@ impl EncryptedCollection {
 
 type ChunkArrayItem = (StringBase64, Option<Vec<u8>>);
 
-pub type RevisionSerialWrite = EncryptedRevision;
-pub type RevisionSerialRead = EncryptedRevision;
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EncryptedRevision {
     uid: StringBase64,
@@ -306,14 +292,6 @@ impl EncryptedRevision {
         ret.set_content(&crypto_manager, additional_data, content)?;
 
         Ok(ret)
-    }
-
-    pub fn deserialize(serialized: RevisionSerialRead) -> Self {
-        serialized
-    }
-
-    pub fn serialize(&self) -> &RevisionSerialWrite {
-        self
     }
 
     fn calculate_hash(&self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<Vec<u8>> {
@@ -447,9 +425,6 @@ impl EncryptedRevision {
     }
 }
 
-pub type ItemSerialWrite = EncryptedItem;
-pub type ItemSerialRead = EncryptedItem;
-
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EncryptedItem {
@@ -483,14 +458,6 @@ impl EncryptedItem {
 
             etag: None,
         })
-    }
-
-    pub fn deserialize(serialized: ItemSerialRead) -> Self {
-        serialized
-    }
-
-    pub fn serialize(&self) -> &ItemSerialWrite {
-        self
     }
 
     pub(crate) fn mark_saved(&mut self) {
