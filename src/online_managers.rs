@@ -3,6 +3,7 @@
 
 extern crate rmp_serde;
 
+use std::rc::Rc;
 use url::Url;
 
 use serde::{Serialize, Deserialize};
@@ -115,8 +116,8 @@ impl Client {
 
 #[derive(Deserialize)]
 pub struct ListResponse<T> {
-    data: Vec<T>,
-    done: bool,
+    pub data: Vec<T>,
+    pub done: bool,
 }
 
 #[derive(Deserialize)]
@@ -357,13 +358,13 @@ pub fn apply_fetch_options(url: Url, options: Option<&FetchOptions>) -> Url {
 }
 
 
-pub struct CollectionManagerOnline<'a> {
+pub struct CollectionManagerOnline {
     api_base: Url,
-    client: &'a Client,
+    client: Rc<Client>,
 }
 
-impl<'a> CollectionManagerOnline<'a> {
-    pub fn new(client: &'a Client) -> Self {
+impl CollectionManagerOnline {
+    pub fn new(client: Rc<Client>) -> Self {
         Self {
             api_base: client.api_base.join("api/v1/collection/").unwrap(),
             client,

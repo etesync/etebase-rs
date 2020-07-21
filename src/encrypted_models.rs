@@ -160,6 +160,14 @@ impl EncryptedCollection {
         self.item.is_deleted()
     }
 
+    pub fn get_etag(&self) -> Option<&str> {
+        self.item.get_etag()
+    }
+
+    pub fn get_stoken(&self) -> Option<&str> {
+        self.stoken.as_deref()
+    }
+
     fn get_crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8]) -> Result<CollectionCryptoManager> {
         let encryption_key = parent_crypto_manager.0.decrypt(encryption_key, None)?;
 
@@ -451,6 +459,10 @@ impl EncryptedItem {
 
     pub fn is_deleted(&self) -> bool {
         self.content.deleted
+    }
+
+    pub fn get_etag(&self) -> Option<&str> {
+        self.etag.as_deref()
     }
 
     fn get_crypto_manager_static(parent_crypto_manager: &CollectionCryptoManager, uid: &str, version: u8, encryption_key: Option<&[u8]>) -> Result<ItemCryptoManager> {

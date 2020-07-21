@@ -45,6 +45,41 @@ fn init_test(user: &TestUser) -> etebase::Account {
 }
 
 #[test]
+fn simple_collection_handling() {
+    let etebase = init_test(&USER);
+
+}
+it("Simple collection handling", async () => {
+  const collectionManager = etebase.getCollectionManager();
+  const meta: Etebase.CollectionMetadata = {
+    type: "COLTYPE",
+    name: "Calendar",
+    description: "Mine",
+    color: "#ffffff",
+  };
+
+  const content = Uint8Array.from([1, 2, 3, 5]);
+  const col = await collectionManager.create(meta, content);
+  await verifyCollection(col, meta, content);
+
+  const meta2 = {
+    type: "COLTYPE",
+    name: "Calendar2",
+    description: "Someone",
+    color: "#000000",
+  };
+  await col.setMeta(meta2);
+
+  await verifyCollection(col, meta2, content);
+  expect(meta).not.toEqual(await col.getMeta());
+
+  expect(col.isDeleted).toBeFalsy();
+  await col.delete(true);
+  expect(col.isDeleted).toBeTruthy();
+  await verifyCollection(col, meta2, content);
+});
+
+#[test]
 #[ignore]
 fn login_and_password_change() {
     init_test(&USER);
