@@ -71,6 +71,96 @@ impl ItemCryptoManager {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct CollectionMetadata {
+    type_: String,
+    name: String,
+    description: Option<String>,
+    color: Option<String>,
+    // FIXME: missing mtime and extra
+}
+
+impl CollectionMetadata {
+    pub fn new(type_: &str, name: &str) -> Self {
+        Self {
+            type_: type_.to_string(),
+            name: name.to_string(),
+            description: None,
+            color: None
+        }
+    }
+
+    pub fn set_type(mut self, type_: &str) -> Self {
+        self.type_ = type_.to_string();
+        self
+    }
+
+    pub fn get_type(&self) -> &str {
+        &self.type_
+    }
+
+    pub fn set_name(mut self, name: &str) -> Self {
+        self.name = name.to_string();
+        self
+    }
+
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn set_description(mut self, description: Option<&str>) -> Self {
+        self.description = description.and_then(|x| Some(x.to_string()));
+        self
+    }
+
+    pub fn get_description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    pub fn set_color(mut self, color: Option<&str>) -> Self {
+        self.color = color.and_then(|x| Some(x.to_string()));
+        self
+    }
+
+    pub fn get_color(&self) -> Option<&str> {
+        self.color.as_deref()
+    }
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct ItemMetadata {
+    type_: Option<String>,
+    name: Option<String>,
+    // FIXME: missing mtime and extra
+}
+
+impl ItemMetadata {
+    pub fn new() -> Self {
+        Self {
+            type_: None,
+            name: None
+        }
+    }
+
+    pub fn set_type(mut self, type_: Option<&str>) -> Self {
+        self.type_ = type_.and_then(|x| Some(x.to_string()));
+        self
+    }
+
+    pub fn get_type(&self) -> Option<&str> {
+        self.type_.as_deref()
+    }
+
+    pub fn set_name(mut self, name: Option<&str>) -> Self {
+        self.name = name.and_then(|x| Some(x.to_string()));
+        self
+    }
+
+    pub fn get_name(&self) -> Option<&str> {
+        self.name.as_deref()
+    }
+}
+
+
 pub type CollectionSerialWrite = EncryptedCollection;
 pub type CollectionSerialRead = EncryptedCollection;
 
@@ -95,12 +185,12 @@ pub struct EncryptedCollection {
 }
 
 impl EncryptedCollection {
-    // FIXME: meta should be a special struct that we have that we let people manipulate
-    pub fn new(parent_crypto_manager: &AccountCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
+    pub fn new(parent_crypto_manager: &AccountCryptoManager, meta: &CollectionMetadata, content: &[u8]) -> Result<Self> {
         let version = CURRENT_VERSION;
         let collection_key = parent_crypto_manager.0.encrypt(&randombytes(SYMMETRIC_KEY_SIZE), None)?;
+        let meta = rmp_serde::to_vec_named(meta)?;
         let crypto_manager = Self::get_crypto_manager_static(parent_crypto_manager, version, &collection_key)?;
-        let item = EncryptedItem::new(&crypto_manager, meta, content)?;
+        let item = EncryptedItem::new_raw(&crypto_manager, &meta, content)?;
 
         Ok(Self {
             item,
@@ -128,16 +218,19 @@ impl EncryptedCollection {
         self.item.verify(&item_crypto_manager)
     }
 
-    // FIXME: meta should be a special struct that we have that we let people manipulate
-    pub fn set_meta(&mut self, crypto_manager: &CollectionCryptoManager, meta: &[u8]) -> Result<()> {
+    pub fn set_meta(&mut self, crypto_manager: &CollectionCryptoManager, meta: &CollectionMetadata) -> Result<()> {
         let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
-        self.item.set_meta(&item_crypto_manager, meta)
+        let meta = rmp_serde::to_vec_named(meta)?;
+        self.item.set_meta_raw(&item_crypto_manager, &meta)
     }
 
-    pub fn decrypt_meta(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
+    pub fn decrypt_meta(&self, crypto_manager: &CollectionCryptoManager) -> Result<CollectionMetadata> {
         self.verify(crypto_manager)?;
         let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
-        self.item.decrypt_meta(&item_crypto_manager)
+        let decrypted = self.item.decrypt_meta_raw(&item_crypto_manager)?;
+        let meta: CollectionMetadata = rmp_serde::from_read_ref(&decrypted)?;
+
+        Ok(meta)
     }
 
     pub fn set_content(&mut self, crypto_manager: &CollectionCryptoManager, content: &[u8]) -> Result<()> {
@@ -371,12 +464,16 @@ pub struct EncryptedItem {
 }
 
 impl EncryptedItem {
-    // FIXME: meta should be a special struct that we have that we let people manipulate
-    pub fn new(parent_crypto_manager: &CollectionCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
+    pub fn new(parent_crypto_manager: &CollectionCryptoManager, meta: &ItemMetadata, content: &[u8]) -> Result<Self> {
+        let meta = rmp_serde::to_vec_named(meta)?;
+        Self::new_raw(parent_crypto_manager, &meta, content)
+    }
+
+    fn new_raw(parent_crypto_manager: &CollectionCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
         let uid = gen_uid_base64();
         let version = CURRENT_VERSION;
         let crypto_manager = Self::get_crypto_manager_static(parent_crypto_manager, &uid, version, None)?;
-        let content = EncryptedRevision::new(&crypto_manager, Self::get_additional_mac_data_static(&uid), meta, content)?;
+        let content = EncryptedRevision::new(&crypto_manager, Self::get_additional_mac_data_static(&uid), &meta, content)?;
 
         Ok(Self {
             uid,
@@ -411,8 +508,14 @@ impl EncryptedItem {
         self.content.verify(crypto_manager, self.get_additional_mac_data())
     }
 
-    // FIXME: meta should be a special struct that we have that we let people manipulate
-    pub fn set_meta(&mut self, crypto_manager: &ItemCryptoManager, meta: &[u8]) -> Result<()> {
+    pub fn set_meta(&mut self, crypto_manager: &ItemCryptoManager, meta: &ItemMetadata) -> Result<()> {
+        let meta = rmp_serde::to_vec_named(meta)?;
+        self.set_meta_raw(crypto_manager, &meta)?;
+
+        Ok(())
+    }
+
+    fn set_meta_raw(&mut self, crypto_manager: &ItemCryptoManager, meta: &[u8]) -> Result<()> {
         let ad_mac_data = Self::get_additional_mac_data_static(&self.uid);
         if self.is_locally_changed() {
             self.content.set_meta(crypto_manager, ad_mac_data, meta)?;
@@ -425,7 +528,14 @@ impl EncryptedItem {
         Ok(())
     }
 
-    pub fn decrypt_meta(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
+    pub fn decrypt_meta(&self, crypto_manager: &ItemCryptoManager) -> Result<ItemMetadata> {
+        let decrypted = self.decrypt_meta_raw(crypto_manager)?;
+        let meta: ItemMetadata = rmp_serde::from_read_ref(&decrypted)?;
+
+        Ok(meta)
+    }
+
+    fn decrypt_meta_raw(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
         self.content.decrypt_meta(crypto_manager, self.get_additional_mac_data())
     }

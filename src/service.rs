@@ -33,6 +33,8 @@ use super::{
         ItemCryptoManager,
         EncryptedCollection,
         EncryptedItem,
+        CollectionMetadata,
+        ItemMetadata,
     },
     online_managers::{
         Authenticator,
@@ -345,8 +347,7 @@ impl CollectionManager {
         })
     }
 
-    // FIXME: meta should be a special struct that we have that we let people manipulate
-    pub fn create(&self, meta: &[u8], content: &[u8]) -> Result<Collection> {
+    pub fn create(&self, meta: &CollectionMetadata, content: &[u8]) -> Result<Collection> {
         let encrypted_collection = EncryptedCollection::new(&self.account_crypto_manager, meta, content)?;
         Collection::new(encrypted_collection.get_crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
     }
@@ -417,8 +418,7 @@ impl ItemManager {
         })
     }
 
-    // FIXME: meta should be a special struct that we have that we let people manipulate
-    pub fn create(&self, meta: &[u8], content: &[u8]) -> Result<Item> {
+    pub fn create(&self, meta: &ItemMetadata, content: &[u8]) -> Result<Item> {
         let encrypted_item = EncryptedItem::new(&self.collection_crypto_manager, meta, content)?;
         Item::new(encrypted_item.get_crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
     }
@@ -466,12 +466,11 @@ impl Collection {
         self.col.verify(&self.cm)
     }
 
-    // FIXME: meta should be a special struct that we have that we let people manipulate
-    pub fn set_meta(&mut self, meta: &[u8]) -> Result<()> {
+    pub fn set_meta(&mut self, meta: &CollectionMetadata) -> Result<()> {
         self.col.set_meta(&self.cm, meta)
     }
 
-    pub fn decrypt_meta(&self) -> Result<Vec<u8>> {
+    pub fn decrypt_meta(&self) -> Result<CollectionMetadata> {
         self.col.decrypt_meta(&self.cm)
     }
 
@@ -520,13 +519,11 @@ impl Item {
     pub fn verify(&self) -> Result<bool> {
         self.item.verify(&self.cm)
     }
-
-    // FIXME: meta should be a special struct that we have that we let people manipulate
-    pub fn set_meta(&mut self, meta: &[u8]) -> Result<()> {
+    pub fn set_meta(&mut self, meta: &ItemMetadata) -> Result<()> {
         self.item.set_meta(&self.cm, meta)
     }
 
-    pub fn decrypt_meta(&self) -> Result<Vec<u8>> {
+    pub fn decrypt_meta(&self) -> Result<ItemMetadata> {
         self.item.decrypt_meta(&self.cm)
     }
 

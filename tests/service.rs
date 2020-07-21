@@ -12,7 +12,9 @@ use etebase::{
     Account,
     Client,
     Collection,
+    CollectionMetadata,
     Item,
+    ItemMetadata,
 };
 
 #[allow(dead_code)]
@@ -54,15 +56,15 @@ fn init_test(user: &TestUser) -> Account {
     ret
 }
 
-fn verify_collection(col: &Collection, meta: &[u8], content: &[u8]) {
+fn verify_collection(col: &Collection, meta: &CollectionMetadata, content: &[u8]) {
     col.verify().unwrap();
-    assert_eq!(col.decrypt_meta().unwrap(), meta);
+    assert_eq!(&col.decrypt_meta().unwrap(), meta);
     assert_eq!(col.decrypt_content().unwrap(), content);
 }
 
-fn verify_item(item: &Item, meta: &[u8], content: &[u8]) {
+fn verify_item(item: &Item, meta: &ItemMetadata, content: &[u8]) {
     item.verify().unwrap();
-    assert_eq!(item.decrypt_meta().unwrap(), meta);
+    assert_eq!(&item.decrypt_meta().unwrap(), meta);
     assert_eq!(item.decrypt_content().unwrap(), content);
 }
 
@@ -70,20 +72,20 @@ fn verify_item(item: &Item, meta: &[u8], content: &[u8]) {
 fn simple_collection_handling() {
     let etebase = init_test(&USER);
     let col_mgr = etebase.get_collection_manager().unwrap();
-    let meta = b"FIXME bad meta";
+    let meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
     let content = b"SomeContent";
 
-    let mut col = col_mgr.create(meta, content).unwrap();
-    verify_collection(&col, meta, content);
+    let mut col = col_mgr.create(&meta, content).unwrap();
+    verify_collection(&col, &meta, content);
 
-    let meta2 = b"FIXME bad meta second time";
-    col.set_meta(meta2).unwrap();
-    verify_collection(&col, meta2, content);
+    let meta2 = meta.clone().set_name("Collection meta2");
+    col.set_meta(&meta2).unwrap();
+    verify_collection(&col, &meta2, content);
 
     assert!(!col.is_deleted());
     col.delete().unwrap();
     assert!(col.is_deleted());
-    verify_collection(&col, meta2, content);
+    verify_collection(&col, &meta2, content);
 
     etebase.logout().unwrap();
 }
@@ -92,26 +94,26 @@ fn simple_collection_handling() {
 fn simple_item_handling() {
     let etebase = init_test(&USER);
     let col_mgr = etebase.get_collection_manager().unwrap();
-    let col_meta = b"FIXME bad meta";
+    let col_meta = CollectionMetadata::new("type", "Collection");
     let col_content = b"SomeContent";
 
-    let col = col_mgr.create(col_meta, col_content).unwrap();
+    let col = col_mgr.create(&col_meta, col_content).unwrap();
 
     let it_mgr = col_mgr.get_item_manager(&col).unwrap();
 
-    let meta = b"FIXME bad item meta";
+    let meta = ItemMetadata::new().set_name(Some("Item 1"));
     let content = b"ItemContent";
-    let mut item = it_mgr.create(meta, content).unwrap();
-    verify_item(&item, meta, content);
+    let mut item = it_mgr.create(&meta, content).unwrap();
+    verify_item(&item, &meta, content);
 
-    let meta2 = b"FIXME bad item meta 2";
-    item.set_meta(meta2).unwrap();
-    verify_item(&item, meta2, content);
+    let meta2 = ItemMetadata::new().set_name(Some("Item 2"));
+    item.set_meta(&meta2).unwrap();
+    verify_item(&item, &meta2, content);
 
     assert!(!item.is_deleted());
     item.delete().unwrap();
     assert!(item.is_deleted());
-    verify_item(&item, meta2, content);
+    verify_item(&item, &meta2, content);
 
     etebase.logout().unwrap();
 }

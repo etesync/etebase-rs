@@ -1,16 +1,21 @@
 // SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
-pub mod crypto;
+mod crypto;
 mod online_managers;
 mod encrypted_models;
-pub mod service;
+mod service;
 pub mod utils;
 pub mod error;
 
 pub use online_managers::{
     Client,
     User,
+};
+
+pub use encrypted_models::{
+    CollectionMetadata,
+    ItemMetadata,
 };
 
 pub use service::{
