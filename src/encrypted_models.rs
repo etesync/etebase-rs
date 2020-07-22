@@ -3,6 +3,7 @@
 
 extern crate rmp_serde;
 
+use std::cell::RefCell;
 use std::convert::TryInto;
 
 use serde::{Serialize, Deserialize};
@@ -222,7 +223,7 @@ impl EncryptedCollection {
         })
     }
 
-    pub(crate) fn mark_saved(&mut self) {
+    pub(crate) fn mark_saved(&self) {
         self.item.mark_saved();
     }
 
@@ -270,7 +271,7 @@ impl EncryptedCollection {
         self.item.get_uid()
     }
 
-    pub fn get_etag(&self) -> Option<&str> {
+    pub fn get_etag(&self) -> Etag {
         self.item.get_etag()
     }
 
@@ -460,6 +461,8 @@ impl EncryptedRevision {
     }
 }
 
+pub type Etag = Option<String>;
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EncryptedItem {
@@ -470,7 +473,7 @@ pub struct EncryptedItem {
     encryption_key: Option<Vec<u8>>,
     content: EncryptedRevision,
 
-    etag: Option<String>,
+    etag: RefCell<Option<String>>,
 }
 
 impl EncryptedItem {
@@ -491,16 +494,16 @@ impl EncryptedItem {
             encryption_key: None,
             content,
 
-            etag: None,
+            etag: RefCell::new(None),
         })
     }
 
-    pub(crate) fn mark_saved(&mut self) {
-        self.etag = Some(self.content.uid.clone());
+    pub(crate) fn mark_saved(&self) {
+        *self.etag.borrow_mut() = Some(self.content.uid.clone());
     }
 
     pub fn is_locally_changed(&self) -> bool {
-        match self.etag.as_deref() {
+        match self.etag.borrow().as_deref() {
             Some(etag) => etag == self.content.uid,
             None => false,
         }
@@ -581,8 +584,8 @@ impl EncryptedItem {
         &self.uid
     }
 
-    pub fn get_etag(&self) -> Option<&str> {
-        self.etag.as_deref()
+    pub fn get_etag(&self) -> Etag {
+        self.etag.borrow().to_owned()
     }
 
     fn get_crypto_manager_static(parent_crypto_manager: &CollectionCryptoManager, uid: &str, version: u8, encryption_key: Option<&[u8]>) -> Result<ItemCryptoManager> {

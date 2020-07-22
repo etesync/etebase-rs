@@ -147,7 +147,7 @@ fn simple_collection_sync() {
     let collections = col_mgr.list(None).unwrap();
     assert_eq!(collections.data.len(), 0);
 
-    col_mgr.upload(&mut col, None).unwrap();
+    col_mgr.upload(&col, None).unwrap();
 
     let collections = col_mgr.list(None).unwrap();
     assert_eq!(collections.data.len(), 1);
@@ -163,7 +163,7 @@ fn simple_collection_sync() {
     let meta2 = meta.clone().set_name("Collection meta2");
     col.set_meta(&meta2).unwrap();
 
-    col_mgr.upload(&mut col, None).unwrap();
+    col_mgr.upload(&col, None).unwrap();
 
     let collections = col_mgr.list(None).unwrap();
     assert_eq!(collections.data.len(), 1);
@@ -179,9 +179,9 @@ fn simple_collection_sync() {
         let content2 = b"Content2";
         col_old.set_content(content2).unwrap();
 
-        assert_err!(col_mgr.transaction(&mut col, None), Error::Http(_));
+        assert_err!(col_mgr.transaction(&col, None), Error::Http(_));
         let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
-        assert_err!(col_mgr.upload(&mut col, Some(&fetch_options)), Error::Http(_));
+        assert_err!(col_mgr.upload(&col, Some(&fetch_options)), Error::Http(_));
     }
 
     let content2 = b"Content2";

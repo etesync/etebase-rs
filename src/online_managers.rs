@@ -414,7 +414,7 @@ impl CollectionManagerOnline {
 #[derive(Serialize)]
 struct ItemBatchBodyDep<'a> {
     uid: &'a str,
-    etag: Option<&'a str>,
+    etag: Option<String>,
 }
 
 #[derive(Serialize)]

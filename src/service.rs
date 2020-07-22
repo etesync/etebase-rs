@@ -31,6 +31,7 @@ use super::{
         AccountCryptoManager,
         CollectionCryptoManager,
         ItemCryptoManager,
+        Etag,
         EncryptedCollection,
         EncryptedItem,
         CollectionMetadata,
@@ -375,8 +376,8 @@ impl CollectionManager {
         })
     }
 
-    pub fn upload(&self, collection: &mut Collection, options: Option<&FetchOptions>) -> Result<()> {
-        let col = &mut collection.col;
+    pub fn upload(&self, collection: &Collection, options: Option<&FetchOptions>) -> Result<()> {
+        let col = &collection.col;
         match col.get_etag() {
             Some(_) => {
                 let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
@@ -391,8 +392,8 @@ impl CollectionManager {
         Ok(())
     }
 
-    pub fn transaction(&self, collection: &mut Collection, options: Option<&FetchOptions>) -> Result<()> {
-        let col = &mut collection.col;
+    pub fn transaction(&self, collection: &Collection, options: Option<&FetchOptions>) -> Result<()> {
+        let col = &collection.col;
         match col.get_etag() {
             Some(_) => {
                 let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
@@ -528,7 +529,7 @@ impl Collection {
         self.col.get_uid()
     }
 
-    pub fn get_etag(&self) -> Option<&str> {
+    pub fn get_etag(&self) -> Etag {
         self.col.get_etag()
     }
 
@@ -581,7 +582,7 @@ impl Item {
         self.item.get_uid()
     }
 
-    pub fn get_etag(&self) -> Option<&str> {
+    pub fn get_etag(&self) -> Etag {
         self.item.get_etag()
     }
 }
