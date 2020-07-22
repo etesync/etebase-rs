@@ -463,20 +463,26 @@ impl ItemManagerOnline {
         Ok(ret)
     }
 
-    pub fn batch(&self, items: &Vec<&EncryptedItem>, deps: Option<&Vec<&EncryptedItem>>, options: Option<&FetchOptions>) -> Result<()> {
+    pub fn batch<'a, I, J>(&self, items: I, deps: J, options: Option<&FetchOptions>) -> Result<()>
+        where I: Iterator<Item = &'a EncryptedItem>, J: Iterator<Item = &'a EncryptedItem>
+        {
+
         let url = apply_fetch_options(self.api_base.join("batch/")?, options);
 
-        let deps = deps.and_then(|deps| {
-            let ret: Vec<ItemBatchBodyDep> = deps.iter().map(|x| {
-                ItemBatchBodyDep {
-                    uid: x.get_uid(),
-                    etag: x.get_etag(),
-                }
-            }).collect();
-            Some(ret)
-        });
+        let items: Vec<&EncryptedItem> = items.collect();
+        let deps: Vec<ItemBatchBodyDep> = deps.map(|x| {
+            ItemBatchBodyDep {
+                uid: x.get_uid(),
+                etag: x.get_etag(),
+            }
+        }).collect();
+        let deps = if deps.len() > 0 {
+            Some(deps)
+        } else {
+            None
+        };
         let body_struct = ItemBatchBody {
-            items,
+            items: &items,
             deps,
         };
         let body = rmp_serde::to_vec_named(&body_struct)?;
@@ -489,20 +495,26 @@ impl ItemManagerOnline {
         Ok(())
     }
 
-    pub fn transaction(&self, items: &Vec<&EncryptedItem>, deps: Option<&Vec<&EncryptedItem>>, options: Option<&FetchOptions>) -> Result<()> {
+    pub fn transaction<'a, I, J>(&self, items: I, deps: J, options: Option<&FetchOptions>) -> Result<()>
+        where I: Iterator<Item = &'a EncryptedItem>, J: Iterator<Item = &'a EncryptedItem>
+        {
+
         let url = apply_fetch_options(self.api_base.join("transaction/")?, options);
 
-        let deps = deps.and_then(|deps| {
-            let ret: Vec<ItemBatchBodyDep> = deps.iter().map(|x| {
-                ItemBatchBodyDep {
-                    uid: x.get_uid(),
-                    etag: x.get_etag(),
-                }
-            }).collect();
-            Some(ret)
-        });
+        let items: Vec<&EncryptedItem> = items.collect();
+        let deps: Vec<ItemBatchBodyDep> = deps.map(|x| {
+            ItemBatchBodyDep {
+                uid: x.get_uid(),
+                etag: x.get_etag(),
+            }
+        }).collect();
+        let deps = if deps.len() > 0 {
+            Some(deps)
+        } else {
+            None
+        };
         let body_struct = ItemBatchBody {
-            items,
+            items: &items,
             deps,
         };
         let body = rmp_serde::to_vec_named(&body_struct)?;

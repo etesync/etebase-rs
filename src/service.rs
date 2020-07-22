@@ -380,7 +380,7 @@ impl CollectionManager {
         match col.get_etag() {
             Some(_) => {
                 let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
-                item_manager_online.batch(&vec![col.get_item()], None, options)?;
+                item_manager_online.batch(vec![col.get_item()].into_iter(), vec![].into_iter(), options)?;
             },
             None => {
                 self.collection_manager_online.create(&col, options)?;
@@ -396,7 +396,7 @@ impl CollectionManager {
         match col.get_etag() {
             Some(_) => {
                 let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
-                item_manager_online.transaction(&vec![col.get_item()], None, options)?;
+                item_manager_online.transaction(vec![col.get_item()].into_iter(), vec![].into_iter(), options)?;
             },
             None => {
                 self.collection_manager_online.create(&col, options)?;
@@ -446,14 +446,40 @@ impl ItemManager {
         })
     }
 
-    pub fn batch(&self, items: &Vec<&Item>, deps: Option<&Vec<&Item>>, options: Option<&FetchOptions>) -> Result<()> {
-        // FIXME: self.item_manager_online.batch(items, deps, options)
-        Ok(())
+    pub fn batch<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<()>
+        where I: Iterator<Item = &'a Item>
+        {
+
+        let items = items.map(|x| &x.item);
+        let deps = vec![].into_iter();
+        self.item_manager_online.batch(items, deps, options)
     }
 
-    pub fn transaction(&self, items: &Vec<&Item>, deps: Option<&Vec<&Item>>, options: Option<&FetchOptions>) -> Result<()> {
-        // FIXME: self.item_manager_online.transaction(items, deps, options)
-        Ok(())
+    pub fn batch_deps<'a, I, J>(&self, items: I, deps: J, options: Option<&FetchOptions>) -> Result<()>
+        where I: Iterator<Item = &'a Item>, J: Iterator<Item = &'a Item>
+        {
+
+        let items = items.map(|x| &x.item);
+        let deps = deps.map(|x| &x.item);
+        self.item_manager_online.batch(items, deps, options)
+    }
+
+    pub fn transaction<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<()>
+        where I: Iterator<Item = &'a Item>
+        {
+
+        let items = items.map(|x| &x.item);
+        let deps = vec![].into_iter();
+        self.item_manager_online.transaction(items, deps, options)
+    }
+
+    pub fn transaction_deps<'a, I, J>(&self, items: I, deps: J, options: Option<&FetchOptions>) -> Result<()>
+        where I: Iterator<Item = &'a Item>, J: Iterator<Item = &'a Item>
+        {
+
+        let items = items.map(|x| &x.item);
+        let deps = deps.map(|x| &x.item);
+        self.item_manager_online.transaction(items, deps, options)
     }
 }
 
