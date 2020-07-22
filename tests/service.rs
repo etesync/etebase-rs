@@ -1,8 +1,13 @@
 // SPDX-FileCopyrightText: © 2020 EteSync Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
-const TEST_API_URL: &str = "http://localhost:8033";
+use std::env;
+
 const CLIENT_NAME: &str = "etebase-tests";
+
+fn get_test_url() -> String {
+    env::var("ETEBASE_TEST_API_URL").unwrap_or("http://localhost:8033".to_owned())
+}
 
 use etebase::utils::from_base64;
 
@@ -28,7 +33,7 @@ use common::{
 };
 
 fn user_reset(user: &TestUser) {
-    let client = Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let client = Client::new(CLIENT_NAME, &get_test_url()).unwrap();
     let body_struct = etebase::test_helpers::SignupBody {
         user: &etebase::User {
             username: user.username,
@@ -47,7 +52,7 @@ fn init_test(user: &TestUser) -> Account {
     user_reset(&user);
 
     // FIXME: move to prepare user for test
-    let client = Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let client = Client::new(CLIENT_NAME, &get_test_url()).unwrap();
     let session_key = from_base64(sessionStorageKey).unwrap();
 
     let mut ret = Account::restore(client, user.storedSession, Some(&session_key)).unwrap();
@@ -125,7 +130,7 @@ fn login_and_password_change() {
     etebase.logout().unwrap();
 
     let another_password = "AnotherPassword";
-    let client = Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let client = Client::new(CLIENT_NAME, &get_test_url()).unwrap();
     let mut etebase2 = Account::login(client.clone(), USER2.username, USER2.password).unwrap();
 
     etebase2.change_password(another_password).unwrap();
@@ -148,7 +153,7 @@ fn login_and_password_change() {
 
 #[test]
 fn session_save_and_restore() {
-    let client = Client::new(CLIENT_NAME, TEST_API_URL).unwrap();
+    let client = Client::new(CLIENT_NAME, &get_test_url()).unwrap();
     let etebase = init_test(&USER);
 
     // Verify we can store and restore without an encryption key
