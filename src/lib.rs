@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
-mod crypto;
+pub mod crypto;
 mod online_managers;
 mod encrypted_models;
 mod service;
