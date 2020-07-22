@@ -431,8 +431,8 @@ impl ItemManager {
         Item::new(encrypted_item.get_crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
     }
 
-    pub fn fetch(&self, col_uid: &StrBase64, options: Option<&FetchOptions>) -> Result<Item> {
-        let encrypted_item = self.item_manager_online.fetch(&col_uid, options)?;
+    pub fn fetch(&self, item_uid: &StrBase64, options: Option<&FetchOptions>) -> Result<Item> {
+        let encrypted_item = self.item_manager_online.fetch(&item_uid, options)?;
         Item::new(encrypted_item.get_crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
     }
 
