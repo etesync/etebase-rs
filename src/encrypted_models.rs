@@ -278,6 +278,10 @@ impl EncryptedCollection {
         self.stoken.as_deref()
     }
 
+    pub fn get_item(&self) -> &EncryptedItem {
+        &self.item
+    }
+
     fn get_crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8]) -> Result<CollectionCryptoManager> {
         let encryption_key = parent_crypto_manager.0.decrypt(encryption_key, None)?;
 

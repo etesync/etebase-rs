@@ -13,6 +13,15 @@ use etebase::utils::from_base64;
 
 use etebase::error::Error;
 
+macro_rules! assert_err {
+    ($x:expr, $err:pat) => {
+        match ($x) {
+            Err($err) => (),
+            _ => assert!(false),
+        }
+    }
+}
+
 use etebase::{
     Account,
     Client,
@@ -20,6 +29,7 @@ use etebase::{
     CollectionMetadata,
     Item,
     ItemMetadata,
+    FetchOptions,
 };
 
 #[allow(dead_code)]
@@ -143,6 +153,44 @@ fn simple_collection_sync() {
     assert_eq!(collections.data.len(), 1);
     verify_collection(&collections.data.first().unwrap(), &meta, content);
 
+    let mut col_old = col_mgr.fetch(col.get_uid(), None).unwrap();
+    {
+        let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
+        let collections = col_mgr.list(Some(&fetch_options)).unwrap();
+        assert_eq!(collections.data.len(), 0);
+    }
+
+    let meta2 = meta.clone().set_name("Collection meta2");
+    col.set_meta(&meta2).unwrap();
+
+    col_mgr.upload(&mut col, None).unwrap();
+
+    let collections = col_mgr.list(None).unwrap();
+    assert_eq!(collections.data.len(), 1);
+
+    {
+        let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
+        let collections = col_mgr.list(Some(&fetch_options)).unwrap();
+        assert_eq!(collections.data.len(), 1);
+    }
+
+    // Fail uploading because of an old stoken/etag
+    {
+        let content2 = b"Content2";
+        col_old.set_content(content2).unwrap();
+
+        assert_err!(col_mgr.transaction(&mut col, None), Error::Http(_));
+        let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
+        assert_err!(col_mgr.upload(&mut col, Some(&fetch_options)), Error::Http(_));
+    }
+
+    let content2 = b"Content2";
+    col.set_content(content2).unwrap();
+
+    let collections = col_mgr.list(None).unwrap();
+    assert_eq!(collections.data.len(), 1);
+    verify_collection(&col, &meta2, content2);
+
     etebase.logout().unwrap();
 }
 
@@ -160,10 +208,7 @@ fn login_and_password_change() {
 
     etebase2.logout().unwrap();
 
-    match Account::login(client.clone(), USER2.username, "BadPassword") {
-        Err(Error::Http(_)) => (),
-        _ => assert!(false),
-    }
+    assert_err!(Account::login(client.clone(), USER2.username, "BadPassword"), Error::Http(_));
 
     // FIXME: add tests to verify that we can actually manipulate the data
     let mut etebase2 = Account::login(client.clone(), USER2.username, another_password).unwrap();

@@ -11,6 +11,7 @@ pub mod error;
 pub use online_managers::{
     Client,
     User,
+    FetchOptions,
 };
 
 pub use encrypted_models::{

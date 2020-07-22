@@ -464,7 +464,7 @@ impl ItemManagerOnline {
     }
 
     pub fn batch(&self, items: &Vec<&EncryptedItem>, deps: Option<&Vec<&EncryptedItem>>, options: Option<&FetchOptions>) -> Result<()> {
-        let url = apply_fetch_options(self.api_base.join("batch")?, options);
+        let url = apply_fetch_options(self.api_base.join("batch/")?, options);
 
         let deps = deps.and_then(|deps| {
             let ret: Vec<ItemBatchBodyDep> = deps.iter().map(|x| {
@@ -490,7 +490,7 @@ impl ItemManagerOnline {
     }
 
     pub fn transaction(&self, items: &Vec<&EncryptedItem>, deps: Option<&Vec<&EncryptedItem>>, options: Option<&FetchOptions>) -> Result<()> {
-        let url = apply_fetch_options(self.api_base.join("transaction")?, options);
+        let url = apply_fetch_options(self.api_base.join("transaction/")?, options);
 
         let deps = deps.and_then(|deps| {
             let ret: Vec<ItemBatchBodyDep> = deps.iter().map(|x| {

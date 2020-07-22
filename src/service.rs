@@ -379,8 +379,8 @@ impl CollectionManager {
         let col = &mut collection.col;
         match col.get_etag() {
             Some(_) => {
-                let options = options.unwrap_or(&FetchOptions::new().stoken(col.get_stoken()));
-                return Err(Error::Generic("FIXME: tbd 3".to_owned()));
+                let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
+                item_manager_online.batch(&vec![col.get_item()], None, options)?;
             },
             None => {
                 self.collection_manager_online.create(&col, options)?;
@@ -395,8 +395,8 @@ impl CollectionManager {
         let col = &mut collection.col;
         match col.get_etag() {
             Some(_) => {
-                let options = options.unwrap_or(&FetchOptions::new().stoken(col.get_stoken()));
-                return Err(Error::Generic("FIXME: tbd 4".to_owned()));
+                let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
+                item_manager_online.transaction(&vec![col.get_item()], None, options)?;
             },
             None => {
                 self.collection_manager_online.create(&col, options)?;
