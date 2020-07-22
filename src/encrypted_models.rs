@@ -162,6 +162,7 @@ impl ItemMetadata {
 
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(from = "String", into = "String")]
 enum CollectionAccessLevel {
     #[serde(rename = "adm")]
     Admin,
@@ -169,6 +170,29 @@ enum CollectionAccessLevel {
     ReadWrite,
     #[serde(rename = "ro")]
     ReadOnly,
+    Unknown(String),
+}
+
+impl From<String> for CollectionAccessLevel {
+    fn from(input: String) -> Self {
+        match &input[..] {
+            "adm" => CollectionAccessLevel::Admin,
+            "rw" => CollectionAccessLevel::ReadWrite,
+            "ro" => CollectionAccessLevel::ReadOnly,
+            unknown  => CollectionAccessLevel::Unknown(unknown.to_owned()),
+        }
+    }
+}
+
+impl From<CollectionAccessLevel> for String {
+    fn from(input: CollectionAccessLevel) -> Self {
+        match input {
+            CollectionAccessLevel::Admin => "adm".to_owned(),
+            CollectionAccessLevel::ReadWrite => "rw".to_owned(),
+            CollectionAccessLevel::ReadOnly => "ro".to_owned(),
+            CollectionAccessLevel::Unknown(string) => string.to_owned(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
