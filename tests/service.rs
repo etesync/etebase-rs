@@ -195,6 +195,71 @@ fn simple_collection_sync() {
 }
 
 #[test]
+fn simple_item_sync() {
+    let etebase = init_test(&USER);
+    let col_mgr = etebase.get_collection_manager().unwrap();
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_content = b"SomeContent";
+
+    let col = col_mgr.create(&col_meta, col_content).unwrap();
+
+    col_mgr.upload(&col, None).unwrap();
+
+    let it_mgr = col_mgr.get_item_manager(&col).unwrap();
+
+    let meta = ItemMetadata::new().set_name(Some("Item 1"));
+    let content = b"Content 1";
+
+    let mut item = it_mgr.create(&meta, content).unwrap();
+
+    it_mgr.batch(vec![&item].into_iter(), None).unwrap();
+
+    {
+        let items = it_mgr.list(None).unwrap();
+        assert_eq!(items.data.len(), 1);
+        verify_item(&items.data.first().unwrap(), &meta, content);
+    }
+
+    let mut item_old = it_mgr.fetch(item.get_uid(), None).unwrap();
+
+    let meta2 = ItemMetadata::new().set_name(Some("Item 2"));
+    item.set_meta(&meta2).unwrap();
+
+    let col_old = col_mgr.fetch(col.get_uid(), None).unwrap();
+
+    it_mgr.batch(vec![&item].into_iter(), None).unwrap();
+
+    {
+        let items = it_mgr.list(None).unwrap();
+        assert_eq!(items.data.len(), 1);
+        verify_item(&items.data.first().unwrap(), &meta2, content);
+    }
+
+    {
+        item_old.set_content(b"Bla bla").unwrap();
+        assert_err!(it_mgr.transaction(vec![&item_old].into_iter(), None), Error::Http(_));
+    }
+
+    let content2 = b"Content 2";
+    item.set_content(content2).unwrap();
+
+    {
+        let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
+        assert_err!(it_mgr.batch(vec![&item].into_iter(), Some(&fetch_options)), Error::Http(_));
+    }
+
+    it_mgr.transaction(vec![&item].into_iter(), None).unwrap();
+
+    {
+        let items = it_mgr.list(None).unwrap();
+        assert_eq!(items.data.len(), 1);
+        verify_item(&items.data.first().unwrap(), &meta2, content2);
+    }
+
+    etebase.logout().unwrap();
+}
+
+#[test]
 #[ignore]
 fn login_and_password_change() {
     let etebase = init_test(&USER);

@@ -407,6 +407,8 @@ impl CollectionManagerOnline {
             .send()?;
         res.error_for_status()?.bytes()?;
 
+        collection.mark_saved();
+
         Ok(())
     }
 }
@@ -492,6 +494,10 @@ impl ItemManagerOnline {
             .send()?;
         res.error_for_status()?.bytes()?;
 
+        for item in items {
+            item.mark_saved();
+        }
+
         Ok(())
     }
 
@@ -523,6 +529,10 @@ impl ItemManagerOnline {
             .body(body)
             .send()?;
         res.error_for_status()?.bytes()?;
+
+        for item in items {
+            item.mark_saved();
+        }
 
         Ok(())
     }

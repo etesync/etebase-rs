@@ -387,7 +387,6 @@ impl CollectionManager {
                 self.collection_manager_online.create(&col, options)?;
             },
         };
-        (*col).mark_saved();
 
         Ok(())
     }
@@ -403,7 +402,6 @@ impl CollectionManager {
                 self.collection_manager_online.create(&col, options)?;
             },
         };
-        (*col).mark_saved();
 
         Ok(())
     }
