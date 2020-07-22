@@ -216,6 +216,14 @@ impl Account {
         Ok(())
     }
 
+    pub fn force_api_base(&mut self, api_base: &str) -> Result<()> {
+        let mut client = (*self.client).clone();
+        client.set_api_base(api_base)?;
+        self.client = Rc::new(client);
+
+        Ok(())
+    }
+
     pub fn change_password(&mut self, password: &str) -> Result<()> {
         let authenticator = Authenticator::new(&self.client);
         let version = self.version;
