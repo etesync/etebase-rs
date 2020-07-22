@@ -412,7 +412,7 @@ impl EncryptedRevision {
         Ok(())
     }
 
-    pub fn decrypt_content(&self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<Vec<u8>> {
+    pub fn decrypt_content(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         let decrypt_item = |item: &ChunkArrayItem| -> Result<Vec<u8>> {
             let hash_str = &item.0;
             let buf = &item.1;
@@ -553,7 +553,7 @@ impl EncryptedItem {
 
     pub fn decrypt_content(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
-        self.content.decrypt_content(crypto_manager, self.get_additional_mac_data())
+        self.content.decrypt_content(crypto_manager)
     }
 
     pub fn delete(&mut self, crypto_manager: &ItemCryptoManager) -> Result<()> {
