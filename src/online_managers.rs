@@ -372,7 +372,7 @@ impl CollectionManagerOnline {
     }
 
     pub fn fetch(&self, col_uid: &str, options: Option<&FetchOptions>) -> Result<EncryptedCollection> {
-        let url = apply_fetch_options(self.api_base.join(col_uid)?, options);
+        let url = apply_fetch_options(self.api_base.join(&format!("{}/", col_uid))?, options);
         let res = self.client.get(&url)?
             .send()?;
         let res = res.error_for_status()?.bytes()?;
@@ -437,7 +437,7 @@ impl ItemManagerOnline {
     }
 
     pub fn fetch(&self, item_uid: &str, options: Option<&FetchOptions>) -> Result<EncryptedItem> {
-        let url = apply_fetch_options(self.api_base.join(item_uid)?, options);
+        let url = apply_fetch_options(self.api_base.join(&format!("{}/", item_uid))?, options);
         let res = self.client.get(&url)?
             .send()?;
         let res = res.error_for_status()?.bytes()?;
