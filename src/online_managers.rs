@@ -402,7 +402,7 @@ impl CollectionManagerOnline {
         let url = apply_fetch_options(self.api_base.clone(), options);
         let body = rmp_serde::to_vec_named(&collection)?;
 
-        let res = self.client.get(&url)?
+        let res = self.client.post(&url)?
             .body(body)
             .send()?;
         res.error_for_status()?.bytes()?;
@@ -481,7 +481,7 @@ impl ItemManagerOnline {
         };
         let body = rmp_serde::to_vec_named(&body_struct)?;
 
-        let res = self.client.get(&url)?
+        let res = self.client.post(&url)?
             .body(body)
             .send()?;
         res.error_for_status()?.bytes()?;
@@ -507,7 +507,7 @@ impl ItemManagerOnline {
         };
         let body = rmp_serde::to_vec_named(&body_struct)?;
 
-        let res = self.client.get(&url)?
+        let res = self.client.post(&url)?
             .body(body)
             .send()?;
         res.error_for_status()?.bytes()?;

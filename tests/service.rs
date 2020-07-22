@@ -125,6 +125,28 @@ fn simple_item_handling() {
 }
 
 #[test]
+fn simple_collection_sync() {
+    let etebase = init_test(&USER);
+    let col_mgr = etebase.get_collection_manager().unwrap();
+    let meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let content = b"SomeContent";
+
+    let mut col = col_mgr.create(&meta, content).unwrap();
+    verify_collection(&col, &meta, content);
+
+    let collections = col_mgr.list(None).unwrap();
+    assert_eq!(collections.data.len(), 0);
+
+    col_mgr.upload(&mut col, None).unwrap();
+
+    let collections = col_mgr.list(None).unwrap();
+    assert_eq!(collections.data.len(), 1);
+    verify_collection(&collections.data.first().unwrap(), &meta, content);
+
+    etebase.logout().unwrap();
+}
+
+#[test]
 #[ignore]
 fn login_and_password_change() {
     let etebase = init_test(&USER);

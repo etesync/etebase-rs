@@ -290,7 +290,12 @@ impl EncryptedCollection {
 }
 
 
-type ChunkArrayItem = (StringBase64, Option<Vec<u8>>);
+#[derive(Serialize, Deserialize, Clone)]
+struct ChunkArrayItem(
+    StringBase64,
+    #[serde(with = "serde_bytes")]
+    Option<Vec<u8>>,
+    );
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EncryptedRevision {
@@ -377,7 +382,7 @@ impl EncryptedRevision {
         if chunk_start < content.len() {
             let buf = &content[chunk_start..];
             let hash = to_base64(&crypto_manager.0.calculate_mac(buf)?)?;
-            chunks.push((hash, Some(buf.to_vec())));
+            chunks.push(ChunkArrayItem(hash, Some(buf.to_vec())));
         }
 
         if chunks.len() > 1 {
@@ -385,13 +390,14 @@ impl EncryptedRevision {
         }
 
         let encrypt_item = |item: ChunkArrayItem| -> Result<ChunkArrayItem> {
-            let (hash, buf) = item;
+            let hash = item.0;
+            let buf = item.1;
             let ret = match buf {
                 Some(buf) => Some(crypto_manager.0.encrypt(&buffer_pad(&buf)?, None)?),
                 None => None,
             };
 
-            Ok((hash, ret))
+            Ok(ChunkArrayItem(hash, ret))
         };
 
         // Encrypt all of the chunks
@@ -408,7 +414,8 @@ impl EncryptedRevision {
 
     pub fn decrypt_content(&self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<Vec<u8>> {
         let decrypt_item = |item: &ChunkArrayItem| -> Result<Vec<u8>> {
-            let (hash_str, buf) = item;
+            let hash_str = &item.0;
+            let buf = &item.1;
             let buf = match buf {
                 Some(buf) => buffer_unpad(&crypto_manager.0.decrypt(&buf, None)?)?,
                 None => return Err(Error::Generic("Got chunk without data".to_owned())),
