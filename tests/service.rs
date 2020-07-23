@@ -228,7 +228,7 @@ fn simple_item_sync() -> Result<()> {
 
     let mut item = it_mgr.create(&meta, content)?;
 
-    it_mgr.batch(vec![&item].into_iter(), None)?;
+    it_mgr.batch(iter::once(&item), None)?;
 
     {
         let items = it_mgr.list(None)?;
@@ -243,7 +243,7 @@ fn simple_item_sync() -> Result<()> {
 
     let col_old = col_mgr.fetch(col.uid(), None)?;
 
-    it_mgr.batch(vec![&item].into_iter(), None)?;
+    it_mgr.batch(iter::once(&item), None)?;
 
     {
         let items = it_mgr.list(None)?;
@@ -253,7 +253,7 @@ fn simple_item_sync() -> Result<()> {
 
     {
         item_old.set_content(b"Bla bla")?;
-        assert_err!(it_mgr.transaction(vec![&item_old].into_iter(), None), Error::Http(_));
+        assert_err!(it_mgr.transaction(iter::once(&item_old), None), Error::Http(_));
     }
 
     let content2 = b"Content 2";
@@ -261,10 +261,10 @@ fn simple_item_sync() -> Result<()> {
 
     {
         let fetch_options = FetchOptions::new().stoken(col_old.stoken());
-        assert_err!(it_mgr.batch(vec![&item].into_iter(), Some(&fetch_options)), Error::Http(_));
+        assert_err!(it_mgr.batch(iter::once(&item), Some(&fetch_options)), Error::Http(_));
     }
 
-    it_mgr.transaction(vec![&item].into_iter(), None)?;
+    it_mgr.transaction(iter::once(&item), None)?;
 
     {
         let items = it_mgr.list(None)?;
@@ -306,7 +306,7 @@ fn collection_as_item() -> Result<()> {
     let content = b"Item data";
     let item = it_mgr.create(&meta, content)?;
 
-    it_mgr.batch(vec![&item].into_iter(), None)?;
+    it_mgr.batch(iter::once(&item), None)?;
 
     {
         let items = it_mgr.list(None)?;
@@ -371,13 +371,13 @@ fn collection_and_item_deletion() -> Result<()> {
 
     let mut item = it_mgr.create(&meta, content)?;
 
-    it_mgr.batch(vec![&item].into_iter(), None)?;
+    it_mgr.batch(iter::once(&item), None)?;
 
     let items = it_mgr.list(None)?;
     assert_eq!(items.data().len(), 1);
 
     item.delete()?;
-    it_mgr.batch(vec![&item].into_iter(), None)?;
+    it_mgr.batch(iter::once(&item), None)?;
 
     {
         let fetch_options = FetchOptions::new().stoken(items.stoken());
@@ -427,7 +427,7 @@ fn empty_content() -> Result<()> {
 
     let item = it_mgr.create(&meta, content)?;
 
-    it_mgr.transaction(vec![&item].into_iter(), None)?;
+    it_mgr.transaction(iter::once(&item), None)?;
 
     {
         let items = it_mgr.list(None)?;
@@ -553,7 +553,7 @@ fn item_transactions() -> Result<()> {
     item.set_meta(&meta2)?;
     let deps = vec![&item];
 
-    it_mgr.transaction_deps(vec![&item].into_iter(), deps.clone().into_iter(), None)?;
+    it_mgr.transaction_deps(iter::once(&item), deps.clone().into_iter(), None)?;
 
     {
         let items = it_mgr.list(None)?;
