@@ -13,6 +13,9 @@ pub use online_managers::{
     Client,
     User,
     FetchOptions,
+    CollectionListResponse,
+    ItemListResponse,
+    IteratorListResponse,
 };
 
 pub use encrypted_models::{

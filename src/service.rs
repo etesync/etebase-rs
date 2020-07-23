@@ -46,7 +46,8 @@ use super::{
         LoginBodyResponse,
         CollectionManagerOnline,
         ItemManagerOnline,
-        ListResponse,
+        CollectionListResponse,
+        ItemListResponse,
         FetchOptions,
     },
 };
@@ -367,13 +368,15 @@ impl CollectionManager {
         Collection::new(encrypted_collection.get_crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
     }
 
-    pub fn list(&self, options: Option<&FetchOptions>) -> Result<ListResponse<Collection>> {
+    pub fn list(&self, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>> {
         let response = self.collection_manager_online.list(options)?;
 
         let data: Result<Vec<Collection>> = response.data.into_iter().map(|x| Collection::new(x.get_crypto_manager(&self.account_crypto_manager)?, x)).collect();
-        Ok(ListResponse {
+
+        Ok(CollectionListResponse {
             data: data?,
             done: response.done,
+            stoken: response.stoken,
         })
     }
 
@@ -436,26 +439,28 @@ impl ItemManager {
         Item::new(encrypted_item.get_crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
     }
 
-    pub fn list(&self, options: Option<&FetchOptions>) -> Result<ListResponse<Item>> {
+    pub fn list(&self, options: Option<&FetchOptions>) -> Result<ItemListResponse<Item>> {
         let response = self.item_manager_online.list(options)?;
 
         let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.get_crypto_manager(&self.collection_crypto_manager)?, x)).collect();
-        Ok(ListResponse {
+        Ok(ItemListResponse {
             data: data?,
             done: response.done,
+            stoken: response.stoken,
         })
     }
 
-    pub fn fetch_updates<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ListResponse<Item>>
+    pub fn fetch_updates<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ItemListResponse<Item>>
         where I: Iterator<Item = &'a Item>
         {
 
         let items = items.map(|x| &x.item);
         let response = self.item_manager_online.fetch_updates(items, options)?;
         let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.get_crypto_manager(&self.collection_crypto_manager)?, x)).collect();
-        Ok(ListResponse {
+        Ok(ItemListResponse {
             data: data?,
             done: response.done,
+            stoken: response.stoken,
         })
     }
 

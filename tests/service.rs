@@ -160,19 +160,19 @@ fn simple_collection_sync() -> Result<()> {
     verify_collection(&col, &meta, content)?;
 
     let collections = col_mgr.list(None)?;
-    assert_eq!(collections.data.len(), 0);
+    assert_eq!(collections.data().len(), 0);
 
     col_mgr.upload(&col, None)?;
 
     let collections = col_mgr.list(None)?;
-    assert_eq!(collections.data.len(), 1);
-    verify_collection(&collections.data.first().unwrap(), &meta, content)?;
+    assert_eq!(collections.data().len(), 1);
+    verify_collection(&collections.data().first().unwrap(), &meta, content)?;
 
     let mut col_old = col_mgr.fetch(col.get_uid(), None)?;
     {
         let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
         let collections = col_mgr.list(Some(&fetch_options))?;
-        assert_eq!(collections.data.len(), 0);
+        assert_eq!(collections.data().len(), 0);
     }
 
     let meta2 = meta.clone().set_name("Collection meta2");
@@ -181,12 +181,12 @@ fn simple_collection_sync() -> Result<()> {
     col_mgr.upload(&col, None)?;
 
     let collections = col_mgr.list(None)?;
-    assert_eq!(collections.data.len(), 1);
+    assert_eq!(collections.data().len(), 1);
 
     {
         let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
         let collections = col_mgr.list(Some(&fetch_options))?;
-        assert_eq!(collections.data.len(), 1);
+        assert_eq!(collections.data().len(), 1);
     }
 
     // Fail uploading because of an old stoken/etag
@@ -203,7 +203,7 @@ fn simple_collection_sync() -> Result<()> {
     col.set_content(content2)?;
 
     let collections = col_mgr.list(None)?;
-    assert_eq!(collections.data.len(), 1);
+    assert_eq!(collections.data().len(), 1);
     verify_collection(&col, &meta2, content2)?;
 
     etebase.logout()
@@ -231,8 +231,8 @@ fn simple_item_sync() -> Result<()> {
 
     {
         let items = it_mgr.list(None)?;
-        assert_eq!(items.data.len(), 1);
-        verify_item(&items.data.first().unwrap(), &meta, content)?;
+        assert_eq!(items.data().len(), 1);
+        verify_item(&items.data().first().unwrap(), &meta, content)?;
     }
 
     let mut item_old = it_mgr.fetch(item.get_uid(), None)?;
@@ -246,8 +246,8 @@ fn simple_item_sync() -> Result<()> {
 
     {
         let items = it_mgr.list(None)?;
-        assert_eq!(items.data.len(), 1);
-        verify_item(&items.data.first().unwrap(), &meta2, content)?;
+        assert_eq!(items.data().len(), 1);
+        verify_item(&items.data().first().unwrap(), &meta2, content)?;
     }
 
     {
@@ -267,8 +267,8 @@ fn simple_item_sync() -> Result<()> {
 
     {
         let items = it_mgr.list(None)?;
-        assert_eq!(items.data.len(), 1);
-        verify_item(&items.data.first().unwrap(), &meta2, content2)?;
+        assert_eq!(items.data().len(), 1);
+        verify_item(&items.data().first().unwrap(), &meta2, content2)?;
     }
 
     etebase.logout()
@@ -290,12 +290,12 @@ fn collection_as_item() -> Result<()> {
     // Verify with_collection works
     {
         let items = it_mgr.list(None)?;
-        assert_eq!(items.data.len(), 0);
+        assert_eq!(items.data().len(), 0);
         let fetch_options = FetchOptions::new().with_collection(true);
         let items = it_mgr.list(Some(&fetch_options))?;
-        assert_eq!(items.data.len(), 1);
+        assert_eq!(items.data().len(), 1);
         let meta = col.get_item()?.decrypt_meta()?;
-        let first_item = items.data.first().unwrap();
+        let first_item = items.data().first().unwrap();
         verify_item(&first_item, &meta, col_content)?;
         // Also verify the collection metadata is good
         assert_eq!(&first_item.decrypt_meta_generic::<CollectionMetadata>()?, &col_meta);
@@ -309,10 +309,10 @@ fn collection_as_item() -> Result<()> {
 
     {
         let items = it_mgr.list(None)?;
-        assert_eq!(items.data.len(), 1);
+        assert_eq!(items.data().len(), 1);
         let fetch_options = FetchOptions::new().with_collection(true);
         let items = it_mgr.list(Some(&fetch_options))?;
-        assert_eq!(items.data.len(), 2);
+        assert_eq!(items.data().len(), 2);
     }
 
     let col_item_old = it_mgr.fetch(col.get_uid(), None)?;
@@ -324,8 +324,8 @@ fn collection_as_item() -> Result<()> {
 
     {
         let collections = col_mgr.list(None)?;
-        assert_eq!(collections.data.len(), 1);
-        verify_collection(&collections.data.first().unwrap(), &col_meta, col_content2)?;
+        assert_eq!(collections.data().len(), 1);
+        verify_collection(&collections.data().first().unwrap(), &col_meta, col_content2)?;
     }
 
     let mut col = col_mgr.fetch(col.get_uid(), None)?;
@@ -335,15 +335,15 @@ fn collection_as_item() -> Result<()> {
 
     {
         let collections = col_mgr.list(None)?;
-        assert_eq!(collections.data.len(), 1);
-        verify_collection(&collections.data.first().unwrap(), &col_meta, col_content2)?;
+        assert_eq!(collections.data().len(), 1);
+        verify_collection(&collections.data().first().unwrap(), &col_meta, col_content2)?;
     }
 
     {
         let updates = it_mgr.fetch_updates(vec![&col_item_old, &item].into_iter(), None)?;
-        assert_eq!(updates.data.len(), 1);
+        assert_eq!(updates.data().len(), 1);
         let meta = col.get_item()?.decrypt_meta()?;
-        let first_item = updates.data.first().unwrap();
+        let first_item = updates.data().first().unwrap();
         verify_item(&first_item, &meta, col_content2)?;
         // Also verify the collection metadata is good
         assert_eq!(&first_item.decrypt_meta_generic::<CollectionMetadata>()?, &col_meta);

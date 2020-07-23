@@ -6,6 +6,7 @@ extern crate rmp_serde;
 use std::rc::Rc;
 use url::Url;
 
+use getset::Getters;
 use serde::{Serialize, Deserialize};
 
 use reqwest::{
@@ -114,10 +115,49 @@ impl Client {
     }
 }
 
-#[derive(Deserialize)]
-pub struct ListResponse<T> {
-    pub data: Vec<T>,
-    pub done: bool,
+#[derive(Deserialize, Getters)]
+pub struct CollectionListResponse<T> {
+    #[get = "pub"]
+    pub(crate) data: Vec<T>,
+    #[get = "pub"]
+    pub(crate) done: bool,
+    pub(crate) stoken: Option<String>,
+}
+
+impl<T> CollectionListResponse<T> {
+    pub fn stoken(&self) -> Option<&str> {
+        self.stoken.as_deref()
+    }
+}
+
+#[derive(Deserialize, Getters)]
+pub struct ItemListResponse<T> {
+    #[get = "pub"]
+    pub(crate) data: Vec<T>,
+    #[get = "pub"]
+    pub(crate) done: bool,
+    pub(crate) stoken: Option<String>,
+}
+
+impl<T> ItemListResponse<T> {
+    pub fn stoken(&self) -> Option<&str> {
+        self.stoken.as_deref()
+    }
+}
+
+#[derive(Deserialize, Getters)]
+pub struct IteratorListResponse<T> {
+    #[get = "pub"]
+    pub(crate) data: Vec<T>,
+    #[get = "pub"]
+    pub(crate) done: bool,
+    pub(crate) iterator: Option<String>,
+}
+
+impl<T> IteratorListResponse<T> {
+    pub fn iterator(&self) -> Option<&str> {
+        self.iterator.as_deref()
+    }
 }
 
 #[derive(Deserialize)]
@@ -383,21 +423,16 @@ impl CollectionManagerOnline {
         Ok(serialized)
     }
 
-    pub fn list(&self, options: Option<&FetchOptions>) -> Result<ListResponse<EncryptedCollection>> {
+    pub fn list(&self, options: Option<&FetchOptions>) -> Result<CollectionListResponse<EncryptedCollection>> {
         let url = apply_fetch_options(self.api_base.clone(), options);
         let res = self.client.get(&url)?
             .send()?;
         let res = res.error_for_status()?.bytes()?;
 
-        let serialized: ListResponse<EncryptedCollection> = rmp_serde::from_read_ref(&res)?;
+        let serialized: CollectionListResponse<EncryptedCollection> = rmp_serde::from_read_ref(&res)?;
         serialized.data.iter().for_each(|x| x.mark_saved());
 
-        let ret = ListResponse {
-            data: serialized.data,
-            done: serialized.done,
-        };
-
-        Ok(ret)
+        Ok(serialized)
     }
 
     pub fn create(&self, collection: &EncryptedCollection, options: Option<&FetchOptions>) -> Result<()> {
@@ -453,24 +488,19 @@ impl ItemManagerOnline {
         Ok(serialized)
     }
 
-    pub fn list(&self, options: Option<&FetchOptions>) -> Result<ListResponse<EncryptedItem>> {
+    pub fn list(&self, options: Option<&FetchOptions>) -> Result<ItemListResponse<EncryptedItem>> {
         let url = apply_fetch_options(self.api_base.clone(), options);
         let res = self.client.get(&url)?
             .send()?;
         let res = res.error_for_status()?.bytes()?;
 
-        let serialized: ListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
+        let serialized: ItemListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
         serialized.data.iter().for_each(|x| x.mark_saved());
 
-        let ret = ListResponse {
-            data: serialized.data,
-            done: serialized.done,
-        };
-
-        Ok(ret)
+        Ok(serialized)
     }
 
-    pub fn fetch_updates<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ListResponse<EncryptedItem>>
+    pub fn fetch_updates<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ItemListResponse<EncryptedItem>>
         where I: Iterator<Item = &'a EncryptedItem>
         {
 
@@ -493,15 +523,10 @@ impl ItemManagerOnline {
             .send()?;
         let res = res.error_for_status()?.bytes()?;
 
-        let serialized: ListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
+        let serialized: ItemListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
         serialized.data.iter().for_each(|x| x.mark_saved());
 
-        let ret = ListResponse {
-            data: serialized.data,
-            done: serialized.done,
-        };
-
-        Ok(ret)
+        Ok(serialized)
     }
 
     pub fn batch<'a, I, J>(&self, items: I, deps: J, options: Option<&FetchOptions>) -> Result<()>
