@@ -418,6 +418,7 @@ impl CollectionManagerOnline {
 #[derive(Serialize)]
 struct ItemBatchBodyDep<'a> {
     uid: &'a str,
+    #[serde(skip_serializing_if = "std::option::Option::is_none")]
     etag: Option<String>,
 }
 
@@ -455,6 +456,40 @@ impl ItemManagerOnline {
     pub fn list(&self, options: Option<&FetchOptions>) -> Result<ListResponse<EncryptedItem>> {
         let url = apply_fetch_options(self.api_base.clone(), options);
         let res = self.client.get(&url)?
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let serialized: ListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
+        serialized.data.iter().for_each(|x| x.mark_saved());
+
+        let ret = ListResponse {
+            data: serialized.data,
+            done: serialized.done,
+        };
+
+        Ok(ret)
+    }
+
+    pub fn fetch_updates<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ListResponse<EncryptedItem>>
+        where I: Iterator<Item = &'a EncryptedItem>
+        {
+
+        let want_etag = options.and_then(|x| x.stoken).is_none();
+        let items: Vec<ItemBatchBodyDep> = items.map(|x| {
+            ItemBatchBodyDep {
+                uid: x.get_uid(),
+                etag: if want_etag {
+                    x.get_etag()
+                } else {
+                    None
+                }
+            }
+        }).collect();
+
+        let body = rmp_serde::to_vec_named(&items)?;
+        let url = apply_fetch_options(self.api_base.join("fetch_updates/")?, options);
+        let res = self.client.post(&url)?
+            .body(body)
             .send()?;
         let res = res.error_for_status()?.bytes()?;
 

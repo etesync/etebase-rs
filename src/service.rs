@@ -446,6 +446,19 @@ impl ItemManager {
         })
     }
 
+    pub fn fetch_updates<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ListResponse<Item>>
+        where I: Iterator<Item = &'a Item>
+        {
+
+        let items = items.map(|x| &x.item);
+        let response = self.item_manager_online.fetch_updates(items, options)?;
+        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.get_crypto_manager(&self.collection_crypto_manager)?, x)).collect();
+        Ok(ListResponse {
+            data: data?,
+            done: response.done,
+        })
+    }
+
     pub fn batch<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<()>
         where I: Iterator<Item = &'a Item>
         {

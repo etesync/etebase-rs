@@ -305,7 +305,7 @@ fn collection_as_item() -> Result<()> {
     let content = b"Item data";
     let item = it_mgr.create(&meta, content)?;
 
-    it_mgr.batch([item].iter(), None)?;
+    it_mgr.batch(vec![&item].into_iter(), None)?;
 
     {
         let items = it_mgr.list(None)?;
@@ -314,6 +314,8 @@ fn collection_as_item() -> Result<()> {
         let items = it_mgr.list(Some(&fetch_options))?;
         assert_eq!(items.data.len(), 2);
     }
+
+    let col_item_old = it_mgr.fetch(col.get_uid(), None)?;
 
     // Manipulate the collection with batch/transaction
     let col_content2 = b"Other content";
@@ -324,6 +326,27 @@ fn collection_as_item() -> Result<()> {
         let collections = col_mgr.list(None)?;
         assert_eq!(collections.data.len(), 1);
         verify_collection(&collections.data.first().unwrap(), &col_meta, col_content2)?;
+    }
+
+    let mut col = col_mgr.fetch(col.get_uid(), None)?;
+    let col_content2 = b"Other content 3";
+    col.set_content(col_content2)?;
+    it_mgr.transaction([col.get_item()?].iter(), None)?;
+
+    {
+        let collections = col_mgr.list(None)?;
+        assert_eq!(collections.data.len(), 1);
+        verify_collection(&collections.data.first().unwrap(), &col_meta, col_content2)?;
+    }
+
+    {
+        let updates = it_mgr.fetch_updates(vec![&col_item_old, &item].into_iter(), None)?;
+        assert_eq!(updates.data.len(), 1);
+        let meta = col.get_item()?.decrypt_meta()?;
+        let first_item = updates.data.first().unwrap();
+        verify_item(&first_item, &meta, col_content2)?;
+        // Also verify the collection metadata is good
+        assert_eq!(&first_item.decrypt_meta_generic::<CollectionMetadata>()?, &col_meta);
     }
 
     etebase.logout()
