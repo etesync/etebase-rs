@@ -119,7 +119,6 @@ impl Client {
 pub struct CollectionListResponse<T> {
     #[get = "pub"]
     pub(crate) data: Vec<T>,
-    #[get = "pub"]
     pub(crate) done: bool,
     pub(crate) stoken: Option<String>,
 }
@@ -128,13 +127,16 @@ impl<T> CollectionListResponse<T> {
     pub fn stoken(&self) -> Option<&str> {
         self.stoken.as_deref()
     }
+
+    pub fn done(&self) -> bool {
+        self.done
+    }
 }
 
 #[derive(Deserialize, Getters)]
 pub struct ItemListResponse<T> {
     #[get = "pub"]
     pub(crate) data: Vec<T>,
-    #[get = "pub"]
     pub(crate) done: bool,
     pub(crate) stoken: Option<String>,
 }
@@ -143,13 +145,16 @@ impl<T> ItemListResponse<T> {
     pub fn stoken(&self) -> Option<&str> {
         self.stoken.as_deref()
     }
+
+    pub fn done(&self) -> bool {
+        self.done
+    }
 }
 
 #[derive(Deserialize, Getters)]
 pub struct IteratorListResponse<T> {
     #[get = "pub"]
     pub(crate) data: Vec<T>,
-    #[get = "pub"]
     pub(crate) done: bool,
     pub(crate) iterator: Option<String>,
 }
@@ -157,6 +162,10 @@ pub struct IteratorListResponse<T> {
 impl<T> IteratorListResponse<T> {
     pub fn iterator(&self) -> Option<&str> {
         self.iterator.as_deref()
+    }
+
+    pub fn done(&self) -> bool {
+        self.done
     }
 }
 

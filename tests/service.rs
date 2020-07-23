@@ -437,6 +437,79 @@ fn empty_content() -> Result<()> {
     etebase.logout()
 }
 
+#[test]
+fn list_response_correctness() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection");
+    let col_content = b"";
+
+    let col = col_mgr.create(&col_meta, col_content)?;
+
+    col_mgr.upload(&col, None)?;
+
+    {
+        let col2 = col_mgr.fetch(col.uid(), None)?;
+        verify_collection(&col2, &col_meta, col_content)?;
+    }
+
+    let it_mgr = col_mgr.item_manager(&col)?;
+
+    let items: Vec<Item> = (0..5).into_iter()
+        .map(|i| {
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let content = b"";
+            it_mgr.create(&meta, content).unwrap()
+        })
+        .collect();
+
+    it_mgr.batch(items.iter(), None)?;
+
+    {
+        let items = it_mgr.list(None)?;
+        assert_eq!(items.data().len(), 5);
+        assert!(items.done());
+        let fetch_options = FetchOptions::new().limit(5);
+        let items = it_mgr.list(Some(&fetch_options))?;
+        assert!(items.done());
+    }
+
+    let mut stoken = None;
+    for i in 0..3 {
+        let fetch_options = FetchOptions::new().limit(2).stoken(stoken.as_deref());
+        let items = it_mgr.list(Some(&fetch_options))?;
+        assert_eq!(items.done(), i == 2);
+        stoken = items.stoken().map(str::to_string);
+    }
+
+    // Also check collections
+    for i in 0..4 {
+        let meta = CollectionMetadata::new("col", &format!("Item {}", i));
+        let content = b"";
+        let col = col_mgr.create(&meta, content).unwrap();
+        col_mgr.upload(&col, None)?;
+    }
+
+    {
+        let collections = col_mgr.list(None)?;
+        assert_eq!(collections.data().len(), 5);
+        assert!(collections.done());
+        let fetch_options = FetchOptions::new().limit(5);
+        let collections = col_mgr.list(Some(&fetch_options))?;
+        assert!(collections.done());
+        assert!(collections.done());
+    }
+
+    let mut stoken = None;
+    for i in 0..3 {
+        let fetch_options = FetchOptions::new().limit(2).stoken(stoken.as_deref());
+        let collections = col_mgr.list(Some(&fetch_options))?;
+        assert_eq!(collections.done(), i == 2);
+        stoken = collections.stoken().map(str::to_string);
+    }
+
+    etebase.logout()
+}
 
 #[test]
 fn chunking_large_data() -> Result<()> {
