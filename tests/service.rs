@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-2.1-only
 
 use std::env;
+use std::iter;
 use std::collections::HashSet;
 
 const CLIENT_NAME: &str = "etebase-tests";
@@ -506,6 +507,104 @@ fn list_response_correctness() -> Result<()> {
         let collections = col_mgr.list(Some(&fetch_options))?;
         assert_eq!(collections.done(), i == 2);
         stoken = collections.stoken().map(str::to_string);
+    }
+
+    etebase.logout()
+}
+
+#[test]
+fn item_transactions() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection");
+    let col_content = b"";
+
+    let col = col_mgr.create(&col_meta, col_content)?;
+
+    col_mgr.upload(&col, None)?;
+
+    let it_mgr = col_mgr.item_manager(&col)?;
+    let meta = ItemMetadata::new().set_name(Some("Item 1"));
+    let content = b"";
+    let mut item = it_mgr.create(&meta, content)?;
+
+    let deps = vec![&item];
+    it_mgr.transaction(deps.clone().into_iter(), None)?;
+
+    let item_old = it_mgr.fetch(item.uid(), None)?;
+    let mut item_old2 = it_mgr.fetch(item.uid(), None)?;
+
+    let items: Vec<Item> = (0..5).into_iter()
+        .map(|i| {
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let content = b"";
+            it_mgr.create(&meta, content).unwrap()
+        })
+        .collect();
+
+    it_mgr.transaction_deps(items.iter(), deps.clone().into_iter(), None)?;
+
+    {
+        let items = it_mgr.list(None)?;
+        assert_eq!(items.data().len(), 6);
+    }
+
+    let meta2 = ItemMetadata::new().set_name(Some("some"));
+    item.set_meta(&meta2)?;
+    let deps = vec![&item];
+
+    it_mgr.transaction_deps(vec![&item].into_iter(), deps.clone().into_iter(), None)?;
+
+    {
+        let items = it_mgr.list(None)?;
+        assert_eq!(items.data().len(), 6);
+    }
+
+    {
+        let meta3 = ItemMetadata::new().set_name(Some("some2"));
+        item.set_meta(&meta3)?;
+
+        let deps2 = items.iter().chain(iter::once(&item_old));
+
+        // Old in the deps
+        assert_err!(it_mgr.transaction_deps(iter::once(&item), deps2.into_iter(), None), Error::Http(_));
+        it_mgr.transaction(iter::once(&item), None)?;
+
+        item_old2.set_meta(&meta3)?;
+
+        // Old stoken in the item itself
+        assert_err!(it_mgr.transaction(iter::once(&item_old2), None), Error::Http(_));
+    }
+
+    {
+        let meta3 = ItemMetadata::new().set_name(Some("some3"));
+        let mut item2 = it_mgr.fetch(items[0].uid(), None)?;
+        item2.set_meta(&meta3)?;
+
+        item_old2.set_meta(&meta3)?;
+
+        // Part of the transaction is bad, and part is good
+        assert_err!(it_mgr.transaction(vec![&item2, &item_old2].into_iter(), None), Error::Http(_));
+
+        // Verify it hasn't changed after the transaction above failed
+        let item2_fetch = it_mgr.fetch(item2.uid(), None)?;
+        assert_ne!(item2_fetch.decrypt_meta()?, item2.decrypt_meta()?);
+    }
+
+    {
+        // Global stoken test
+        let meta3 = ItemMetadata::new().set_name(Some("some4"));
+        item.set_meta(&meta3)?;
+
+        let new_col = col_mgr.fetch(col.uid(), None)?;
+        let stoken = new_col.stoken();
+        let bad_etag = col.etag();
+
+        let fetch_options = FetchOptions::new().stoken(bad_etag.as_deref());
+        assert_err!(it_mgr.transaction(iter::once(&item), Some(&fetch_options)), Error::Http(_));
+
+        let fetch_options = FetchOptions::new().stoken(stoken);
+        it_mgr.transaction(iter::once(&item), Some(&fetch_options))?;
     }
 
     etebase.logout()
