@@ -82,7 +82,8 @@ pub struct CollectionMetadata {
     name: String,
     description: Option<String>,
     color: Option<String>,
-    // FIXME: missing mtime and extra
+    mtime: Option<i64>,
+    // FIXME: missing extra
 }
 
 impl CollectionMetadata {
@@ -91,7 +92,8 @@ impl CollectionMetadata {
             type_: type_.to_string(),
             name: name.to_string(),
             description: None,
-            color: None
+            color: None,
+            mtime: None,
         }
     }
 
@@ -130,19 +132,30 @@ impl CollectionMetadata {
     pub fn get_color(&self) -> Option<&str> {
         self.color.as_deref()
     }
+
+    pub fn set_mtime(mut self, mtime: Option<i64>) -> Self {
+        self.mtime = mtime;
+        self
+    }
+
+    pub fn get_mtime(&self) -> Option<i64> {
+        self.mtime
+    }
 }
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ItemMetadata {
     type_: Option<String>,
     name: Option<String>,
-    // FIXME: missing mtime and extra
+    mtime: Option<i64>,
+    // FIXME: missing extra
 }
 
 impl ItemMetadata {
     pub fn new() -> Self {
         Self {
             type_: None,
-            name: None
+            name: None,
+            mtime: None,
         }
     }
 
@@ -162,6 +175,15 @@ impl ItemMetadata {
 
     pub fn get_name(&self) -> Option<&str> {
         self.name.as_deref()
+    }
+
+    pub fn set_mtime(mut self, mtime: Option<i64>) -> Self {
+        self.mtime = mtime;
+        self
+    }
+
+    pub fn get_mtime(&self) -> Option<i64> {
+        self.mtime
     }
 }
 
