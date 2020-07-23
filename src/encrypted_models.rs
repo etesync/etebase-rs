@@ -32,6 +32,7 @@ use super::{
         from_base64,
         to_base64,
         StringBase64,
+        MsgPackSerilization,
         SYMMETRIC_KEY_SIZE,
     },
 };
@@ -142,6 +143,19 @@ impl CollectionMetadata {
         self.mtime
     }
 }
+
+impl MsgPackSerilization for CollectionMetadata {
+    type Output = CollectionMetadata;
+
+    fn to_msgpack(&self) -> Result<Vec<u8>> {
+        Ok(rmp_serde::to_vec_named(self)?)
+    }
+
+    fn from_msgpack(data: &[u8]) -> Result<Self::Output> {
+        Ok(rmp_serde::from_read_ref(data)?)
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ItemMetadata {
     type_: Option<String>,
@@ -187,6 +201,17 @@ impl ItemMetadata {
     }
 }
 
+impl MsgPackSerilization for ItemMetadata {
+    type Output = ItemMetadata;
+
+    fn to_msgpack(&self) -> Result<Vec<u8>> {
+        Ok(rmp_serde::to_vec_named(self)?)
+    }
+
+    fn from_msgpack(data: &[u8]) -> Result<Self::Output> {
+        Ok(rmp_serde::from_read_ref(data)?)
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(from = "String", into = "String")]

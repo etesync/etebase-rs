@@ -122,3 +122,10 @@ pub(crate) fn buffer_unpad(buf: &[u8]) -> Result<Vec<u8>> {
     // We pass the buffer's length as the block size because due to padme there's always some variable-sized padding.
     Ok(Iso7816::unpad(&mut buf[..])?.to_vec())
 }
+
+pub trait MsgPackSerilization {
+    type Output;
+
+    fn to_msgpack(&self) -> Result<Vec<u8>>;
+    fn from_msgpack(data: &[u8]) -> Result<Self::Output>;
+}

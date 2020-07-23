@@ -26,6 +26,7 @@ use super::{
         StrBase64,
         randombytes,
         SYMMETRIC_KEY_SIZE,
+        MsgPackSerilization,
     },
     encrypted_models::{
         AccountCryptoManager,
@@ -499,14 +500,18 @@ impl Collection {
         self.col.verify(&self.cm)
     }
 
-    pub fn set_meta(&mut self, meta: &CollectionMetadata) -> Result<()> {
-        let meta = rmp_serde::to_vec_named(meta)?;
+    pub fn set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()> {
+        let meta = meta.to_msgpack()?;
         self.col.set_meta(&self.cm, &meta)
     }
 
     pub fn decrypt_meta(&self) -> Result<CollectionMetadata> {
+        self.decrypt_meta_generic::<CollectionMetadata>()
+    }
+
+    pub fn decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
         let decrypted = self.col.decrypt_meta(&self.cm)?;
-        Ok(rmp_serde::from_read_ref(&decrypted)?)
+        T::from_msgpack(&decrypted)
     }
 
     pub fn set_content(&mut self, content: &[u8]) -> Result<()> {
@@ -555,14 +560,18 @@ impl Item {
         self.item.verify(&self.cm)
     }
 
-    pub fn set_meta(&mut self, meta: &ItemMetadata) -> Result<()> {
-        let meta = rmp_serde::to_vec_named(meta)?;
+    pub fn set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()> {
+        let meta = meta.to_msgpack()?;
         self.item.set_meta(&self.cm, &meta)
     }
 
     pub fn decrypt_meta(&self) -> Result<ItemMetadata> {
+        self.decrypt_meta_generic::<ItemMetadata>()
+    }
+
+    pub fn decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
         let decrypted = self.item.decrypt_meta(&self.cm)?;
-        Ok(rmp_serde::from_read_ref(&decrypted)?)
+        T::from_msgpack(&decrypted)
     }
 
     pub fn set_content(&mut self, content: &[u8]) -> Result<()> {
