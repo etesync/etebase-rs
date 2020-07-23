@@ -6,6 +6,8 @@ extern crate rmp_serde;
 use std::cell::RefCell;
 use std::convert::TryInto;
 
+use std::collections::HashMap;
+
 use serde::{Serialize, Deserialize};
 
 use super::{
@@ -15,6 +17,7 @@ use super::{
         CryptoManager,
         CryptoMac,
     },
+    chunker::Rollsum,
     error::{
         Error,
         Result,
@@ -23,6 +26,7 @@ use super::{
         buffer_pad_meta,
         buffer_pad,
         buffer_unpad,
+        shuffle,
         memcmp,
         randombytes,
         from_base64,
@@ -378,10 +382,27 @@ impl EncryptedRevision {
 
         let min_chunk = 1 << 14;
         let max_chunk = 1 << 16;
-        let chunk_start = 0;
+        let mut chunk_start = 0;
 
-        if content.len() > min_chunk {
-            return Err(Error::Generic("FIXME: tbd".to_owned()));
+        let content_length = content.len();
+        if content_length > min_chunk {
+            // FIXME: figure out what to do with mask - should it be configurable?
+            let mask = (1 << 12) - 1;
+            let mut chunker = Rollsum::new();
+            let mut pos = 0;
+            while pos < content_length {
+                chunker.update(content[pos]);
+                let offset = pos - chunk_start;
+                if offset >= min_chunk {
+                    if (offset >= max_chunk) || chunker.split(mask) {
+                        let buf = &content[chunk_start..pos];
+                        let hash = to_base64(&crypto_manager.0.calculate_mac(buf)?)?;
+                        chunks.push(ChunkArrayItem(hash, Some(buf.to_vec())));
+                        chunk_start = pos;
+                    }
+                }
+                pos += 1;
+            }
         }
 
         if chunk_start < content.len() {
@@ -390,8 +411,36 @@ impl EncryptedRevision {
             chunks.push(ChunkArrayItem(hash, Some(buf.to_vec())));
         }
 
-        if chunks.len() > 1 {
-            return Err(Error::Generic("FIXME: tbd 2".to_owned()));
+        // Shuffle the items and save the ordering if we have more than one
+        if chunks.len() > 0 {
+            let mut indices = shuffle(&mut chunks);
+
+            // Filter duplicates and construct the indice list.
+            let mut uid_indices: HashMap<String, usize> = HashMap::new();
+            chunks = chunks
+                .into_iter()
+                .enumerate()
+                .filter(|(i, chunk)| {
+                    let uid = &chunk.0;
+                    match uid_indices.get(uid) {
+                        Some(previous_index) => {
+                            indices[*i] = *previous_index;
+                            false
+                        },
+                        None => {
+                            uid_indices.insert(uid.to_string(), *i);
+                            true
+                        }
+                    }
+                })
+                .map(|(_, e)| e)
+                .collect();
+
+            // Encode the indice list in the first chunk:
+            chunks[0].1 = match &chunks[0].1 {
+                Some(buf) => Some(rmp_serde::to_vec_named(&(indices, buf))?),
+                None => None,
+            }
         }
 
         let encrypt_item = |item: ChunkArrayItem| -> Result<ChunkArrayItem> {
@@ -418,13 +467,21 @@ impl EncryptedRevision {
     }
 
     pub fn decrypt_content(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
-        let decrypt_item = |item: &ChunkArrayItem| -> Result<Vec<u8>> {
+        let mut indices = None;
+        let decrypt_item = |(i, item): (usize, &ChunkArrayItem)| -> Result<Vec<u8>> {
             let hash_str = &item.0;
             let buf = &item.1;
-            let buf = match buf {
+            let mut buf = match buf {
                 Some(buf) => buffer_unpad(&crypto_manager.0.decrypt(&buf, None)?)?,
                 None => return Err(Error::Generic("Got chunk without data".to_owned())),
             };
+
+            // If we have the header, remove it before calculating the mac
+            if i == 0 {
+                let first_chunk: (Vec<usize>, Vec<u8>) = rmp_serde::from_read_ref(&buf)?;
+                indices = Some(first_chunk.0);
+                buf = first_chunk.1;
+            }
 
             let hash = from_base64(&hash_str)?;
             let calculated_mac = crypto_manager.0.calculate_mac(&buf)?;
@@ -438,17 +495,28 @@ impl EncryptedRevision {
 
         let decrypted_chunks: Result<Vec<_>> = self.chunks
             .iter()
+            .enumerate()
             .map(decrypt_item)
             .collect();
         let decrypted_chunks = decrypted_chunks?;
 
-        let ret = if decrypted_chunks.len() > 1 {
-            Err(Error::Generic("FIXME: tbd 3".to_owned()))
-        } else {
-            Ok(decrypted_chunks.into_iter().nth(0).unwrap_or(vec![]))
-        };
+        match indices {
+            Some(indices) => {
+                if indices.len() > 1 {
+                    let sorted_chunks: Vec<u8> = indices
+                        .into_iter()
+                        .map(|index| &decrypted_chunks[index])
+                        .flatten()
+                        .map(|x| *x)
+                        .collect::<Vec<u8>>();
 
-        ret
+                    Ok(sorted_chunks)
+                } else {
+                    Ok(decrypted_chunks.into_iter().nth(0).unwrap_or(vec![]))
+                }
+            },
+            None => Ok(decrypted_chunks.into_iter().nth(0).unwrap_or(vec![]))
+        }
     }
 
     pub fn delete(&mut self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<()> {
@@ -608,5 +676,12 @@ impl EncryptedItem {
 
     fn get_additional_mac_data(&self) -> &[u8] {
         Self::get_additional_mac_data_static(&self.uid)
+    }
+
+    pub(crate) fn test_get_chunk_uids(&self) -> Vec<String> {
+        self.content.chunks
+            .iter()
+            .map(|x| x.0.clone())
+            .collect()
     }
 }

@@ -584,3 +584,7 @@ impl Item {
         self.item.get_etag()
     }
 }
+
+pub(crate) fn test_get_chunk_uids(item: &Item) -> Vec<String> {
+    item.item.test_get_chunk_uids()
+}

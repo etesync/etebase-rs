@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-2.1-only
 
 use std::env;
+use std::collections::HashSet;
 
 const CLIENT_NAME: &str = "etebase-tests";
 
@@ -9,7 +10,10 @@ fn get_test_url() -> String {
     env::var("ETEBASE_TEST_API_URL").unwrap_or("http://localhost:8033".to_owned())
 }
 
-use etebase::utils::from_base64;
+use etebase::utils::{
+    from_base64,
+    randombytes_deterministic,
+};
 
 use etebase::error::{
     Result,
@@ -33,6 +37,10 @@ use etebase::{
     Item,
     ItemMetadata,
     FetchOptions,
+    test_helpers::{
+        test_reset,
+        get_chunk_uids,
+    }
 };
 
 #[allow(dead_code)]
@@ -57,7 +65,7 @@ fn user_reset(user: &TestUser) -> Result<()> {
         login_pubkey: &from_base64(user.loginPubkey)?,
         encrypted_content: &from_base64(user.encryptedContent)?,
     };
-    etebase::test_helpers::test_reset(&client, body_struct)?;
+    test_reset(&client, body_struct)?;
 
     Ok(())
 }
@@ -261,6 +269,68 @@ fn simple_item_sync() -> Result<()> {
         let items = it_mgr.list(None)?;
         assert_eq!(items.data.len(), 1);
         verify_item(&items.data.first().unwrap(), &meta2, content2)?;
+    }
+
+    etebase.logout()
+}
+
+#[test]
+fn chunking_large_data() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.get_collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_content = b"SomeContent";
+
+    let col = col_mgr.create(&col_meta, col_content)?;
+
+    col_mgr.upload(&col, None)?;
+
+    let it_mgr = col_mgr.get_item_manager(&col)?;
+
+    let meta = ItemMetadata::new();
+    let content = randombytes_deterministic(120 * 1024, &[0; 32]); // 120kb of pseuedorandom data
+
+    let mut item = it_mgr.create(&meta, &content)?;
+    verify_item(&item, &meta, &content)?;
+
+    let mut uid_set = HashSet::new();
+
+    // Get the first chunks and init uid_set
+    {
+        let chunks = get_chunk_uids(&item);
+        assert_eq!(chunks.len(), 7);
+        for chunk in chunks {
+            uid_set.insert(chunk);
+        }
+    }
+
+    // Bite a chunk off the new buffer
+    let bite_start = 10000_usize;
+    let bite_size = 210_usize;
+    let mut new_buf = [&content[..bite_start], &content[bite_start + bite_size..]].concat();
+
+    new_buf[39000] = 0;
+    new_buf[39001] = 1;
+    new_buf[39002] = 2;
+    new_buf[39003] = 3;
+    new_buf[39004] = 4;
+
+    item.set_content(&new_buf)?;
+    verify_item(&item, &meta, &new_buf)?;
+
+    // Verify how much has changed
+    {
+        let chunks = get_chunk_uids(&item);
+        assert_eq!(chunks.len(), 7);
+
+        let mut reused = 0;
+        for chunk in chunks {
+            if uid_set.contains(&chunk) {
+                reused += 1;
+            }
+        }
+
+        assert_eq!(reused, 5);
     }
 
     etebase.logout()

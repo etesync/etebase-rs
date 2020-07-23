@@ -28,6 +28,14 @@ pub fn randombytes(size: usize) -> Vec<u8> {
     sodiumoxide::randombytes::randombytes(size)
 }
 
+pub fn randombytes_deterministic(size: usize, seed: &[u8; 32]) -> Vec<u8> {
+    // Not exactly like the sodium randombytes_deterministic but close enough
+    let nonce = sodiumoxide::crypto::stream::xchacha20::Nonce(*b"LibsodiumDRG\0\0\0\0\0\0\0\0\0\0\0\0");
+    let key = sodiumoxide::crypto::stream::xchacha20::Key(*seed);
+
+    sodiumoxide::crypto::stream::xchacha20::stream(size, &nonce, &key)
+}
+
 pub fn memcmp(x: &[u8], y: &[u8]) -> bool {
     sodiumoxide::utils::memcmp(x, y)
 }
@@ -41,6 +49,25 @@ pub fn from_base64(string: &StrBase64) -> Result<Vec<u8>> {
 
 pub fn to_base64(bytes: &[u8]) -> Result<StringBase64> {
     Ok(base64::encode(bytes, base64::Variant::UrlSafeNoPadding))
+}
+// Fisher–Yates shuffle - an unbiased shuffler
+// The returend indices of where item is now.
+// So if the first item moved to position 3: ret[0] = 3
+pub fn shuffle<T>(a: &mut Vec<T>) -> Vec<usize> {
+    let len = a.len();
+    let mut shuffled_indices: Vec<usize> = (0..len).collect();
+
+    for i in 0..len {
+        let j = i + sodiumoxide::randombytes::randombytes_uniform((len - i) as u32) as usize;
+        a.swap(i, j);
+        shuffled_indices.swap(i, j);
+    }
+
+    let mut ret = vec![0; len];
+    for i in 0..len {
+        ret[shuffled_indices[i]] = i;
+    }
+    ret
 }
 
 pub fn get_padding(length: u32) -> u32 {

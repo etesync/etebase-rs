@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-2.1-only
 
 pub mod crypto;
+mod chunker;
 mod online_managers;
 mod encrypted_models;
 mod service;
@@ -31,6 +32,10 @@ pub mod test_helpers {
         test_reset,
         SignupBody,
     };
+
+    pub fn get_chunk_uids(item: &super::service::Item) -> Vec<String> {
+        super::service::test_get_chunk_uids(item)
+    }
 }
 
 pub const CURRENT_VERSION: u8 = 1;
