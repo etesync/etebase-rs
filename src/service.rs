@@ -382,7 +382,7 @@ impl CollectionManager {
         match col.get_etag() {
             Some(_) => {
                 let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
-                item_manager_online.batch(vec![col.get_item()].into_iter(), vec![].into_iter(), options)?;
+                item_manager_online.batch(vec![col.get_item()].into_iter(), std::iter::empty(), options)?;
             },
             None => {
                 self.collection_manager_online.create(&col, options)?;
@@ -397,7 +397,7 @@ impl CollectionManager {
         match col.get_etag() {
             Some(_) => {
                 let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
-                item_manager_online.transaction(vec![col.get_item()].into_iter(), vec![].into_iter(), options)?;
+                item_manager_online.transaction(vec![col.get_item()].into_iter(), std::iter::empty(), options)?;
             },
             None => {
                 self.collection_manager_online.create(&col, options)?;
@@ -464,7 +464,7 @@ impl ItemManager {
         {
 
         let items = items.map(|x| &x.item);
-        let deps = vec![].into_iter();
+        let deps = std::iter::empty();
         self.item_manager_online.batch(items, deps, options)
     }
 
@@ -482,7 +482,7 @@ impl ItemManager {
         {
 
         let items = items.map(|x| &x.item);
-        let deps = vec![].into_iter();
+        let deps = std::iter::empty();
         self.item_manager_online.transaction(items, deps, options)
     }
 
