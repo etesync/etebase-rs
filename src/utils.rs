@@ -53,7 +53,7 @@ pub fn to_base64(bytes: &[u8]) -> Result<StringBase64> {
 // Fisher–Yates shuffle - an unbiased shuffler
 // The returend indices of where item is now.
 // So if the first item moved to position 3: ret[0] = 3
-pub fn shuffle<T>(a: &mut Vec<T>) -> Vec<usize> {
+pub(crate) fn shuffle<T>(a: &mut Vec<T>) -> Vec<usize> {
     let len = a.len();
     let mut shuffled_indices: Vec<usize> = (0..len).collect();
 
@@ -89,7 +89,7 @@ pub fn get_padding(length: u32) -> u32 {
 }
 
 // FIXME: we should properly pad the meta and probably change these functions
-pub fn buffer_pad_meta(buf: &[u8]) -> Result<Vec<u8>> {
+pub(crate) fn buffer_pad_meta(buf: &[u8]) -> Result<Vec<u8>> {
     let len = buf.len();
     let padding = len + 1;
     let mut ret = vec![0; padding];
@@ -100,7 +100,7 @@ pub fn buffer_pad_meta(buf: &[u8]) -> Result<Vec<u8>> {
     Ok(ret)
 }
 
-pub fn buffer_pad(buf: &[u8]) -> Result<Vec<u8>> {
+pub(crate) fn buffer_pad(buf: &[u8]) -> Result<Vec<u8>> {
     let len = buf.len();
     let padding = get_padding(len as u32) as usize;
     let mut ret = vec![0; padding];
@@ -111,7 +111,7 @@ pub fn buffer_pad(buf: &[u8]) -> Result<Vec<u8>> {
     Ok(ret)
 }
 
-pub fn buffer_unpad(buf: &[u8]) -> Result<Vec<u8>> {
+pub(crate) fn buffer_unpad(buf: &[u8]) -> Result<Vec<u8>> {
     let len = buf.len();
     let mut buf = buf.to_vec();
 

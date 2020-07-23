@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
-pub mod crypto;
+mod crypto;
 mod chunker;
 mod online_managers;
 mod encrypted_models;
@@ -27,6 +27,21 @@ pub use service::{
 };
 
 pub mod test_helpers {
+    pub mod crypto {
+        pub use super::super::crypto::*;
+    }
+    pub mod utils {
+        use super::super::error::Result;
+
+        pub use super::super::utils::*;
+        pub fn test_buffer_pad(buf: &[u8]) -> Result<Vec<u8>> {
+            buffer_pad(buf)
+        }
+
+        pub fn test_buffer_unpad(buf: &[u8]) -> Result<Vec<u8>> {
+            buffer_unpad(buf)
+        }
+    }
     pub use super::online_managers::{
         // Test stuff
         test_reset,

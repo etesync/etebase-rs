@@ -3,7 +3,7 @@
 
 use std::convert::TryInto;
 
-use etebase::crypto;
+use etebase::test_helpers::crypto;
 
 use etebase::utils::from_base64;
 
