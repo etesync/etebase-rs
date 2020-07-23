@@ -11,7 +11,10 @@ fn get_test_url() -> String {
 
 use etebase::utils::from_base64;
 
-use etebase::error::Error;
+use etebase::error::{
+    Result,
+    Error,
+};
 
 macro_rules! assert_err {
     ($x:expr, $err:pat) => {
@@ -42,142 +45,146 @@ use common::{
     sessionStorageKey,
 };
 
-fn user_reset(user: &TestUser) {
-    let client = Client::new(CLIENT_NAME, &get_test_url()).unwrap();
+fn user_reset(user: &TestUser) -> Result<()> {
+    let client = Client::new(CLIENT_NAME, &get_test_url())?;
     let body_struct = etebase::test_helpers::SignupBody {
         user: &etebase::User {
             username: user.username,
             email: user.email,
         },
-        salt: &from_base64(user.salt).unwrap(),
-        pubkey: &from_base64(user.pubkey).unwrap(),
-        login_pubkey: &from_base64(user.loginPubkey).unwrap(),
-        encrypted_content: &from_base64(user.encryptedContent).unwrap(),
+        salt: &from_base64(user.salt)?,
+        pubkey: &from_base64(user.pubkey)?,
+        login_pubkey: &from_base64(user.loginPubkey)?,
+        encrypted_content: &from_base64(user.encryptedContent)?,
     };
-    etebase::test_helpers::test_reset(&client, body_struct).unwrap();
+    etebase::test_helpers::test_reset(&client, body_struct)?;
+
+    Ok(())
 }
 
-fn init_test(user: &TestUser) -> Account {
-    etebase::init().unwrap();
-    user_reset(&user);
+fn init_test(user: &TestUser) -> Result<Account> {
+    etebase::init()?;
+    user_reset(&user)?;
 
     // FIXME: move to prepare user for test
-    let client = Client::new(CLIENT_NAME, &get_test_url()).unwrap();
-    let session_key = from_base64(sessionStorageKey).unwrap();
+    let client = Client::new(CLIENT_NAME, &get_test_url())?;
+    let session_key = from_base64(sessionStorageKey)?;
 
-    let mut ret = Account::restore(client, user.storedSession, Some(&session_key)).unwrap();
-    ret.force_api_base(&get_test_url()).unwrap();
-    ret.fetch_token().unwrap();
+    let mut ret = Account::restore(client, user.storedSession, Some(&session_key))?;
+    ret.force_api_base(&get_test_url())?;
+    ret.fetch_token()?;
 
-    ret
+    Ok(ret)
 }
 
-fn verify_collection(col: &Collection, meta: &CollectionMetadata, content: &[u8]) {
-    col.verify().unwrap();
-    assert_eq!(&col.decrypt_meta().unwrap(), meta);
-    assert_eq!(col.decrypt_content().unwrap(), content);
+fn verify_collection(col: &Collection, meta: &CollectionMetadata, content: &[u8]) -> Result<()> {
+    col.verify()?;
+    assert_eq!(&col.decrypt_meta()?, meta);
+    assert_eq!(col.decrypt_content()?, content);
+    Ok(())
 }
 
-fn verify_item(item: &Item, meta: &ItemMetadata, content: &[u8]) {
-    item.verify().unwrap();
-    assert_eq!(&item.decrypt_meta().unwrap(), meta);
-    assert_eq!(item.decrypt_content().unwrap(), content);
+fn verify_item(item: &Item, meta: &ItemMetadata, content: &[u8]) -> Result<()> {
+    item.verify()?;
+    assert_eq!(&item.decrypt_meta()?, meta);
+    assert_eq!(item.decrypt_content()?, content);
+    Ok(())
 }
 
 #[test]
-fn simple_collection_handling() {
-    let etebase = init_test(&USER);
-    let col_mgr = etebase.get_collection_manager().unwrap();
+fn simple_collection_handling() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.get_collection_manager()?;
     let meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
     let content = b"SomeContent";
 
-    let mut col = col_mgr.create(&meta, content).unwrap();
-    verify_collection(&col, &meta, content);
+    let mut col = col_mgr.create(&meta, content)?;
+    verify_collection(&col, &meta, content)?;
 
     let meta2 = meta.clone().set_name("Collection meta2");
-    col.set_meta(&meta2).unwrap();
-    verify_collection(&col, &meta2, content);
+    col.set_meta(&meta2)?;
+    verify_collection(&col, &meta2, content)?;
 
     assert!(!col.is_deleted());
-    col.delete().unwrap();
+    col.delete()?;
     assert!(col.is_deleted());
-    verify_collection(&col, &meta2, content);
+    verify_collection(&col, &meta2, content)?;
 
-    etebase.logout().unwrap();
+    etebase.logout()
 }
 
 #[test]
-fn simple_item_handling() {
-    let etebase = init_test(&USER);
-    let col_mgr = etebase.get_collection_manager().unwrap();
+fn simple_item_handling() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.get_collection_manager()?;
     let col_meta = CollectionMetadata::new("type", "Collection");
     let col_content = b"SomeContent";
 
-    let col = col_mgr.create(&col_meta, col_content).unwrap();
+    let col = col_mgr.create(&col_meta, col_content)?;
 
-    let it_mgr = col_mgr.get_item_manager(&col).unwrap();
+    let it_mgr = col_mgr.get_item_manager(&col)?;
 
     let meta = ItemMetadata::new().set_name(Some("Item 1"));
     let content = b"ItemContent";
-    let mut item = it_mgr.create(&meta, content).unwrap();
-    verify_item(&item, &meta, content);
+    let mut item = it_mgr.create(&meta, content)?;
+    verify_item(&item, &meta, content)?;
 
     let meta2 = ItemMetadata::new().set_name(Some("Item 2"));
-    item.set_meta(&meta2).unwrap();
-    verify_item(&item, &meta2, content);
+    item.set_meta(&meta2)?;
+    verify_item(&item, &meta2, content)?;
 
     assert!(!item.is_deleted());
-    item.delete().unwrap();
+    item.delete()?;
     assert!(item.is_deleted());
-    verify_item(&item, &meta2, content);
+    verify_item(&item, &meta2, content)?;
 
-    etebase.logout().unwrap();
+    etebase.logout()
 }
 
 #[test]
-fn simple_collection_sync() {
-    let etebase = init_test(&USER);
-    let col_mgr = etebase.get_collection_manager().unwrap();
+fn simple_collection_sync() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.get_collection_manager()?;
     let meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
     let content = b"SomeContent";
 
-    let mut col = col_mgr.create(&meta, content).unwrap();
-    verify_collection(&col, &meta, content);
+    let mut col = col_mgr.create(&meta, content)?;
+    verify_collection(&col, &meta, content)?;
 
-    let collections = col_mgr.list(None).unwrap();
+    let collections = col_mgr.list(None)?;
     assert_eq!(collections.data.len(), 0);
 
-    col_mgr.upload(&col, None).unwrap();
+    col_mgr.upload(&col, None)?;
 
-    let collections = col_mgr.list(None).unwrap();
+    let collections = col_mgr.list(None)?;
     assert_eq!(collections.data.len(), 1);
-    verify_collection(&collections.data.first().unwrap(), &meta, content);
+    verify_collection(&collections.data.first().unwrap(), &meta, content)?;
 
-    let mut col_old = col_mgr.fetch(col.get_uid(), None).unwrap();
+    let mut col_old = col_mgr.fetch(col.get_uid(), None)?;
     {
         let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
-        let collections = col_mgr.list(Some(&fetch_options)).unwrap();
+        let collections = col_mgr.list(Some(&fetch_options))?;
         assert_eq!(collections.data.len(), 0);
     }
 
     let meta2 = meta.clone().set_name("Collection meta2");
-    col.set_meta(&meta2).unwrap();
+    col.set_meta(&meta2)?;
 
-    col_mgr.upload(&col, None).unwrap();
+    col_mgr.upload(&col, None)?;
 
-    let collections = col_mgr.list(None).unwrap();
+    let collections = col_mgr.list(None)?;
     assert_eq!(collections.data.len(), 1);
 
     {
         let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
-        let collections = col_mgr.list(Some(&fetch_options)).unwrap();
+        let collections = col_mgr.list(Some(&fetch_options))?;
         assert_eq!(collections.data.len(), 1);
     }
 
     // Fail uploading because of an old stoken/etag
     {
         let content2 = b"Content2";
-        col_old.set_content(content2).unwrap();
+        col_old.set_content(content2)?;
 
         assert_err!(col_mgr.transaction(&col, None), Error::Http(_));
         let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
@@ -185,128 +192,128 @@ fn simple_collection_sync() {
     }
 
     let content2 = b"Content2";
-    col.set_content(content2).unwrap();
+    col.set_content(content2)?;
 
-    let collections = col_mgr.list(None).unwrap();
+    let collections = col_mgr.list(None)?;
     assert_eq!(collections.data.len(), 1);
-    verify_collection(&col, &meta2, content2);
+    verify_collection(&col, &meta2, content2)?;
 
-    etebase.logout().unwrap();
+    etebase.logout()
 }
 
 #[test]
-fn simple_item_sync() {
-    let etebase = init_test(&USER);
-    let col_mgr = etebase.get_collection_manager().unwrap();
+fn simple_item_sync() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.get_collection_manager()?;
     let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
     let col_content = b"SomeContent";
 
-    let col = col_mgr.create(&col_meta, col_content).unwrap();
+    let col = col_mgr.create(&col_meta, col_content)?;
 
-    col_mgr.upload(&col, None).unwrap();
+    col_mgr.upload(&col, None)?;
 
-    let it_mgr = col_mgr.get_item_manager(&col).unwrap();
+    let it_mgr = col_mgr.get_item_manager(&col)?;
 
     let meta = ItemMetadata::new().set_name(Some("Item 1"));
     let content = b"Content 1";
 
-    let mut item = it_mgr.create(&meta, content).unwrap();
+    let mut item = it_mgr.create(&meta, content)?;
 
-    it_mgr.batch(vec![&item].into_iter(), None).unwrap();
+    it_mgr.batch(vec![&item].into_iter(), None)?;
 
     {
-        let items = it_mgr.list(None).unwrap();
+        let items = it_mgr.list(None)?;
         assert_eq!(items.data.len(), 1);
-        verify_item(&items.data.first().unwrap(), &meta, content);
+        verify_item(&items.data.first().unwrap(), &meta, content)?;
     }
 
-    let mut item_old = it_mgr.fetch(item.get_uid(), None).unwrap();
+    let mut item_old = it_mgr.fetch(item.get_uid(), None)?;
 
     let meta2 = ItemMetadata::new().set_name(Some("Item 2"));
-    item.set_meta(&meta2).unwrap();
+    item.set_meta(&meta2)?;
 
-    let col_old = col_mgr.fetch(col.get_uid(), None).unwrap();
+    let col_old = col_mgr.fetch(col.get_uid(), None)?;
 
-    it_mgr.batch(vec![&item].into_iter(), None).unwrap();
+    it_mgr.batch(vec![&item].into_iter(), None)?;
 
     {
-        let items = it_mgr.list(None).unwrap();
+        let items = it_mgr.list(None)?;
         assert_eq!(items.data.len(), 1);
-        verify_item(&items.data.first().unwrap(), &meta2, content);
+        verify_item(&items.data.first().unwrap(), &meta2, content)?;
     }
 
     {
-        item_old.set_content(b"Bla bla").unwrap();
+        item_old.set_content(b"Bla bla")?;
         assert_err!(it_mgr.transaction(vec![&item_old].into_iter(), None), Error::Http(_));
     }
 
     let content2 = b"Content 2";
-    item.set_content(content2).unwrap();
+    item.set_content(content2)?;
 
     {
         let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
         assert_err!(it_mgr.batch(vec![&item].into_iter(), Some(&fetch_options)), Error::Http(_));
     }
 
-    it_mgr.transaction(vec![&item].into_iter(), None).unwrap();
+    it_mgr.transaction(vec![&item].into_iter(), None)?;
 
     {
-        let items = it_mgr.list(None).unwrap();
+        let items = it_mgr.list(None)?;
         assert_eq!(items.data.len(), 1);
-        verify_item(&items.data.first().unwrap(), &meta2, content2);
+        verify_item(&items.data.first().unwrap(), &meta2, content2)?;
     }
 
-    etebase.logout().unwrap();
+    etebase.logout()
 }
 
 #[test]
 #[ignore]
-fn login_and_password_change() {
-    let etebase = init_test(&USER);
-    etebase.logout().unwrap();
+fn login_and_password_change() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    etebase.logout()?;
 
     let another_password = "AnotherPassword";
-    let client = Client::new(CLIENT_NAME, &get_test_url()).unwrap();
-    let mut etebase2 = Account::login(client.clone(), USER2.username, USER2.password).unwrap();
+    let client = Client::new(CLIENT_NAME, &get_test_url())?;
+    let mut etebase2 = Account::login(client.clone(), USER2.username, USER2.password)?;
 
-    etebase2.change_password(another_password).unwrap();
+    etebase2.change_password(another_password)?;
 
-    etebase2.logout().unwrap();
+    etebase2.logout()?;
 
     assert_err!(Account::login(client.clone(), USER2.username, "BadPassword"), Error::Http(_));
 
     // FIXME: add tests to verify that we can actually manipulate the data
-    let mut etebase2 = Account::login(client.clone(), USER2.username, another_password).unwrap();
+    let mut etebase2 = Account::login(client.clone(), USER2.username, another_password)?;
 
-    etebase2.change_password(USER2.password).unwrap();
+    etebase2.change_password(USER2.password)?;
 
-    etebase2.logout().unwrap();
+    etebase2.logout()
 }
 
 
 #[test]
-fn session_save_and_restore() {
-    let client = Client::new(CLIENT_NAME, &get_test_url()).unwrap();
-    let etebase = init_test(&USER);
+fn session_save_and_restore() -> Result<()> {
+    let client = Client::new(CLIENT_NAME, &get_test_url())?;
+    let etebase = init_test(&USER)?;
 
     // Verify we can store and restore without an encryption key
     {
-        let saved = etebase.save(None).unwrap();
-        let mut etebase2 = Account::restore(client.clone(), &saved, None).unwrap();
+        let saved = etebase.save(None)?;
+        let mut etebase2 = Account::restore(client.clone(), &saved, None)?;
 
         // FIXME: we should verify we can access data instead
-        &etebase2.fetch_token().unwrap();
+        &etebase2.fetch_token()?;
     }
 
     // Verify we can store and restore with an encryption key
     {
         let key = etebase::utils::randombytes(32);
-        let saved = etebase.save(Some(&key)).unwrap();
-        let mut etebase2 = Account::restore(client.clone(), &saved, Some(&key)).unwrap();
+        let saved = etebase.save(Some(&key))?;
+        let mut etebase2 = Account::restore(client.clone(), &saved, Some(&key))?;
 
         // FIXME: we should verify we can access data instead
-        &etebase2.fetch_token().unwrap();
+        &etebase2.fetch_token()?;
     }
 
-    etebase.logout().unwrap();
+    etebase.logout()
 }
