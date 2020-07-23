@@ -275,6 +275,61 @@ fn simple_item_sync() -> Result<()> {
 }
 
 #[test]
+fn collection_as_item() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.get_collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_content = b"SomeContent";
+
+    let mut col = col_mgr.create(&col_meta, col_content)?;
+
+    col_mgr.upload(&col, None)?;
+
+    let it_mgr = col_mgr.get_item_manager(&col)?;
+
+    // Verify with_collection works
+    {
+        let items = it_mgr.list(None)?;
+        assert_eq!(items.data.len(), 0);
+        let fetch_options = FetchOptions::new().with_collection(true);
+        let items = it_mgr.list(Some(&fetch_options))?;
+        assert_eq!(items.data.len(), 1);
+        let meta = col.get_item()?.decrypt_meta()?;
+        let first_item = items.data.first().unwrap();
+        verify_item(&first_item, &meta, col_content)?;
+        // Also verify the collection metadata is good
+        assert_eq!(&first_item.decrypt_meta_generic::<CollectionMetadata>()?, &col_meta);
+    }
+
+    let meta = ItemMetadata::new();
+    let content = b"Item data";
+    let item = it_mgr.create(&meta, content)?;
+
+    it_mgr.batch([item].iter(), None)?;
+
+    {
+        let items = it_mgr.list(None)?;
+        assert_eq!(items.data.len(), 1);
+        let fetch_options = FetchOptions::new().with_collection(true);
+        let items = it_mgr.list(Some(&fetch_options))?;
+        assert_eq!(items.data.len(), 2);
+    }
+
+    // Manipulate the collection with batch/transaction
+    let col_content2 = b"Other content";
+    col.set_content(col_content2)?;
+    it_mgr.batch([col.get_item()?].iter(), None)?;
+
+    {
+        let collections = col_mgr.list(None)?;
+        assert_eq!(collections.data.len(), 1);
+        verify_collection(&collections.data.first().unwrap(), &col_meta, col_content2)?;
+    }
+
+    etebase.logout()
+}
+
+#[test]
 fn chunking_large_data() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.get_collection_manager()?;

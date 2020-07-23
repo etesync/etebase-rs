@@ -541,6 +541,12 @@ impl Collection {
     pub fn get_stoken(&self) -> Option<&str> {
         self.col.get_stoken()
     }
+
+    pub fn get_item(&self) -> Result<Item> {
+        let encrypted_item = self.col.get_item();
+        let crypto_manager = encrypted_item.get_crypto_manager(&self.cm)?;
+        Item::new(crypto_manager, encrypted_item.clone())
+    }
 }
 
 pub struct Item {
