@@ -6,7 +6,6 @@ extern crate rmp_serde;
 use std::rc::Rc;
 use url::Url;
 
-use getset::Getters;
 use serde::{Serialize, Deserialize};
 
 use reqwest::{
@@ -115,9 +114,8 @@ impl Client {
     }
 }
 
-#[derive(Deserialize, Getters)]
+#[derive(Deserialize)]
 pub struct CollectionListResponse<T> {
-    #[get = "pub"]
     pub(crate) data: Vec<T>,
     pub(crate) done: bool,
     pub(crate) stoken: Option<String>,
@@ -128,14 +126,17 @@ impl<T> CollectionListResponse<T> {
         self.stoken.as_deref()
     }
 
+    pub fn data(&self) -> &Vec<T> {
+        &self.data
+    }
+
     pub fn done(&self) -> bool {
         self.done
     }
 }
 
-#[derive(Deserialize, Getters)]
+#[derive(Deserialize)]
 pub struct ItemListResponse<T> {
-    #[get = "pub"]
     pub(crate) data: Vec<T>,
     pub(crate) done: bool,
     pub(crate) stoken: Option<String>,
@@ -146,14 +147,17 @@ impl<T> ItemListResponse<T> {
         self.stoken.as_deref()
     }
 
+    pub fn data(&self) -> &Vec<T> {
+        &self.data
+    }
+
     pub fn done(&self) -> bool {
         self.done
     }
 }
 
-#[derive(Deserialize, Getters)]
+#[derive(Deserialize)]
 pub struct IteratorListResponse<T> {
-    #[get = "pub"]
     pub(crate) data: Vec<T>,
     pub(crate) done: bool,
     pub(crate) iterator: Option<String>,
@@ -162,6 +166,10 @@ pub struct IteratorListResponse<T> {
 impl<T> IteratorListResponse<T> {
     pub fn iterator(&self) -> Option<&str> {
         self.iterator.as_deref()
+    }
+
+    pub fn data(&self) -> &Vec<T> {
+        &self.data
     }
 
     pub fn done(&self) -> bool {
