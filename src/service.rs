@@ -500,11 +500,13 @@ impl Collection {
     }
 
     pub fn set_meta(&mut self, meta: &CollectionMetadata) -> Result<()> {
-        self.col.set_meta(&self.cm, meta)
+        let meta = rmp_serde::to_vec_named(meta)?;
+        self.col.set_meta(&self.cm, &meta)
     }
 
     pub fn decrypt_meta(&self) -> Result<CollectionMetadata> {
-        self.col.decrypt_meta(&self.cm)
+        let decrypted = self.col.decrypt_meta(&self.cm)?;
+        Ok(rmp_serde::from_read_ref(&decrypted)?)
     }
 
     pub fn set_content(&mut self, content: &[u8]) -> Result<()> {
@@ -552,12 +554,15 @@ impl Item {
     pub fn verify(&self) -> Result<bool> {
         self.item.verify(&self.cm)
     }
+
     pub fn set_meta(&mut self, meta: &ItemMetadata) -> Result<()> {
-        self.item.set_meta(&self.cm, meta)
+        let meta = rmp_serde::to_vec_named(meta)?;
+        self.item.set_meta(&self.cm, &meta)
     }
 
     pub fn decrypt_meta(&self) -> Result<ItemMetadata> {
-        self.item.decrypt_meta(&self.cm)
+        let decrypted = self.item.decrypt_meta(&self.cm)?;
+        Ok(rmp_serde::from_read_ref(&decrypted)?)
     }
 
     pub fn set_content(&mut self, content: &[u8]) -> Result<()> {

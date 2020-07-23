@@ -258,19 +258,15 @@ impl EncryptedCollection {
         self.item.verify(&item_crypto_manager)
     }
 
-    pub fn set_meta(&mut self, crypto_manager: &CollectionCryptoManager, meta: &CollectionMetadata) -> Result<()> {
+    pub fn set_meta(&mut self, crypto_manager: &CollectionCryptoManager, meta: &[u8]) -> Result<()> {
         let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
-        let meta = rmp_serde::to_vec_named(meta)?;
-        self.item.set_meta_raw(&item_crypto_manager, &meta)
+        self.item.set_meta(&item_crypto_manager, &meta)
     }
 
-    pub fn decrypt_meta(&self, crypto_manager: &CollectionCryptoManager) -> Result<CollectionMetadata> {
+    pub fn decrypt_meta(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
         let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
-        let decrypted = self.item.decrypt_meta_raw(&item_crypto_manager)?;
-        let meta: CollectionMetadata = rmp_serde::from_read_ref(&decrypted)?;
-
-        Ok(meta)
+        self.item.decrypt_meta(&item_crypto_manager)
     }
 
     pub fn set_content(&mut self, crypto_manager: &CollectionCryptoManager, content: &[u8]) -> Result<()> {
@@ -603,14 +599,7 @@ impl EncryptedItem {
         self.content.verify(crypto_manager, self.get_additional_mac_data())
     }
 
-    pub fn set_meta(&mut self, crypto_manager: &ItemCryptoManager, meta: &ItemMetadata) -> Result<()> {
-        let meta = rmp_serde::to_vec_named(meta)?;
-        self.set_meta_raw(crypto_manager, &meta)?;
-
-        Ok(())
-    }
-
-    fn set_meta_raw(&mut self, crypto_manager: &ItemCryptoManager, meta: &[u8]) -> Result<()> {
+    pub fn set_meta(&mut self, crypto_manager: &ItemCryptoManager, meta: &[u8]) -> Result<()> {
         let ad_mac_data = Self::get_additional_mac_data_static(&self.uid);
         if self.is_locally_changed() {
             self.content.set_meta(crypto_manager, ad_mac_data, meta)?;
@@ -623,14 +612,7 @@ impl EncryptedItem {
         Ok(())
     }
 
-    pub fn decrypt_meta(&self, crypto_manager: &ItemCryptoManager) -> Result<ItemMetadata> {
-        let decrypted = self.decrypt_meta_raw(crypto_manager)?;
-        let meta: ItemMetadata = rmp_serde::from_read_ref(&decrypted)?;
-
-        Ok(meta)
-    }
-
-    fn decrypt_meta_raw(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
+    pub fn decrypt_meta(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
         self.content.decrypt_meta(crypto_manager, self.get_additional_mac_data())
     }
