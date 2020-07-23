@@ -404,6 +404,41 @@ fn collection_and_item_deletion() -> Result<()> {
 }
 
 #[test]
+fn empty_content() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.get_collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection");
+    let col_content = b"";
+
+    let col = col_mgr.create(&col_meta, col_content)?;
+
+    col_mgr.upload(&col, None)?;
+
+    {
+        let col2 = col_mgr.fetch(col.get_uid(), None)?;
+        verify_collection(&col2, &col_meta, col_content)?;
+    }
+
+    let it_mgr = col_mgr.get_item_manager(&col)?;
+
+    let meta = ItemMetadata::new().set_name(Some("Item 1"));
+    let content = b"";
+
+    let item = it_mgr.create(&meta, content)?;
+
+    it_mgr.transaction(vec![&item].into_iter(), None)?;
+
+    {
+        let items = it_mgr.list(None)?;
+        let first_item = items.data().first().unwrap();
+        verify_item(&first_item, &meta, content)?;
+    }
+
+    etebase.logout()
+}
+
+
+#[test]
 fn chunking_large_data() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.get_collection_manager()?;
