@@ -378,6 +378,7 @@ impl CollectionManagerOnline {
         let res = res.error_for_status()?.bytes()?;
 
         let serialized: EncryptedCollection = rmp_serde::from_read_ref(&res)?;
+        serialized.mark_saved();
 
         Ok(serialized)
     }
@@ -389,6 +390,7 @@ impl CollectionManagerOnline {
         let res = res.error_for_status()?.bytes()?;
 
         let serialized: ListResponse<EncryptedCollection> = rmp_serde::from_read_ref(&res)?;
+        serialized.data.iter().for_each(|x| x.mark_saved());
 
         let ret = ListResponse {
             data: serialized.data,
@@ -445,6 +447,7 @@ impl ItemManagerOnline {
         let res = res.error_for_status()?.bytes()?;
 
         let serialized: EncryptedItem = rmp_serde::from_read_ref(&res)?;
+        serialized.mark_saved();
 
         Ok(serialized)
     }
@@ -456,6 +459,7 @@ impl ItemManagerOnline {
         let res = res.error_for_status()?.bytes()?;
 
         let serialized: ListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
+        serialized.data.iter().for_each(|x| x.mark_saved());
 
         let ret = ListResponse {
             data: serialized.data,
@@ -528,7 +532,7 @@ impl ItemManagerOnline {
         let res = self.client.post(&url)?
             .body(body)
             .send()?;
-        res.error_for_status()?.bytes()?;
+        res.error_for_status()?;
 
         for item in items {
             item.mark_saved();
