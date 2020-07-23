@@ -129,7 +129,7 @@ impl CryptoManager {
         generichash_quick(&self.sub_derivation_key, Some(salt))
     }
 
-    pub fn get_crypto_mac(&self) -> Result<CryptoMac> {
+    pub fn crypto_mac(&self) -> Result<CryptoMac> {
         CryptoMac::new(Some(&self.mac_key))
     }
 
@@ -174,7 +174,7 @@ impl LoginCryptoManager {
         Ok(ret)
     }
 
-    pub fn get_pubkey(&self) -> Vec<u8> {
+    pub fn pubkey(&self) -> Vec<u8> {
         self.pubkey[..].to_vec()
     }
 }
@@ -231,11 +231,11 @@ impl BoxCryptoManager {
         Ok(to_enc_error!(box_::open(cipher, &box_::Nonce(*nonce), &pubkey, &privkey), "decryption failed")?)
     }
 
-    pub fn get_pubkey(&self) -> Vec<u8> {
+    pub fn pubkey(&self) -> Vec<u8> {
         self.pubkey[..].to_vec()
     }
 
-    pub fn get_privkey(&self) -> Vec<u8> {
+    pub fn privkey(&self) -> Vec<u8> {
         self.privkey[..].to_vec()
     }
 }
@@ -270,7 +270,7 @@ impl CryptoMac {
     }
 }
 
-pub fn get_pretty_fingerprint(content: &[u8]) -> String {
+pub fn pretty_fingerprint(content: &[u8]) -> String {
     let delimiter = "   ";
     let fingerprint = generichash_quick(content, None).unwrap();
 

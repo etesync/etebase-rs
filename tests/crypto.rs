@@ -51,7 +51,7 @@ fn crypto_manager() {
 
     crypto_manager.verify(&cipher, tag, None).unwrap();
 
-    let mut crypto_mac = crypto_manager.get_crypto_mac().unwrap();
+    let mut crypto_mac = crypto_manager.crypto_mac().unwrap();
     crypto_mac.update(&[0; 4]).unwrap();
     assert_eq!(crypto_mac.finalize().unwrap(), from_base64("y5nYZ75gDUna4bnaAHobXUlgQoTKOnueNW_KCYxcAg4").unwrap());
 }
@@ -64,7 +64,7 @@ fn login_crypto_manager() {
 
     let msg = b"This Is Some Test Cleartext.";
     let signature = login_crypto_manager.sign_detached(msg).unwrap();
-    let pubkey = login_crypto_manager.get_pubkey();
+    let pubkey = login_crypto_manager.pubkey();
     assert!(login_crypto_manager.verify_detached(msg, &signature, (&pubkey[..]).try_into().unwrap()).unwrap());
 }
 
@@ -76,8 +76,8 @@ fn box_crypto_manager() {
     let box_crypto_manager2 = crypto::BoxCryptoManager::keygen(None).unwrap();
 
     let msg = b"This Is Some Test Cleartext.";
-    let cipher = box_crypto_manager.encrypt(msg, (&box_crypto_manager2.get_pubkey()[..]).try_into().unwrap()).unwrap();
-    let decrypted = box_crypto_manager2.decrypt(&cipher[..], (&box_crypto_manager.get_pubkey()[..]).try_into().unwrap()).unwrap();
+    let cipher = box_crypto_manager.encrypt(msg, (&box_crypto_manager2.pubkey()[..]).try_into().unwrap()).unwrap();
+    let decrypted = box_crypto_manager2.decrypt(&cipher[..], (&box_crypto_manager.pubkey()[..]).try_into().unwrap()).unwrap();
     assert_eq!(decrypted, msg);
 }
 
@@ -104,6 +104,6 @@ fn pretty_fingerprint() {
 
     let pubkey = from_base64(USER.pubkey).unwrap();
 
-    let fingerprint = crypto::get_pretty_fingerprint(&pubkey);
+    let fingerprint = crypto::pretty_fingerprint(&pubkey);
     assert_eq!(fingerprint, "17756   37089   25897   42924\n06835   62184   63746   54689\n32947   01272   14138   19749\n00577   54359   44439   58177");
 }

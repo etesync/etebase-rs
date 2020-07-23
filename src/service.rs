@@ -63,11 +63,11 @@ impl MainCryptoManager {
         })
     }
 
-    pub fn get_login_crypto_manager(&self) -> Result<LoginCryptoManager> {
+    pub fn login_crypto_manager(&self) -> Result<LoginCryptoManager> {
         LoginCryptoManager::keygen(&self.0.asym_key_seed)
     }
 
-    pub fn get_account_crypto_manager(&self, key: &[u8; 32]) -> Result<AccountCryptoManager> {
+    pub fn account_crypto_manager(&self, key: &[u8; 32]) -> Result<AccountCryptoManager> {
         AccountCryptoManager::new(key, self.0.version)
     }
 }
@@ -121,20 +121,20 @@ impl Account {
 
         let main_key = derive_key(&salt, &password)?;
         let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
-        let login_crypto_manager = main_crypto_manager.get_login_crypto_manager()?;
+        let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
         let identity_crypto_manager = BoxCryptoManager::keygen(None)?;
 
         let account_key = randombytes(SYMMETRIC_KEY_SIZE);
-        let content = [&account_key, &identity_crypto_manager.get_privkey()[..]].concat();
+        let content = [&account_key, &identity_crypto_manager.privkey()[..]].concat();
         let encrypted_content = main_crypto_manager.0.encrypt(&content, None)?;
 
-        let login_response = authenticator.signup(user, &salt, &login_crypto_manager.get_pubkey(),
-                                                  &identity_crypto_manager.get_pubkey(), &encrypted_content)?;
+        let login_response = authenticator.signup(user, &salt, &login_crypto_manager.pubkey(),
+                                                  &identity_crypto_manager.pubkey(), &encrypted_content)?;
 
         client.set_token(Some(&login_response.token));
 
-        let account_crypto_manager = main_crypto_manager.get_account_crypto_manager(try_into!(&account_key[..])?)?;
+        let account_crypto_manager = main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
 
         let ret = Self {
             main_key,
@@ -157,12 +157,12 @@ impl Account {
 
         let main_key = derive_key(&login_challenge.salt, &password)?;
         let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
-        let login_crypto_manager = main_crypto_manager.get_login_crypto_manager()?;
+        let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
         let response_struct = LoginBodyResponse {
             username,
             challenge: &login_challenge.challenge,
-            host: client.get_api_base().host_str().unwrap_or(client.get_api_base().as_str()),
+            host: client.api_base().host_str().unwrap_or(client.api_base().as_str()),
             action: "login",
         };
         let response = rmp_serde::to_vec_named(&response_struct)?;
@@ -175,7 +175,7 @@ impl Account {
 
         let content = main_crypto_manager.0.decrypt(&login_response.user.encrypted_content, None)?;
         let account_key = &content[..SYMMETRIC_KEY_SIZE];
-        let account_crypto_manager = main_crypto_manager.get_account_crypto_manager(try_into!(&account_key[..])?)?;
+        let account_crypto_manager = main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
 
         let ret = Self {
             main_key,
@@ -199,12 +199,12 @@ impl Account {
         let username = &self.user.username;
         let main_key = &self.main_key;
         let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
-        let login_crypto_manager = main_crypto_manager.get_login_crypto_manager()?;
+        let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
         let response_struct = LoginBodyResponse {
             username,
             challenge: &login_challenge.challenge,
-            host: &self.client.get_api_base().host_str().unwrap_or(&self.client.get_api_base().as_str()),
+            host: &self.client.api_base().host_str().unwrap_or(&self.client.api_base().as_str()),
             action: "login",
         };
         let response = rmp_serde::to_vec_named(&response_struct)?;
@@ -236,11 +236,11 @@ impl Account {
 
         let old_main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
         let content = old_main_crypto_manager.0.decrypt(&self.user.encrypted_content, None)?;
-        let old_login_crypto_manager = old_main_crypto_manager.get_login_crypto_manager()?;
+        let old_login_crypto_manager = old_main_crypto_manager.login_crypto_manager()?;
 
         let main_key = derive_key(&login_challenge.salt, &password)?;
         let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
-        let login_crypto_manager = main_crypto_manager.get_login_crypto_manager()?;
+        let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
         let encrypted_content = main_crypto_manager.0.encrypt(&content, None)?;
 
@@ -263,10 +263,10 @@ impl Account {
         let response_struct = Body {
             username,
             challenge: &login_challenge.challenge,
-            host: &self.client.get_api_base().host_str().unwrap_or(&self.client.get_api_base().as_str()),
+            host: &self.client.api_base().host_str().unwrap_or(&self.client.api_base().as_str()),
             action: "changePassword",
 
-            login_pubkey: &login_crypto_manager.get_pubkey(),
+            login_pubkey: &login_crypto_manager.pubkey(),
             encrypted_content: &encrypted_content,
         };
         let response = rmp_serde::to_vec_named(&response_struct)?;
@@ -294,8 +294,8 @@ impl Account {
             user: self.user.clone(),
             version,
             key: &crypto_manager.0.encrypt(&self.main_key, None)?,
-            auth_token: self.client.get_token(),
-            server_url: self.client.get_api_base().as_str(),
+            auth_token: self.client.token(),
+            server_url: self.client.api_base().as_str(),
         };
         let serialized = rmp_serde::to_vec_named(&account_data)?;
 
@@ -326,7 +326,7 @@ impl Account {
         let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
         let content = main_crypto_manager.0.decrypt(&account_data.user.encrypted_content, None)?;
         let account_key = &content[..SYMMETRIC_KEY_SIZE];
-        let account_crypto_manager = main_crypto_manager.get_account_crypto_manager(try_into!(&account_key[..])?)?;
+        let account_crypto_manager = main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
 
         Ok(Self {
             user: account_data.user,
@@ -337,7 +337,7 @@ impl Account {
         })
     }
 
-    pub fn get_collection_manager(&self) -> Result<CollectionManager> {
+    pub fn collection_manager(&self) -> Result<CollectionManager> {
         CollectionManager::new(Rc::clone(&self.client), Rc::clone(&self.account_crypto_manager))
     }
 }
@@ -360,18 +360,18 @@ impl CollectionManager {
 
     pub fn create(&self, meta: &CollectionMetadata, content: &[u8]) -> Result<Collection> {
         let encrypted_collection = EncryptedCollection::new(&self.account_crypto_manager, meta, content)?;
-        Collection::new(encrypted_collection.get_crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
+        Collection::new(encrypted_collection.crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
     }
 
     pub fn fetch(&self, col_uid: &StrBase64, options: Option<&FetchOptions>) -> Result<Collection> {
         let encrypted_collection = self.collection_manager_online.fetch(&col_uid, options)?;
-        Collection::new(encrypted_collection.get_crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
+        Collection::new(encrypted_collection.crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
     }
 
     pub fn list(&self, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>> {
         let response = self.collection_manager_online.list(options)?;
 
-        let data: Result<Vec<Collection>> = response.data.into_iter().map(|x| Collection::new(x.get_crypto_manager(&self.account_crypto_manager)?, x)).collect();
+        let data: Result<Vec<Collection>> = response.data.into_iter().map(|x| Collection::new(x.crypto_manager(&self.account_crypto_manager)?, x)).collect();
 
         Ok(CollectionListResponse {
             data: data?,
@@ -382,10 +382,10 @@ impl CollectionManager {
 
     pub fn upload(&self, collection: &Collection, options: Option<&FetchOptions>) -> Result<()> {
         let col = &collection.col;
-        match col.get_etag() {
+        match col.etag() {
             Some(_) => {
                 let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
-                item_manager_online.batch(vec![col.get_item()].into_iter(), std::iter::empty(), options)?;
+                item_manager_online.batch(vec![col.item()].into_iter(), std::iter::empty(), options)?;
             },
             None => {
                 self.collection_manager_online.create(&col, options)?;
@@ -397,10 +397,10 @@ impl CollectionManager {
 
     pub fn transaction(&self, collection: &Collection, options: Option<&FetchOptions>) -> Result<()> {
         let col = &collection.col;
-        match col.get_etag() {
+        match col.etag() {
             Some(_) => {
                 let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
-                item_manager_online.transaction(vec![col.get_item()].into_iter(), std::iter::empty(), options)?;
+                item_manager_online.transaction(vec![col.item()].into_iter(), std::iter::empty(), options)?;
             },
             None => {
                 self.collection_manager_online.create(&col, options)?;
@@ -410,7 +410,7 @@ impl CollectionManager {
         Ok(())
     }
 
-    pub fn get_item_manager(&self, collection: &Collection) -> Result<ItemManager> {
+    pub fn item_manager(&self, collection: &Collection) -> Result<ItemManager> {
         ItemManager::new(Rc::clone(&self.client), Rc::clone(&collection.cm), collection)
     }
 }
@@ -431,18 +431,18 @@ impl ItemManager {
 
     pub fn create(&self, meta: &ItemMetadata, content: &[u8]) -> Result<Item> {
         let encrypted_item = EncryptedItem::new(&self.collection_crypto_manager, meta, content)?;
-        Item::new(encrypted_item.get_crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
+        Item::new(encrypted_item.crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
     }
 
     pub fn fetch(&self, item_uid: &StrBase64, options: Option<&FetchOptions>) -> Result<Item> {
         let encrypted_item = self.item_manager_online.fetch(&item_uid, options)?;
-        Item::new(encrypted_item.get_crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
+        Item::new(encrypted_item.crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
     }
 
     pub fn list(&self, options: Option<&FetchOptions>) -> Result<ItemListResponse<Item>> {
         let response = self.item_manager_online.list(options)?;
 
-        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.get_crypto_manager(&self.collection_crypto_manager)?, x)).collect();
+        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x)).collect();
         Ok(ItemListResponse {
             data: data?,
             done: response.done,
@@ -456,7 +456,7 @@ impl ItemManager {
 
         let items = items.map(|x| &x.item);
         let response = self.item_manager_online.fetch_updates(items, options)?;
-        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.get_crypto_manager(&self.collection_crypto_manager)?, x)).collect();
+        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x)).collect();
         Ok(ItemListResponse {
             data: data?,
             done: response.done,
@@ -548,21 +548,21 @@ impl Collection {
         self.col.is_deleted()
     }
 
-    pub fn get_uid(&self) -> &str {
-        self.col.get_uid()
+    pub fn uid(&self) -> &str {
+        self.col.uid()
     }
 
-    pub fn get_etag(&self) -> Etag {
-        self.col.get_etag()
+    pub fn etag(&self) -> Etag {
+        self.col.etag()
     }
 
-    pub fn get_stoken(&self) -> Option<&str> {
-        self.col.get_stoken()
+    pub fn stoken(&self) -> Option<&str> {
+        self.col.stoken()
     }
 
-    pub fn get_item(&self) -> Result<Item> {
-        let encrypted_item = self.col.get_item();
-        let crypto_manager = encrypted_item.get_crypto_manager(&self.cm)?;
+    pub fn item(&self) -> Result<Item> {
+        let encrypted_item = self.col.item();
+        let crypto_manager = encrypted_item.crypto_manager(&self.cm)?;
         Item::new(crypto_manager, encrypted_item.clone())
     }
 }
@@ -614,15 +614,15 @@ impl Item {
         self.item.is_deleted()
     }
 
-    pub fn get_uid(&self) -> &str {
-        self.item.get_uid()
+    pub fn uid(&self) -> &str {
+        self.item.uid()
     }
 
-    pub fn get_etag(&self) -> Etag {
-        self.item.get_etag()
+    pub fn etag(&self) -> Etag {
+        self.item.etag()
     }
 }
 
-pub(crate) fn test_get_chunk_uids(item: &Item) -> Vec<String> {
-    item.item.test_get_chunk_uids()
+pub(crate) fn test_chunk_uids(item: &Item) -> Vec<String> {
+    item.item.test_chunk_uids()
 }

@@ -262,7 +262,7 @@ impl EncryptedCollection {
         let version = CURRENT_VERSION;
         let collection_key = parent_crypto_manager.0.encrypt(&randombytes(SYMMETRIC_KEY_SIZE), None)?;
         let meta = rmp_serde::to_vec_named(meta)?;
-        let crypto_manager = Self::get_crypto_manager_static(parent_crypto_manager, version, &collection_key)?;
+        let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, version, &collection_key)?;
         let item = EncryptedItem::new_raw(&crypto_manager, &meta, content)?;
 
         Ok(Self {
@@ -279,34 +279,34 @@ impl EncryptedCollection {
     }
 
     pub fn verify(&self, crypto_manager: &CollectionCryptoManager) -> Result<bool> {
-        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
         self.item.verify(&item_crypto_manager)
     }
 
     pub fn set_meta(&mut self, crypto_manager: &CollectionCryptoManager, meta: &[u8]) -> Result<()> {
-        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
         self.item.set_meta(&item_crypto_manager, &meta)
     }
 
     pub fn decrypt_meta(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
-        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
         self.item.decrypt_meta(&item_crypto_manager)
     }
 
     pub fn set_content(&mut self, crypto_manager: &CollectionCryptoManager, content: &[u8]) -> Result<()> {
-        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
         self.item.set_content(&item_crypto_manager, content)
     }
 
     pub fn decrypt_content(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
-        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
         self.item.decrypt_content(&item_crypto_manager)
     }
 
     pub fn delete(&mut self, crypto_manager: &CollectionCryptoManager) -> Result<()> {
-        let item_crypto_manager = self.item.get_crypto_manager(crypto_manager)?;
+        let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
         self.item.delete(&item_crypto_manager)
     }
 
@@ -314,30 +314,30 @@ impl EncryptedCollection {
         self.item.is_deleted()
     }
 
-    pub fn get_uid(&self) -> &str {
-        self.item.get_uid()
+    pub fn uid(&self) -> &str {
+        self.item.uid()
     }
 
-    pub fn get_etag(&self) -> Etag {
-        self.item.get_etag()
+    pub fn etag(&self) -> Etag {
+        self.item.etag()
     }
 
-    pub fn get_stoken(&self) -> Option<&str> {
+    pub fn stoken(&self) -> Option<&str> {
         self.stoken.as_deref()
     }
 
-    pub fn get_item(&self) -> &EncryptedItem {
+    pub fn item(&self) -> &EncryptedItem {
         &self.item
     }
 
-    fn get_crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8]) -> Result<CollectionCryptoManager> {
+    fn crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8]) -> Result<CollectionCryptoManager> {
         let encryption_key = parent_crypto_manager.0.decrypt(encryption_key, None)?;
 
         CollectionCryptoManager::new(try_into!(&encryption_key[..])?, version)
     }
 
-    pub fn get_crypto_manager(&self, parent_crypto_manager: &AccountCryptoManager) -> Result<CollectionCryptoManager> {
-        Self::get_crypto_manager_static(parent_crypto_manager, self.item.version, &self.collection_key)
+    pub fn crypto_manager(&self, parent_crypto_manager: &AccountCryptoManager) -> Result<CollectionCryptoManager> {
+        Self::crypto_manager_static(parent_crypto_manager, self.item.version, &self.collection_key)
     }
 }
 
@@ -376,7 +376,7 @@ impl EncryptedRevision {
     }
 
     fn calculate_hash(&self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<Vec<u8>> {
-        let mut crypto_mac = crypto_manager.0.get_crypto_mac()?;
+        let mut crypto_mac = crypto_manager.0.crypto_mac()?;
         crypto_mac.update(&[self.deleted as u8])?;
         crypto_mac.update_with_len_prefix(additional_data)?;
 
@@ -595,8 +595,8 @@ impl EncryptedItem {
     fn new_raw(parent_crypto_manager: &CollectionCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
         let uid = gen_uid_base64();
         let version = CURRENT_VERSION;
-        let crypto_manager = Self::get_crypto_manager_static(parent_crypto_manager, &uid, version, None)?;
-        let content = EncryptedRevision::new(&crypto_manager, Self::get_additional_mac_data_static(&uid), &meta, content)?;
+        let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, &uid, version, None)?;
+        let content = EncryptedRevision::new(&crypto_manager, Self::additional_mac_data_static(&uid), &meta, content)?;
 
         Ok(Self {
             uid,
@@ -620,11 +620,11 @@ impl EncryptedItem {
     }
 
     pub fn verify(&self, crypto_manager: &ItemCryptoManager) -> Result<bool> {
-        self.content.verify(crypto_manager, self.get_additional_mac_data())
+        self.content.verify(crypto_manager, self.additional_mac_data())
     }
 
     pub fn set_meta(&mut self, crypto_manager: &ItemCryptoManager, meta: &[u8]) -> Result<()> {
-        let ad_mac_data = Self::get_additional_mac_data_static(&self.uid);
+        let ad_mac_data = Self::additional_mac_data_static(&self.uid);
         if self.is_locally_changed() {
             self.content.set_meta(crypto_manager, ad_mac_data, meta)?;
         } else {
@@ -638,11 +638,11 @@ impl EncryptedItem {
 
     pub fn decrypt_meta(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
-        self.content.decrypt_meta(crypto_manager, self.get_additional_mac_data())
+        self.content.decrypt_meta(crypto_manager, self.additional_mac_data())
     }
 
     pub fn set_content(&mut self, crypto_manager: &ItemCryptoManager, content: &[u8]) -> Result<()> {
-        let ad_mac_data = Self::get_additional_mac_data_static(&self.uid);
+        let ad_mac_data = Self::additional_mac_data_static(&self.uid);
         if self.is_locally_changed() {
             self.content.set_content(crypto_manager, ad_mac_data, content)?;
         } else {
@@ -660,7 +660,7 @@ impl EncryptedItem {
     }
 
     pub fn delete(&mut self, crypto_manager: &ItemCryptoManager) -> Result<()> {
-        let ad_mac_data = Self::get_additional_mac_data_static(&self.uid);
+        let ad_mac_data = Self::additional_mac_data_static(&self.uid);
         if self.is_locally_changed() {
             self.content.delete(crypto_manager, ad_mac_data)?;
         } else {
@@ -676,15 +676,15 @@ impl EncryptedItem {
         self.content.deleted
     }
 
-    pub fn get_uid(&self) -> &str {
+    pub fn uid(&self) -> &str {
         &self.uid
     }
 
-    pub fn get_etag(&self) -> Etag {
+    pub fn etag(&self) -> Etag {
         self.etag.borrow().to_owned()
     }
 
-    fn get_crypto_manager_static(parent_crypto_manager: &CollectionCryptoManager, uid: &str, version: u8, encryption_key: Option<&[u8]>) -> Result<ItemCryptoManager> {
+    fn crypto_manager_static(parent_crypto_manager: &CollectionCryptoManager, uid: &str, version: u8, encryption_key: Option<&[u8]>) -> Result<ItemCryptoManager> {
         let encryption_key = match encryption_key {
             Some(encryption_key) => parent_crypto_manager.0.decrypt(encryption_key, None)?,
             None => parent_crypto_manager.0.derive_subkey(uid.as_bytes())?,
@@ -693,20 +693,20 @@ impl EncryptedItem {
         ItemCryptoManager::new(try_into!(&encryption_key[..])?, version)
     }
 
-    pub fn get_crypto_manager(&self, parent_crypto_manager: &CollectionCryptoManager) -> Result<ItemCryptoManager> {
+    pub fn crypto_manager(&self, parent_crypto_manager: &CollectionCryptoManager) -> Result<ItemCryptoManager> {
         let encryption_key = self.encryption_key.as_deref().and_then(|x| Some(&x[..]));
-        Self::get_crypto_manager_static(parent_crypto_manager, &self.uid, self.version, encryption_key)
+        Self::crypto_manager_static(parent_crypto_manager, &self.uid, self.version, encryption_key)
     }
 
-    fn get_additional_mac_data_static(uid: &str) -> &[u8] {
+    fn additional_mac_data_static(uid: &str) -> &[u8] {
         uid.as_bytes()
     }
 
-    fn get_additional_mac_data(&self) -> &[u8] {
-        Self::get_additional_mac_data_static(&self.uid)
+    fn additional_mac_data(&self) -> &[u8] {
+        Self::additional_mac_data_static(&self.uid)
     }
 
-    pub(crate) fn test_get_chunk_uids(&self) -> Vec<String> {
+    pub(crate) fn test_chunk_uids(&self) -> Vec<String> {
         self.content.chunks
             .iter()
             .map(|x| x.0.clone())

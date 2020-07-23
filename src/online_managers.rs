@@ -67,7 +67,7 @@ impl Client {
         self.auth_token = token.and_then(|x| Some(x.to_string()));
     }
 
-    pub fn get_token<'a>(&'a self) -> Option<&'a str> {
+    pub fn token<'a>(&'a self) -> Option<&'a str> {
         self.auth_token.as_deref().and_then(|x| Some(&x[..]))
     }
 
@@ -77,7 +77,7 @@ impl Client {
         Ok(())
     }
 
-    pub fn get_api_base(&self) -> &Url {
+    pub fn api_base(&self) -> &Url {
         &self.api_base
     }
 
@@ -471,7 +471,7 @@ pub struct ItemManagerOnline {
 impl ItemManagerOnline {
     pub fn new(client: Rc<Client>, col: &EncryptedCollection) -> Self {
         Self {
-            api_base: client.api_base.join(&format!("api/v1/collection/{}/item/", col.get_uid())).unwrap(),
+            api_base: client.api_base.join(&format!("api/v1/collection/{}/item/", col.uid())).unwrap(),
             client,
         }
     }
@@ -507,9 +507,9 @@ impl ItemManagerOnline {
         let want_etag = options.and_then(|x| x.stoken).is_none();
         let items: Vec<ItemBatchBodyDep> = items.map(|x| {
             ItemBatchBodyDep {
-                uid: x.get_uid(),
+                uid: x.uid(),
                 etag: if want_etag {
-                    x.get_etag()
+                    x.etag()
                 } else {
                     None
                 }
@@ -538,8 +538,8 @@ impl ItemManagerOnline {
         let items: Vec<&EncryptedItem> = items.collect();
         let deps: Vec<ItemBatchBodyDep> = deps.map(|x| {
             ItemBatchBodyDep {
-                uid: x.get_uid(),
-                etag: x.get_etag(),
+                uid: x.uid(),
+                etag: x.etag(),
             }
         }).collect();
         let deps = if deps.len() > 0 {
@@ -574,8 +574,8 @@ impl ItemManagerOnline {
         let items: Vec<&EncryptedItem> = items.collect();
         let deps: Vec<ItemBatchBodyDep> = deps.map(|x| {
             ItemBatchBodyDep {
-                uid: x.get_uid(),
-                etag: x.get_etag(),
+                uid: x.uid(),
+                etag: x.etag(),
             }
         }).collect();
         let deps = if deps.len() > 0 {

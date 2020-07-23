@@ -6,7 +6,7 @@ use std::collections::HashSet;
 
 const CLIENT_NAME: &str = "etebase-tests";
 
-fn get_test_url() -> String {
+fn test_url() -> String {
     env::var("ETEBASE_TEST_API_URL").unwrap_or("http://localhost:8033".to_owned())
 }
 
@@ -39,7 +39,7 @@ use etebase::{
     FetchOptions,
     test_helpers::{
         test_reset,
-        get_chunk_uids,
+        chunk_uids,
     }
 };
 
@@ -54,7 +54,7 @@ use common::{
 };
 
 fn user_reset(user: &TestUser) -> Result<()> {
-    let client = Client::new(CLIENT_NAME, &get_test_url())?;
+    let client = Client::new(CLIENT_NAME, &test_url())?;
     let body_struct = etebase::test_helpers::SignupBody {
         user: &etebase::User {
             username: user.username,
@@ -75,11 +75,11 @@ fn init_test(user: &TestUser) -> Result<Account> {
     user_reset(&user)?;
 
     // FIXME: move to prepare user for test
-    let client = Client::new(CLIENT_NAME, &get_test_url())?;
+    let client = Client::new(CLIENT_NAME, &test_url())?;
     let session_key = from_base64(sessionStorageKey)?;
 
     let mut ret = Account::restore(client, user.storedSession, Some(&session_key))?;
-    ret.force_api_base(&get_test_url())?;
+    ret.force_api_base(&test_url())?;
     ret.fetch_token()?;
 
     Ok(ret)
@@ -102,7 +102,7 @@ fn verify_item(item: &Item, meta: &ItemMetadata, content: &[u8]) -> Result<()> {
 #[test]
 fn simple_collection_handling() -> Result<()> {
     let etebase = init_test(&USER)?;
-    let col_mgr = etebase.get_collection_manager()?;
+    let col_mgr = etebase.collection_manager()?;
     let meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
     let content = b"SomeContent";
 
@@ -124,13 +124,13 @@ fn simple_collection_handling() -> Result<()> {
 #[test]
 fn simple_item_handling() -> Result<()> {
     let etebase = init_test(&USER)?;
-    let col_mgr = etebase.get_collection_manager()?;
+    let col_mgr = etebase.collection_manager()?;
     let col_meta = CollectionMetadata::new("type", "Collection");
     let col_content = b"SomeContent";
 
     let col = col_mgr.create(&col_meta, col_content)?;
 
-    let it_mgr = col_mgr.get_item_manager(&col)?;
+    let it_mgr = col_mgr.item_manager(&col)?;
 
     let meta = ItemMetadata::new().set_name(Some("Item 1"));
     let content = b"ItemContent";
@@ -152,7 +152,7 @@ fn simple_item_handling() -> Result<()> {
 #[test]
 fn simple_collection_sync() -> Result<()> {
     let etebase = init_test(&USER)?;
-    let col_mgr = etebase.get_collection_manager()?;
+    let col_mgr = etebase.collection_manager()?;
     let meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
     let content = b"SomeContent";
 
@@ -168,9 +168,9 @@ fn simple_collection_sync() -> Result<()> {
     assert_eq!(collections.data().len(), 1);
     verify_collection(&collections.data().first().unwrap(), &meta, content)?;
 
-    let mut col_old = col_mgr.fetch(col.get_uid(), None)?;
+    let mut col_old = col_mgr.fetch(col.uid(), None)?;
     {
-        let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
+        let fetch_options = FetchOptions::new().stoken(col_old.stoken());
         let collections = col_mgr.list(Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 0);
     }
@@ -184,7 +184,7 @@ fn simple_collection_sync() -> Result<()> {
     assert_eq!(collections.data().len(), 1);
 
     {
-        let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
+        let fetch_options = FetchOptions::new().stoken(col_old.stoken());
         let collections = col_mgr.list(Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 1);
     }
@@ -195,7 +195,7 @@ fn simple_collection_sync() -> Result<()> {
         col_old.set_content(content2)?;
 
         assert_err!(col_mgr.transaction(&col, None), Error::Http(_));
-        let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
+        let fetch_options = FetchOptions::new().stoken(col_old.stoken());
         assert_err!(col_mgr.upload(&col, Some(&fetch_options)), Error::Http(_));
     }
 
@@ -212,7 +212,7 @@ fn simple_collection_sync() -> Result<()> {
 #[test]
 fn simple_item_sync() -> Result<()> {
     let etebase = init_test(&USER)?;
-    let col_mgr = etebase.get_collection_manager()?;
+    let col_mgr = etebase.collection_manager()?;
     let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
     let col_content = b"SomeContent";
 
@@ -220,7 +220,7 @@ fn simple_item_sync() -> Result<()> {
 
     col_mgr.upload(&col, None)?;
 
-    let it_mgr = col_mgr.get_item_manager(&col)?;
+    let it_mgr = col_mgr.item_manager(&col)?;
 
     let meta = ItemMetadata::new().set_name(Some("Item 1"));
     let content = b"Content 1";
@@ -235,12 +235,12 @@ fn simple_item_sync() -> Result<()> {
         verify_item(&items.data().first().unwrap(), &meta, content)?;
     }
 
-    let mut item_old = it_mgr.fetch(item.get_uid(), None)?;
+    let mut item_old = it_mgr.fetch(item.uid(), None)?;
 
     let meta2 = ItemMetadata::new().set_name(Some("Item 2"));
     item.set_meta(&meta2)?;
 
-    let col_old = col_mgr.fetch(col.get_uid(), None)?;
+    let col_old = col_mgr.fetch(col.uid(), None)?;
 
     it_mgr.batch(vec![&item].into_iter(), None)?;
 
@@ -259,7 +259,7 @@ fn simple_item_sync() -> Result<()> {
     item.set_content(content2)?;
 
     {
-        let fetch_options = FetchOptions::new().stoken(col_old.get_stoken());
+        let fetch_options = FetchOptions::new().stoken(col_old.stoken());
         assert_err!(it_mgr.batch(vec![&item].into_iter(), Some(&fetch_options)), Error::Http(_));
     }
 
@@ -277,7 +277,7 @@ fn simple_item_sync() -> Result<()> {
 #[test]
 fn collection_as_item() -> Result<()> {
     let etebase = init_test(&USER)?;
-    let col_mgr = etebase.get_collection_manager()?;
+    let col_mgr = etebase.collection_manager()?;
     let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
     let col_content = b"SomeContent";
 
@@ -285,7 +285,7 @@ fn collection_as_item() -> Result<()> {
 
     col_mgr.upload(&col, None)?;
 
-    let it_mgr = col_mgr.get_item_manager(&col)?;
+    let it_mgr = col_mgr.item_manager(&col)?;
 
     // Verify with_collection works
     {
@@ -294,7 +294,7 @@ fn collection_as_item() -> Result<()> {
         let fetch_options = FetchOptions::new().with_collection(true);
         let items = it_mgr.list(Some(&fetch_options))?;
         assert_eq!(items.data().len(), 1);
-        let meta = col.get_item()?.decrypt_meta()?;
+        let meta = col.item()?.decrypt_meta()?;
         let first_item = items.data().first().unwrap();
         verify_item(&first_item, &meta, col_content)?;
         // Also verify the collection metadata is good
@@ -315,12 +315,12 @@ fn collection_as_item() -> Result<()> {
         assert_eq!(items.data().len(), 2);
     }
 
-    let col_item_old = it_mgr.fetch(col.get_uid(), None)?;
+    let col_item_old = it_mgr.fetch(col.uid(), None)?;
 
     // Manipulate the collection with batch/transaction
     let col_content2 = b"Other content";
     col.set_content(col_content2)?;
-    it_mgr.batch([col.get_item()?].iter(), None)?;
+    it_mgr.batch([col.item()?].iter(), None)?;
 
     {
         let collections = col_mgr.list(None)?;
@@ -328,10 +328,10 @@ fn collection_as_item() -> Result<()> {
         verify_collection(&collections.data().first().unwrap(), &col_meta, col_content2)?;
     }
 
-    let mut col = col_mgr.fetch(col.get_uid(), None)?;
+    let mut col = col_mgr.fetch(col.uid(), None)?;
     let col_content2 = b"Other content 3";
     col.set_content(col_content2)?;
-    it_mgr.transaction([col.get_item()?].iter(), None)?;
+    it_mgr.transaction([col.item()?].iter(), None)?;
 
     {
         let collections = col_mgr.list(None)?;
@@ -342,7 +342,7 @@ fn collection_as_item() -> Result<()> {
     {
         let updates = it_mgr.fetch_updates(vec![&col_item_old, &item].into_iter(), None)?;
         assert_eq!(updates.data().len(), 1);
-        let meta = col.get_item()?.decrypt_meta()?;
+        let meta = col.item()?.decrypt_meta()?;
         let first_item = updates.data().first().unwrap();
         verify_item(&first_item, &meta, col_content2)?;
         // Also verify the collection metadata is good
@@ -355,7 +355,7 @@ fn collection_as_item() -> Result<()> {
 #[test]
 fn collection_and_item_deletion() -> Result<()> {
     let etebase = init_test(&USER)?;
-    let col_mgr = etebase.get_collection_manager()?;
+    let col_mgr = etebase.collection_manager()?;
     let col_meta = CollectionMetadata::new("type", "Collection");
     let col_content = b"";
 
@@ -363,7 +363,7 @@ fn collection_and_item_deletion() -> Result<()> {
 
     col_mgr.upload(&col, None)?;
 
-    let it_mgr = col_mgr.get_item_manager(&col)?;
+    let it_mgr = col_mgr.item_manager(&col)?;
 
     let meta = ItemMetadata::new().set_name(Some("Item 1"));
     let content = b"Content 1";
@@ -391,7 +391,7 @@ fn collection_and_item_deletion() -> Result<()> {
     col_mgr.upload(&col, None)?;
 
     {
-        let fetch_options = FetchOptions::new().stoken(col.get_stoken());
+        let fetch_options = FetchOptions::new().stoken(col.stoken());
         let collections = col_mgr.list(Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 1);
 
@@ -406,7 +406,7 @@ fn collection_and_item_deletion() -> Result<()> {
 #[test]
 fn empty_content() -> Result<()> {
     let etebase = init_test(&USER)?;
-    let col_mgr = etebase.get_collection_manager()?;
+    let col_mgr = etebase.collection_manager()?;
     let col_meta = CollectionMetadata::new("type", "Collection");
     let col_content = b"";
 
@@ -415,11 +415,11 @@ fn empty_content() -> Result<()> {
     col_mgr.upload(&col, None)?;
 
     {
-        let col2 = col_mgr.fetch(col.get_uid(), None)?;
+        let col2 = col_mgr.fetch(col.uid(), None)?;
         verify_collection(&col2, &col_meta, col_content)?;
     }
 
-    let it_mgr = col_mgr.get_item_manager(&col)?;
+    let it_mgr = col_mgr.item_manager(&col)?;
 
     let meta = ItemMetadata::new().set_name(Some("Item 1"));
     let content = b"";
@@ -441,7 +441,7 @@ fn empty_content() -> Result<()> {
 #[test]
 fn chunking_large_data() -> Result<()> {
     let etebase = init_test(&USER)?;
-    let col_mgr = etebase.get_collection_manager()?;
+    let col_mgr = etebase.collection_manager()?;
     let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
     let col_content = b"SomeContent";
 
@@ -449,7 +449,7 @@ fn chunking_large_data() -> Result<()> {
 
     col_mgr.upload(&col, None)?;
 
-    let it_mgr = col_mgr.get_item_manager(&col)?;
+    let it_mgr = col_mgr.item_manager(&col)?;
 
     let meta = ItemMetadata::new();
     let content = randombytes_deterministic(120 * 1024, &[0; 32]); // 120kb of pseuedorandom data
@@ -461,7 +461,7 @@ fn chunking_large_data() -> Result<()> {
 
     // Get the first chunks and init uid_set
     {
-        let chunks = get_chunk_uids(&item);
+        let chunks = chunk_uids(&item);
         assert_eq!(chunks.len(), 7);
         for chunk in chunks {
             uid_set.insert(chunk);
@@ -484,7 +484,7 @@ fn chunking_large_data() -> Result<()> {
 
     // Verify how much has changed
     {
-        let chunks = get_chunk_uids(&item);
+        let chunks = chunk_uids(&item);
         assert_eq!(chunks.len(), 7);
 
         let mut reused = 0;
@@ -507,7 +507,7 @@ fn login_and_password_change() -> Result<()> {
     etebase.logout()?;
 
     let another_password = "AnotherPassword";
-    let client = Client::new(CLIENT_NAME, &get_test_url())?;
+    let client = Client::new(CLIENT_NAME, &test_url())?;
     let mut etebase2 = Account::login(client.clone(), USER2.username, USER2.password)?;
 
     etebase2.change_password(another_password)?;
@@ -527,7 +527,7 @@ fn login_and_password_change() -> Result<()> {
 
 #[test]
 fn session_save_and_restore() -> Result<()> {
-    let client = Client::new(CLIENT_NAME, &get_test_url())?;
+    let client = Client::new(CLIENT_NAME, &test_url())?;
     let etebase = init_test(&USER)?;
 
     // Verify we can store and restore without an encryption key

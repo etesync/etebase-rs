@@ -51,8 +51,8 @@ pub mod test_helpers {
         SignupBody,
     };
 
-    pub fn get_chunk_uids(item: &super::service::Item) -> Vec<String> {
-        super::service::test_get_chunk_uids(item)
+    pub fn chunk_uids(item: &super::service::Item) -> Vec<String> {
+        super::service::test_chunk_uids(item)
     }
 }
 
