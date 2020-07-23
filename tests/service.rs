@@ -353,6 +353,57 @@ fn collection_as_item() -> Result<()> {
 }
 
 #[test]
+fn collection_and_item_deletion() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.get_collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection");
+    let col_content = b"";
+
+    let mut col = col_mgr.create(&col_meta, col_content)?;
+
+    col_mgr.upload(&col, None)?;
+
+    let it_mgr = col_mgr.get_item_manager(&col)?;
+
+    let meta = ItemMetadata::new().set_name(Some("Item 1"));
+    let content = b"Content 1";
+
+    let mut item = it_mgr.create(&meta, content)?;
+
+    it_mgr.batch(vec![&item].into_iter(), None)?;
+
+    let items = it_mgr.list(None)?;
+    assert_eq!(items.data().len(), 1);
+
+    item.delete()?;
+    it_mgr.batch(vec![&item].into_iter(), None)?;
+
+    {
+        let fetch_options = FetchOptions::new().stoken(items.stoken());
+        let items = it_mgr.list(Some(&fetch_options))?;
+        assert_eq!(items.data().len(), 1);
+        let first_item = items.data().first().unwrap();
+        verify_item(&first_item, &meta, content)?;
+        assert!(first_item.is_deleted());
+    }
+
+    col.delete()?;
+    col_mgr.upload(&col, None)?;
+
+    {
+        let fetch_options = FetchOptions::new().stoken(col.get_stoken());
+        let collections = col_mgr.list(Some(&fetch_options))?;
+        assert_eq!(collections.data().len(), 1);
+
+        let first_col = collections.data().first().unwrap();
+        verify_collection(&first_col, &col_meta, col_content)?;
+        assert!(first_col.is_deleted());
+    }
+
+    etebase.logout()
+}
+
+#[test]
 fn chunking_large_data() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.get_collection_manager()?;
