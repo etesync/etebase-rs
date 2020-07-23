@@ -98,12 +98,12 @@ impl CollectionMetadata {
         }
     }
 
-    pub fn set_type(mut self, type_: &str) -> Self {
+    pub fn set_collection_type(mut self, type_: &str) -> Self {
         self.type_ = type_.to_string();
         self
     }
 
-    pub fn get_type(&self) -> &str {
+    pub fn collection_type(&self) -> &str {
         &self.type_
     }
 
@@ -112,7 +112,7 @@ impl CollectionMetadata {
         self
     }
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
@@ -121,7 +121,7 @@ impl CollectionMetadata {
         self
     }
 
-    pub fn get_description(&self) -> Option<&str> {
+    pub fn description(&self) -> Option<&str> {
         self.description.as_deref()
     }
 
@@ -130,7 +130,7 @@ impl CollectionMetadata {
         self
     }
 
-    pub fn get_color(&self) -> Option<&str> {
+    pub fn color(&self) -> Option<&str> {
         self.color.as_deref()
     }
 
@@ -139,7 +139,7 @@ impl CollectionMetadata {
         self
     }
 
-    pub fn get_mtime(&self) -> Option<i64> {
+    pub fn mtime(&self) -> Option<i64> {
         self.mtime
     }
 }
@@ -173,12 +173,12 @@ impl ItemMetadata {
         }
     }
 
-    pub fn set_type(mut self, type_: Option<&str>) -> Self {
+    pub fn set_item_type(mut self, type_: Option<&str>) -> Self {
         self.type_ = type_.and_then(|x| Some(x.to_string()));
         self
     }
 
-    pub fn get_type(&self) -> Option<&str> {
+    pub fn item_type(&self) -> Option<&str> {
         self.type_.as_deref()
     }
 
@@ -187,7 +187,7 @@ impl ItemMetadata {
         self
     }
 
-    pub fn get_name(&self) -> Option<&str> {
+    pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
     }
 
@@ -196,7 +196,7 @@ impl ItemMetadata {
         self
     }
 
-    pub fn get_mtime(&self) -> Option<i64> {
+    pub fn mtime(&self) -> Option<i64> {
         self.mtime
     }
 }
