@@ -463,20 +463,19 @@ impl EncryptedRevision {
             chunks = chunks
                 .into_iter()
                 .enumerate()
-                .filter(|(i, chunk)| {
+                .filter_map(|(i, chunk)| {
                     let uid = &chunk.0;
                     match uid_indices.get(uid) {
                         Some(previous_index) => {
-                            indices[*i] = *previous_index;
-                            false
+                            indices[i] = *previous_index;
+                            None
                         },
                         None => {
-                            uid_indices.insert(uid.to_string(), *i);
-                            true
+                            uid_indices.insert(uid.to_string(), i);
+                            Some(chunk)
                         }
                     }
                 })
-                .map(|(_, e)| e)
                 .collect();
 
             // Encode the indice list in the first chunk:
