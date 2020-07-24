@@ -675,6 +675,89 @@ fn item_batch_stoken() -> Result<()> {
 }
 
 #[test]
+fn item_fetch_updates() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection");
+    let col_content = b"";
+
+    let col = col_mgr.create(&col_meta, col_content)?;
+
+    col_mgr.upload(&col, None)?;
+
+    let it_mgr = col_mgr.item_manager(&col)?;
+    let meta = ItemMetadata::new().set_name(Some("Item Orig"));
+    let content = b"";
+    let item = it_mgr.create(&meta, content)?;
+
+    it_mgr.batch(iter::once(&item), None)?;
+
+    let items: Vec<Item> = (0..5).into_iter()
+        .map(|i| {
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let content = b"";
+            it_mgr.create(&meta, content).unwrap()
+        })
+        .collect();
+
+    it_mgr.batch(items.iter(), None)?;
+
+    {
+        let items = it_mgr.list(None)?;
+        assert_eq!(items.data().len(), 6);
+    }
+
+    let new_col = col_mgr.fetch(col.uid(), None)?;
+    let stoken = new_col.stoken();
+
+    {
+        let updates = it_mgr.fetch_updates(items.iter(), None)?;
+        assert_eq!(updates.data().len(), 0);
+
+        let fetch_options = FetchOptions::new().stoken(stoken);
+        let updates = it_mgr.fetch_updates(items.iter(), Some(&fetch_options))?;
+        assert_eq!(updates.data().len(), 0);
+    }
+
+    {
+        let mut item2 = it_mgr.fetch(items[0].uid(), None)?;
+        let meta3 = ItemMetadata::new().set_name(Some("some2"));
+        item2.set_meta(&meta3)?;
+        it_mgr.batch(iter::once(&item2), None)?;
+    }
+
+    {
+        let updates = it_mgr.fetch_updates(items.iter(), None)?;
+        assert_eq!(updates.data().len(), 1);
+
+        let fetch_options = FetchOptions::new().stoken(stoken);
+        let updates = it_mgr.fetch_updates(items.iter(), Some(&fetch_options))?;
+        assert_eq!(updates.data().len(), 1);
+    }
+
+    {
+        let item2 = it_mgr.fetch(items[0].uid(), None)?;
+        let updates = it_mgr.fetch_updates(iter::once(&item2), None)?;
+        assert_eq!(updates.data().len(), 0);
+
+        let fetch_options = FetchOptions::new().stoken(stoken);
+        let updates = it_mgr.fetch_updates(iter::once(&item2), Some(&fetch_options))?;
+        assert_eq!(updates.data().len(), 1);
+    }
+
+    let new_col = col_mgr.fetch(col.uid(), None)?;
+    let stoken = new_col.stoken();
+
+    {
+        let fetch_options = FetchOptions::new().stoken(stoken);
+        let updates = it_mgr.fetch_updates(items.iter(), Some(&fetch_options))?;
+        assert_eq!(updates.data().len(), 0);
+    }
+
+    etebase.logout()
+}
+
+#[test]
 fn chunking_large_data() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
