@@ -318,8 +318,8 @@ impl EncryptedCollection {
         self.item.uid()
     }
 
-    pub fn etag(&self) -> Etag {
-        self.item.etag()
+    pub fn etag_owned(&self) -> Option<String> {
+        self.item.etag_owned()
     }
 
     pub fn stoken(&self) -> Option<&str> {
@@ -571,8 +571,6 @@ impl EncryptedRevision {
     }
 }
 
-pub type Etag = Option<String>;
-
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EncryptedItem {
@@ -696,7 +694,7 @@ impl EncryptedItem {
         &self.uid
     }
 
-    pub fn etag(&self) -> Etag {
+    pub fn etag_owned(&self) -> Option<String> {
         self.etag.borrow().to_owned()
     }
 

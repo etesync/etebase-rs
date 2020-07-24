@@ -598,7 +598,7 @@ fn item_transactions() -> Result<()> {
 
         let new_col = col_mgr.fetch(col.uid(), None)?;
         let stoken = new_col.stoken();
-        let bad_etag = col.etag();
+        let bad_etag = col.etag_owned();
 
         let fetch_options = FetchOptions::new().stoken(bad_etag.as_deref());
         assert_err!(it_mgr.transaction(iter::once(&item), Some(&fetch_options)), Error::Http(_));
@@ -662,7 +662,7 @@ fn item_batch_stoken() -> Result<()> {
 
         let new_col = col_mgr.fetch(col.uid(), None)?;
         let stoken = new_col.stoken();
-        let bad_etag = col.etag();
+        let bad_etag = col.etag_owned();
 
         let fetch_options = FetchOptions::new().stoken(bad_etag.as_deref());
         assert_err!(it_mgr.batch(iter::once(&item), Some(&fetch_options)), Error::Http(_));
@@ -786,13 +786,13 @@ fn item_revisions() -> Result<()> {
     }
 
     {
-        let etag = item.etag();
+        let etag = item.etag_owned();
         let fetch_options = FetchOptions::new().iterator(etag.as_deref());
         let revisions = it_mgr.item_revisions(&item, Some(&fetch_options))?;
         assert_eq!(revisions.data().len(), 5);
         assert!(revisions.done());
 
-        let etag = item.etag();
+        let etag = item.etag_owned();
         let fetch_options = FetchOptions::new().iterator(etag.as_deref()).limit(5);
         let revisions = it_mgr.item_revisions(&item, Some(&fetch_options))?;
         assert_eq!(revisions.data().len(), 5);

@@ -32,7 +32,6 @@ use super::{
         AccountCryptoManager,
         CollectionCryptoManager,
         ItemCryptoManager,
-        Etag,
         EncryptedCollection,
         EncryptedItem,
         CollectionMetadata,
@@ -383,7 +382,7 @@ impl CollectionManager {
 
     pub fn upload(&self, collection: &Collection, options: Option<&FetchOptions>) -> Result<()> {
         let col = &collection.col;
-        match col.etag() {
+        match col.etag_owned() {
             Some(_) => {
                 let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
                 item_manager_online.batch(vec![col.item()].into_iter(), std::iter::empty(), options)?;
@@ -398,7 +397,7 @@ impl CollectionManager {
 
     pub fn transaction(&self, collection: &Collection, options: Option<&FetchOptions>) -> Result<()> {
         let col = &collection.col;
-        match col.etag() {
+        match col.etag_owned() {
             Some(_) => {
                 let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
                 item_manager_online.transaction(vec![col.item()].into_iter(), std::iter::empty(), options)?;
@@ -566,8 +565,8 @@ impl Collection {
         self.col.uid()
     }
 
-    pub fn etag(&self) -> Etag {
-        self.col.etag()
+    pub fn etag_owned(&self) -> Option<String> {
+        self.col.etag_owned()
     }
 
     pub fn stoken(&self) -> Option<&str> {
@@ -632,8 +631,8 @@ impl Item {
         self.item.uid()
     }
 
-    pub fn etag(&self) -> Etag {
-        self.item.etag()
+    pub fn etag_owned(&self) -> Option<String> {
+        self.item.etag_owned()
     }
 }
 

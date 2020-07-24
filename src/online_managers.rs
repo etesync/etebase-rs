@@ -548,7 +548,7 @@ impl ItemManagerOnline {
             ItemBatchBodyDep {
                 uid: x.uid(),
                 etag: if want_etag {
-                    x.etag()
+                    x.etag_owned()
                 } else {
                     None
                 }
@@ -578,7 +578,7 @@ impl ItemManagerOnline {
         let deps: Vec<ItemBatchBodyDep> = deps.map(|x| {
             ItemBatchBodyDep {
                 uid: x.uid(),
-                etag: x.etag(),
+                etag: x.etag_owned(),
             }
         }).collect();
         let deps = if deps.len() > 0 {
@@ -614,7 +614,7 @@ impl ItemManagerOnline {
         let deps: Vec<ItemBatchBodyDep> = deps.map(|x| {
             ItemBatchBodyDep {
                 uid: x.uid(),
-                etag: x.etag(),
+                etag: x.etag_owned(),
             }
         }).collect();
         let deps = if deps.len() > 0 {
