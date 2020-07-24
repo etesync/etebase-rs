@@ -758,6 +758,68 @@ fn item_fetch_updates() -> Result<()> {
 }
 
 #[test]
+fn item_revisions() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection");
+    let col_content = b"";
+
+    let col = col_mgr.create(&col_meta, col_content)?;
+
+    col_mgr.upload(&col, None)?;
+
+    let it_mgr = col_mgr.item_manager(&col)?;
+    let meta = ItemMetadata::new().set_name(Some("Item Orig"));
+    let content = b"";
+    let mut item = it_mgr.create(&meta, content)?;
+
+    for i in 0..5 {
+        let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+        item.set_meta(&meta)?;
+        it_mgr.batch(iter::once(&item), None)?;
+    }
+
+    {
+        let meta = ItemMetadata::new().set_name(Some("Latest"));
+        item.set_meta(&meta)?;
+        it_mgr.batch(iter::once(&item), None)?;
+    }
+
+    {
+        let etag = item.etag();
+        let fetch_options = FetchOptions::new().iterator(etag.as_deref());
+        let revisions = it_mgr.item_revisions(&item, Some(&fetch_options))?;
+        assert_eq!(revisions.data().len(), 5);
+        assert!(revisions.done());
+
+        let etag = item.etag();
+        let fetch_options = FetchOptions::new().iterator(etag.as_deref()).limit(5);
+        let revisions = it_mgr.item_revisions(&item, Some(&fetch_options))?;
+        assert_eq!(revisions.data().len(), 5);
+        assert!(revisions.done());
+
+        for i in 0..5 {
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let rev = &revisions.data()[4 - i];
+            assert_eq!(&rev.decrypt_meta()?, &meta);
+        }
+
+        // Iterate through revisions
+        {
+            let mut iterator = None;
+            for i in 0..2 {
+                let fetch_options = FetchOptions::new().limit(2).stoken(iterator.as_deref());
+                let revisions = it_mgr.item_revisions(&item, Some(&fetch_options))?;
+                assert_eq!(revisions.done(), i == 2);
+                iterator = revisions.iterator().map(str::to_string);
+            }
+        }
+    }
+
+    etebase.logout()
+}
+
+#[test]
 fn chunking_large_data() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;

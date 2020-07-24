@@ -21,6 +21,7 @@ use super::error::Result;
 use super::encrypted_models::{
     EncryptedCollection,
     EncryptedItem,
+    EncryptedRevision,
 };
 
 static APP_USER_AGENT: &str = concat!(
@@ -515,6 +516,27 @@ impl ItemManagerOnline {
         serialized.data.iter().for_each(|x| x.mark_saved());
 
         Ok(serialized)
+    }
+
+    pub fn item_revisions(&self, item: &EncryptedItem, options: Option<&FetchOptions>) -> Result<IteratorListResponse<EncryptedItem>> {
+        let url = apply_fetch_options(self.api_base.join(&format!("{}/revision/", item.uid()))?, options);
+        let res = self.client.get(&url)?
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let response: IteratorListResponse<EncryptedRevision> = rmp_serde::from_read_ref(&res)?;
+
+        let data: Vec<EncryptedItem> = response.data.into_iter()
+            .map(|x| {
+                item.clone_with_revision(x)
+            })
+            .collect();
+
+        Ok(IteratorListResponse {
+            data,
+            done: response.done,
+            iterator: response.iterator,
+        })
     }
 
     pub fn fetch_updates<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ItemListResponse<EncryptedItem>>

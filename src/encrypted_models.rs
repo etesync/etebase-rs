@@ -608,6 +608,22 @@ impl EncryptedItem {
         })
     }
 
+    pub(crate) fn clone_with_revision(&self, revision: EncryptedRevision) -> Self {
+        let ret = Self {
+            uid: self.uid.to_string(),
+            version: self.version,
+            encryption_key: self.encryption_key.as_ref().and_then(|x| Some(x.to_vec())),
+
+            content: revision,
+
+            etag: RefCell::new(None),
+        };
+        // We give revisions their old etag
+        ret.mark_saved();
+
+        ret
+    }
+
     pub(crate) fn mark_saved(&self) {
         *self.etag.borrow_mut() = Some(self.content.uid.clone());
     }

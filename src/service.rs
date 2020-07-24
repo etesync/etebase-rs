@@ -48,6 +48,7 @@ use super::{
         ItemManagerOnline,
         CollectionListResponse,
         ItemListResponse,
+        IteratorListResponse,
         FetchOptions,
     },
 };
@@ -449,6 +450,19 @@ impl ItemManager {
             stoken: response.stoken,
         })
     }
+
+    pub fn item_revisions(&self, item: &Item, options: Option<&FetchOptions>) -> Result<IteratorListResponse<Item>> {
+        let item = &item.item;
+        let response = self.item_manager_online.item_revisions(item, options)?;
+
+        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x)).collect();
+        Ok(IteratorListResponse {
+            data: data?,
+            done: response.done,
+            iterator: response.iterator,
+        })
+    }
+
 
     pub fn fetch_updates<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ItemListResponse<Item>>
         where I: Iterator<Item = &'a Item>
