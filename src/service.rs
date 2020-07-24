@@ -32,8 +32,10 @@ use super::{
         AccountCryptoManager,
         CollectionCryptoManager,
         ItemCryptoManager,
+        CollectionAccessLevel,
         EncryptedCollection,
         EncryptedItem,
+        SignedInvitation,
         CollectionMetadata,
         ItemMetadata,
     },
@@ -41,10 +43,14 @@ use super::{
         Authenticator,
         Client,
         User,
+        UserProfile,
         LoginResponseUser,
         LoginBodyResponse,
         CollectionManagerOnline,
         ItemManagerOnline,
+        CollectionMemberManagerOnline,
+        CollectionMember,
+        CollectionInvitationManagerOnline,
         CollectionListResponse,
         ItemListResponse,
         IteratorListResponse,
@@ -69,6 +75,10 @@ impl MainCryptoManager {
 
     pub fn account_crypto_manager(&self, key: &[u8; 32]) -> Result<AccountCryptoManager> {
         AccountCryptoManager::new(key, self.0.version)
+    }
+
+    pub fn identity_crypto_manager(&self, privkey: &[u8; 32]) -> Result<BoxCryptoManager> {
+        BoxCryptoManager::from_privkey(privkey)
     }
 }
 
@@ -340,6 +350,23 @@ impl Account {
     pub fn collection_manager(&self) -> Result<CollectionManager> {
         CollectionManager::new(Rc::clone(&self.client), Rc::clone(&self.account_crypto_manager))
     }
+
+    pub fn invitation_manager(&self) -> Result<CollectionInvitationManager> {
+        CollectionInvitationManager::new(Rc::clone(&self.client), Rc::clone(&self.account_crypto_manager), self.identity_crypto_manager()?)
+    }
+
+    fn main_crypto_manager(&self) -> Result<MainCryptoManager> {
+        let version = self.version;
+        let main_key = &self.main_key;
+        MainCryptoManager::new(try_into!(&main_key[..])?, version)
+    }
+
+    fn identity_crypto_manager(&self) -> Result<BoxCryptoManager> {
+        let main_crypto_manager = self.main_crypto_manager()?;
+        let content = main_crypto_manager.0.decrypt(&self.user.encrypted_content, None)?;
+        let privkey = &content[SYMMETRIC_KEY_SIZE..];
+        main_crypto_manager.identity_crypto_manager(try_into!(privkey)?)
+    }
 }
 
 pub struct CollectionManager {
@@ -412,6 +439,10 @@ impl CollectionManager {
 
     pub fn item_manager(&self, collection: &Collection) -> Result<ItemManager> {
         ItemManager::new(Rc::clone(&self.client), Rc::clone(&collection.cm), collection)
+    }
+
+    pub fn member_manager(&self, collection: &Collection) -> Result<CollectionMemberManager> {
+        CollectionMemberManager::new(Rc::clone(&self.client), collection)
     }
 }
 
@@ -513,6 +544,88 @@ impl ItemManager {
         self.item_manager_online.transaction(items, deps, options)
     }
 }
+
+pub struct CollectionInvitationManager {
+    account_crypto_manager: Rc<AccountCryptoManager>,
+    identity_crypto_manager: BoxCryptoManager,
+    invitation_manager_online: CollectionInvitationManagerOnline,
+}
+
+impl CollectionInvitationManager {
+    fn new(client: Rc<Client>, account_crypto_manager: Rc<AccountCryptoManager>, identity_crypto_manager: BoxCryptoManager) -> Result<Self> {
+        let invitation_manager_online = CollectionInvitationManagerOnline::new(Rc::clone(&client));
+        Ok(Self {
+            account_crypto_manager,
+            identity_crypto_manager,
+            invitation_manager_online,
+        })
+    }
+
+    pub fn list_incoming(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<SignedInvitation>> {
+        self.invitation_manager_online.list_incoming(options)
+    }
+
+    pub fn list_outgoing(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<SignedInvitation>> {
+        self.invitation_manager_online.list_outgoing(options)
+    }
+
+    pub fn accept(&self, invitation: &SignedInvitation) -> Result<()> {
+        let decrypted_encryption_key = invitation.decrypted_encryption_key(&self.identity_crypto_manager)?;
+        let encryption_key = self.account_crypto_manager.0.encrypt(&decrypted_encryption_key, None)?;
+        self.invitation_manager_online.accept(invitation, &encryption_key)
+    }
+
+    pub fn reject(&self, invitation: &SignedInvitation) -> Result<()> {
+        self.invitation_manager_online.reject(invitation)
+    }
+
+    pub fn fetch_user_profile(&self, username: &str) -> Result<UserProfile> {
+        self.invitation_manager_online.fetch_user_profile(username)
+    }
+
+    pub fn invite(&self, collection: &Collection, username: &str, pubkey: &[u8], access_level: &CollectionAccessLevel) -> Result<()> {
+        let invitation = collection.col.create_invitation(&self.account_crypto_manager, &self.identity_crypto_manager, username, pubkey, access_level)?;
+        self.invitation_manager_online.invite(&invitation)
+    }
+
+    pub fn disinvite(&self, invitation: &SignedInvitation) -> Result<()> {
+        self.invitation_manager_online.disinvite(invitation)
+    }
+
+    pub fn pubkey(&self) -> &[u8] {
+        self.identity_crypto_manager.pubkey()
+    }
+}
+
+pub struct CollectionMemberManager {
+    member_manager_online: CollectionMemberManagerOnline,
+}
+
+impl CollectionMemberManager {
+    fn new(client: Rc<Client>, collection: &Collection) -> Result<Self> {
+        let member_manager_online = CollectionMemberManagerOnline::new(Rc::clone(&client), &collection.col);
+        Ok(Self {
+            member_manager_online,
+        })
+    }
+
+    pub fn list(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<CollectionMember>> {
+        self.member_manager_online.list(options)
+    }
+
+    pub fn remove(&self, username: &str) -> Result<()> {
+        self.member_manager_online.remove(username)
+    }
+
+    pub fn leave(&self) -> Result<()> {
+        self.member_manager_online.leave()
+    }
+
+    pub fn modify_access_level(&self, username: &str, access_level: &CollectionAccessLevel) -> Result<()> {
+        self.member_manager_online.modify_access_level(username, access_level)
+    }
+}
+
 
 pub struct Collection {
     col: EncryptedCollection,

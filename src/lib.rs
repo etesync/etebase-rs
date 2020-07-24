@@ -9,9 +9,12 @@ mod service;
 pub mod utils;
 pub mod error;
 
+pub use crypto::pretty_fingerprint;
+
 pub use online_managers::{
     Client,
     User,
+    UserProfile,
     FetchOptions,
     CollectionListResponse,
     ItemListResponse,

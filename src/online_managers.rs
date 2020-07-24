@@ -19,9 +19,11 @@ use reqwest::{
 use super::error::Result;
 
 use super::encrypted_models::{
+    CollectionAccessLevel,
     EncryptedCollection,
     EncryptedItem,
     EncryptedRevision,
+    SignedInvitation,
 };
 
 static APP_USER_AGENT: &str = concat!(
@@ -108,6 +110,10 @@ impl Client {
 
     pub fn put(&self, url: &Url) -> Result<RequestBuilder> {
         Ok(self.prep_client(self.req_client.put(url.as_str())))
+    }
+
+    pub fn patch(&self, url: &Url) -> Result<RequestBuilder> {
+        Ok(self.prep_client(self.req_client.patch(url.as_str())))
     }
 
     pub fn delete(&self, url: &Url) -> Result<RequestBuilder> {
@@ -239,6 +245,12 @@ pub struct LoginResponse {
 pub struct User<'a> {
     pub username: &'a str,
     pub email: &'a str,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UserProfile {
+    #[serde(with = "serde_bytes")]
+    pub pubkey: Vec<u8>,
 }
 
 pub struct Authenticator<'a> {
@@ -636,6 +648,198 @@ impl ItemManagerOnline {
         for item in items {
             item.mark_saved();
         }
+
+        Ok(())
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionMember {
+    username: String,
+    access_level: CollectionAccessLevel,
+}
+
+impl CollectionMember {
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+
+    pub fn access_level(&self) -> &CollectionAccessLevel {
+        &self.access_level
+    }
+}
+
+pub struct CollectionInvitationManagerOnline {
+    api_base: Url,
+    client: Rc<Client>,
+}
+
+impl CollectionInvitationManagerOnline {
+    pub fn new(client: Rc<Client>) -> Self {
+        Self {
+            api_base: client.api_base.join("api/v1/invitation/").unwrap(),
+            client,
+        }
+    }
+
+    pub fn list_incoming(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<SignedInvitation>> {
+        let url = apply_fetch_options(self.api_base.join("incoming/")?, options);
+        let res = self.client.get(&url)?
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let serialized: IteratorListResponse<SignedInvitation> = rmp_serde::from_read_ref(&res)?;
+
+        Ok(serialized)
+    }
+
+    pub fn list_outgoing(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<SignedInvitation>> {
+        let url = apply_fetch_options(self.api_base.join("outgoing/")?, options);
+        let res = self.client.get(&url)?
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let serialized: IteratorListResponse<SignedInvitation> = rmp_serde::from_read_ref(&res)?;
+
+        Ok(serialized)
+    }
+
+    pub fn accept(&self, invitation: &SignedInvitation, encryption_key: &[u8]) -> Result<()> {
+        let url = self.api_base.join(&format!("incoming/{}/accept/", invitation.uid()))?;
+
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Body<'a> {
+            #[serde(with = "serde_bytes")]
+            encryption_key: &'a [u8],
+        }
+
+        let body_struct = Body {
+            encryption_key,
+        };
+        let body = rmp_serde::to_vec_named(&body_struct)?;
+
+        let res = self.client.post(&url)?
+            .body(body)
+            .send()?;
+        res.error_for_status()?.bytes()?;
+
+        Ok(())
+    }
+
+    pub fn reject(&self, invitation: &SignedInvitation) -> Result<()> {
+        let url = self.api_base.join(&format!("incoming/{}/", invitation.uid()))?;
+
+        let res = self.client.delete(&url)?
+            .send()?;
+        res.error_for_status()?.bytes()?;
+
+        Ok(())
+    }
+
+    pub fn fetch_user_profile(&self, username: &str) -> Result<UserProfile> {
+        let mut url = self.api_base.join("outgoing/fetch_user_profile/")?;
+        {
+            let mut query = url.query_pairs_mut();
+            query.append_pair("username", username);
+        }
+
+        let res = self.client.get(&url)?
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let serialized: UserProfile = rmp_serde::from_read_ref(&res)?;
+
+        Ok(serialized)
+    }
+
+    pub fn invite(&self, invitation: &SignedInvitation) -> Result<()> {
+        let url = self.api_base.join("outgoing/")?;
+
+        let body = rmp_serde::to_vec_named(&invitation)?;
+
+        let res = self.client.post(&url)?
+            .body(body)
+            .send()?;
+        res.error_for_status()?.bytes()?;
+
+        Ok(())
+    }
+
+    pub fn disinvite(&self, invitation: &SignedInvitation) -> Result<()> {
+        let url = self.api_base.join(&format!("outgoing/{}/", invitation.uid()))?;
+
+        let res = self.client.delete(&url)?
+            .send()?;
+        res.error_for_status()?.bytes()?;
+
+        Ok(())
+    }
+}
+
+pub struct CollectionMemberManagerOnline {
+    api_base: Url,
+    client: Rc<Client>,
+}
+
+impl CollectionMemberManagerOnline {
+    pub fn new(client: Rc<Client>, collection: &EncryptedCollection) -> Self {
+        Self {
+            api_base: client.api_base.join(&format!("api/v1/collection/{}/member/", collection.uid())).unwrap(),
+            client,
+        }
+    }
+
+    pub fn list(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<CollectionMember>> {
+        let url = apply_fetch_options(self.api_base.clone(), options);
+        let res = self.client.get(&url)?
+            .send()?;
+        let res = res.error_for_status()?.bytes()?;
+
+        let serialized: IteratorListResponse<CollectionMember> = rmp_serde::from_read_ref(&res)?;
+
+        Ok(serialized)
+    }
+
+    pub fn remove(&self, username: &str) -> Result<()> {
+        let url = self.api_base.join(&format!("{}/", username))?;
+
+        let res = self.client.delete(&url)?
+            .send()?;
+        res.error_for_status()?.bytes()?;
+
+        Ok(())
+    }
+
+    pub fn leave(&self) -> Result<()> {
+        let url = self.api_base.join("leave/")?;
+
+        let res = self.client.post(&url)?
+            .send()?;
+        res.error_for_status()?.bytes()?;
+
+        Ok(())
+    }
+
+    pub fn modify_access_level(&self, username: &str, access_level: &CollectionAccessLevel) -> Result<()> {
+        let url = self.api_base.join(&format!("{}/", username))?;
+
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Body<'a> {
+            access_level: &'a CollectionAccessLevel,
+        }
+
+        let body_struct = Body {
+            access_level,
+        };
+        let body = rmp_serde::to_vec_named(&body_struct)?;
+
+        let res = self.client.patch(&url)?
+            .body(body)
+            .send()?;
+        res.error_for_status()?.bytes()?;
 
         Ok(())
     }

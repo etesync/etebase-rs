@@ -33,11 +33,13 @@ macro_rules! assert_err {
 use etebase::{
     Account,
     Client,
+    CollectionAccessLevel,
     Collection,
     CollectionMetadata,
     Item,
     ItemMetadata,
     FetchOptions,
+    pretty_fingerprint,
     test_helpers::{
         test_reset,
         chunk_uids,
@@ -816,6 +818,319 @@ fn item_revisions() -> Result<()> {
         }
     }
 
+    etebase.logout()
+}
+
+#[test]
+fn collection_invitations() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection");
+    let col_content = b"";
+
+    let col = col_mgr.create(&col_meta, col_content)?;
+
+    col_mgr.upload(&col, None)?;
+
+    let it_mgr = col_mgr.item_manager(&col)?;
+
+    let items: Vec<Item> = (0..5).into_iter()
+        .map(|i| {
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let content = b"";
+            it_mgr.create(&meta, content).unwrap()
+        })
+        .collect();
+
+    it_mgr.batch(items.iter(), None)?;
+
+    let invite_mgr = etebase.invitation_manager()?;
+
+    let etebase2 = init_test(&USER2)?;
+    let col_mgr2 = etebase2.collection_manager()?;
+    let invite_mgr2 = etebase2.invitation_manager()?;
+
+    let user2_profile = invite_mgr.fetch_user_profile(USER2.username)?;
+    // Should be verified by user1 off-band
+    let user2_pubkey = invite_mgr2.pubkey();
+    assert_eq!(&user2_profile.pubkey, &user2_pubkey);
+    // Off-band verification:
+    assert_eq!(pretty_fingerprint(&user2_profile.pubkey), pretty_fingerprint(user2_pubkey));
+
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+
+    let invitations = invite_mgr.list_outgoing(None)?;
+    assert_eq!(invitations.data().len(), 1);
+
+    let invitations = invite_mgr2.list_incoming(None)?;
+    assert_eq!(invitations.data().len(), 1);
+
+    invite_mgr2.reject(invitations.data().first().unwrap())?;
+
+    {
+        let collections = col_mgr2.list(None)?;
+        assert_eq!(collections.data().len(), 0);
+        let invitations = invite_mgr2.list_incoming(None)?;
+        assert_eq!(invitations.data().len(), 0);
+    }
+
+    // Invite and then disinvite
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+
+    let invitations = invite_mgr2.list_incoming(None)?;
+    assert_eq!(invitations.data().len(), 1);
+
+    invite_mgr.disinvite(invitations.data().first().unwrap())?;
+
+    {
+        let collections = col_mgr2.list(None)?;
+        assert_eq!(collections.data().len(), 0);
+        let invitations = invite_mgr2.list_incoming(None)?;
+        assert_eq!(invitations.data().len(), 0);
+    }
+
+    // Invite again, this time accept
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+
+    let invitations = invite_mgr2.list_incoming(None)?;
+    assert_eq!(invitations.data().len(), 1);
+
+    let stoken = col_mgr.fetch(col.uid(), None)?.stoken().map(str::to_string);
+
+    // Should be verified by user2 off-band
+    let user1_pubkey = invite_mgr.pubkey();
+    let invitation = invitations.data().first().unwrap();
+    assert_eq!(invitation.from_pubkey(), user1_pubkey);
+
+    invite_mgr2.accept(invitation)?;
+
+    {
+        let collections = col_mgr2.list(None)?;
+        assert_eq!(collections.data().len(), 1);
+        // Verify we can decrypt it and it's what we expect
+        let col2 = collections.data().first().unwrap();
+        verify_collection(col2, &col_meta, col_content)?;
+
+        let invitations = invite_mgr2.list_incoming(None)?;
+        assert_eq!(invitations.data().len(), 0);
+    }
+
+    let col2 = col_mgr2.fetch(col.uid(), None)?;
+    let member_mgr2 = col_mgr2.member_manager(&col2)?;
+
+    member_mgr2.leave()?;
+
+    {
+        let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
+        let collections = col_mgr2.list(Some(&fetch_options))?;
+        assert_eq!(collections.data().len(), 0);
+        // FIXME: verify removed_memberships
+    }
+
+    // Add again
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+
+    let invitations = invite_mgr2.list_incoming(None)?;
+    assert_eq!(invitations.data().len(), 1);
+    let invitation = invitations.data().first().unwrap();
+    invite_mgr2.accept(invitation)?;
+
+    {
+        let new_col = col_mgr.fetch(col.uid(), None)?;
+        assert_ne!(stoken.as_deref(), new_col.stoken());
+
+        let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
+        let collections = col_mgr2.list(Some(&fetch_options))?;
+        assert_eq!(collections.data().len(), 1);
+        let first_col = collections.data().first().unwrap();
+        assert_eq!(first_col.uid(), col.uid());
+        // FIXME: verify removed_memberships is empty
+    }
+
+    // Remove
+    {
+        let new_col = col_mgr.fetch(col.uid(), None)?;
+        assert_ne!(stoken.as_deref(), new_col.stoken());
+
+        let member_mgr = col_mgr.member_manager(&col)?;
+        member_mgr.remove(USER2.username)?;
+
+        let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
+        let collections = col_mgr2.list(Some(&fetch_options))?;
+        assert_eq!(collections.data().len(), 0);
+        // FIXME: verify removed_memberships
+
+        let stoken = new_col.stoken();
+
+        let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
+        let collections = col_mgr2.list(Some(&fetch_options))?;
+        assert_eq!(collections.data().len(), 0);
+        // FIXME: verify removed_memberships
+    }
+
+    etebase2.logout()?;
+    etebase.logout()
+}
+
+#[test]
+fn iterating_invitations() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.collection_manager()?;
+
+    let etebase2 = init_test(&USER2)?;
+    let invite_mgr2 = etebase2.invitation_manager()?;
+
+    let invite_mgr = etebase.invitation_manager()?;
+    let user2_profile = invite_mgr.fetch_user_profile(USER2.username)?;
+
+    for i in 0..3 {
+        let meta = CollectionMetadata::new("col", &format!("Item {}", i));
+        let content = b"";
+        let col = col_mgr.create(&meta, content).unwrap();
+        col_mgr.upload(&col, None)?;
+        invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+    }
+
+    // Check incoming
+    let invitations = invite_mgr2.list_incoming(None)?;
+    assert_eq!(invitations.data().len(), 3);
+
+    {
+        let mut iterator = None;
+        for i in 0..2 {
+            let fetch_options = FetchOptions::new().limit(2).iterator(iterator.as_deref());
+            let invitations = invite_mgr2.list_incoming(Some(&fetch_options))?;
+            assert_eq!(invitations.done(), i == 1);
+            iterator = invitations.iterator().map(str::to_string);
+        }
+    }
+
+    // Check outgoing
+    let invitations = invite_mgr.list_outgoing(None)?;
+    assert_eq!(invitations.data().len(), 3);
+
+    {
+        let mut iterator = None;
+        for i in 0..2 {
+            let fetch_options = FetchOptions::new().limit(2).iterator(iterator.as_deref());
+            let invitations = invite_mgr.list_outgoing(Some(&fetch_options))?;
+            assert_eq!(invitations.done(), i == 1);
+            iterator = invitations.iterator().map(str::to_string);
+        }
+    }
+
+    etebase2.logout()?;
+    etebase.logout()
+}
+
+#[test]
+fn collection_access_level() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection");
+    let col_content = b"";
+
+    let col = col_mgr.create(&col_meta, col_content)?;
+    col_mgr.upload(&col, None)?;
+
+    let it_mgr = col_mgr.item_manager(&col)?;
+
+    let items: Vec<Item> = (0..5).into_iter()
+        .map(|i| {
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let content = b"";
+            it_mgr.create(&meta, content).unwrap()
+        })
+        .collect();
+
+    it_mgr.batch(items.iter(), None)?;
+
+    let etebase2 = init_test(&USER2)?;
+    let col_mgr2 = etebase2.collection_manager()?;
+    let invite_mgr2 = etebase2.invitation_manager()?;
+
+    let invite_mgr = etebase.invitation_manager()?;
+    let member_mgr = col_mgr.member_manager(&col)?;
+    let user2_profile = invite_mgr.fetch_user_profile(USER2.username)?;
+
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+
+    let invitations = invite_mgr2.list_incoming(None)?;
+    invite_mgr2.accept(invitations.data().first().unwrap())?;
+
+    let col2 = col_mgr2.fetch(col.uid(), None)?;
+
+    let it_mgr2 = col_mgr2.item_manager(&col2)?;
+
+    // Item creation: success
+    {
+        let members = member_mgr.list(None)?;
+        assert_eq!(members.data().len(), 2);
+        for member in members.data() {
+            if member.username() == USER2.username {
+                assert_eq!(member.access_level(), &CollectionAccessLevel::ReadWrite);
+            }
+        }
+
+        let meta = ItemMetadata::new().set_name(Some("Some item"));
+        let content = b"";
+        let item = it_mgr2.create(&meta, content)?;
+        it_mgr2.batch(iter::once(&item), None)?;
+    }
+
+    member_mgr.modify_access_level(USER2.username, &CollectionAccessLevel::ReadOnly)?;
+
+    // Item creation: fail
+    {
+        let members = member_mgr.list(None)?;
+        assert_eq!(members.data().len(), 2);
+        for member in members.data() {
+            if member.username() == USER2.username {
+                assert_eq!(member.access_level(), &CollectionAccessLevel::ReadOnly);
+            }
+        }
+
+        let meta = ItemMetadata::new().set_name(Some("Some item"));
+        let content = b"";
+        let item = it_mgr2.create(&meta, content)?;
+        assert_err!(it_mgr2.batch(iter::once(&item), None), Error::Http(_));
+    }
+
+    member_mgr.modify_access_level(USER2.username, &CollectionAccessLevel::Admin)?;
+
+    // Item creation: success
+    {
+        let members = member_mgr.list(None)?;
+        assert_eq!(members.data().len(), 2);
+        for member in members.data() {
+            if member.username() == USER2.username {
+                assert_eq!(member.access_level(), &CollectionAccessLevel::Admin);
+            }
+        }
+
+        let meta = ItemMetadata::new().set_name(Some("Some item"));
+        let content = b"";
+        let item = it_mgr2.create(&meta, content)?;
+        it_mgr2.batch(iter::once(&item), None)?;
+    }
+
+    // Iterate members
+    {
+        let fetch_options = FetchOptions::new().limit(1);
+        let members = member_mgr.list(Some(&fetch_options))?;
+        assert_eq!(members.data().len(), 1);
+        let fetch_options = FetchOptions::new().limit(1).iterator(members.iterator());
+        let members2 = member_mgr.list(Some(&fetch_options))?;
+        assert_eq!(members2.data().len(), 1);
+        assert!(members2.done());
+        // Verify we got two different usersnames
+        assert_ne!(members.data().first().unwrap().username(), members2.data().first().unwrap().username());
+
+        let members = member_mgr.list(None)?;
+        assert!(members.done());
+    }
+
+    etebase2.logout()?;
     etebase.logout()
 }
 

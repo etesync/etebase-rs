@@ -16,6 +16,7 @@ use super::{
     crypto::{
         CryptoManager,
         CryptoMac,
+        BoxCryptoManager,
     },
     chunker::Rollsum,
     error::{
@@ -41,7 +42,7 @@ pub fn gen_uid_base64() -> StringBase64 {
   return to_base64(&randombytes(24)).unwrap();
 }
 
-pub struct AccountCryptoManager(CryptoManager);
+pub struct AccountCryptoManager(pub CryptoManager);
 
 impl AccountCryptoManager {
     pub fn new(key: &[u8; 32], version: u8) -> Result<Self> {
@@ -214,6 +215,56 @@ impl MsgPackSerilization for ItemMetadata {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SignedInvitation {
+    uid: StringBase64,
+    version: u8,
+    username: StringBase64,
+
+    collection: String,
+    access_level: CollectionAccessLevel,
+
+    #[serde(with = "serde_bytes")]
+    signed_encryption_key: Vec<u8>,
+
+    #[serde(with = "serde_bytes", skip_serializing)]
+    from_pubkey: Option<Vec<u8>>,
+}
+
+impl SignedInvitation {
+    pub fn uid(&self) -> &str {
+        &self.uid
+    }
+
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+
+    pub fn collection(&self) -> &str {
+        &self.collection
+    }
+
+    pub fn access_level(&self) -> &CollectionAccessLevel {
+        &self.access_level
+    }
+
+    pub fn from_pubkey(&self) -> &[u8] {
+        match self.from_pubkey.as_deref() {
+            Some(from_pubkey) => from_pubkey,
+            None => panic!("Can never happen. Tried getting empty pubkey."),
+        }
+    }
+
+    pub(crate) fn decrypted_encryption_key(&self, identity_crypto_manager: &BoxCryptoManager) -> Result<Vec<u8>> {
+        let from_pubkey = match self.from_pubkey.as_deref() {
+            Some(from_pubkey) => from_pubkey,
+            None => return Err(Error::ProgrammingError("Missing invitation encryption key.")),
+        };
+        identity_crypto_manager.decrypt(&self.signed_encryption_key, try_into!(from_pubkey)?)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(from = "String", into = "String")]
 pub enum CollectionAccessLevel {
     #[serde(rename = "adm")]
@@ -328,6 +379,22 @@ impl EncryptedCollection {
 
     pub fn item(&self) -> &EncryptedItem {
         &self.item
+    }
+
+    pub fn create_invitation(&self, account_crypto_manager: &AccountCryptoManager, identity_crypto_manager: &BoxCryptoManager, username: &str, pubkey: &[u8], access_level: &CollectionAccessLevel) -> Result<SignedInvitation> {
+        let uid = to_base64(&randombytes(32))?;
+        let encryption_key = account_crypto_manager.0.decrypt(&self.collection_key, None)?;
+        let signed_encryption_key = identity_crypto_manager.encrypt(&encryption_key, try_into!(pubkey)?)?;
+        Ok(SignedInvitation {
+            uid,
+            version: CURRENT_VERSION,
+            username: username.to_owned(),
+            collection: self.uid().to_owned(),
+            access_level: access_level.to_owned(),
+
+            signed_encryption_key,
+            from_pubkey: Some(identity_crypto_manager.pubkey().to_owned()),
+        })
     }
 
     fn crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8]) -> Result<CollectionCryptoManager> {
