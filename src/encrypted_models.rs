@@ -215,7 +215,7 @@ impl MsgPackSerilization for ItemMetadata {
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(from = "String", into = "String")]
-enum CollectionAccessLevel {
+pub enum CollectionAccessLevel {
     #[serde(rename = "adm")]
     Admin,
     #[serde(rename = "rw")]

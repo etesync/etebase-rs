@@ -19,6 +19,7 @@ pub use online_managers::{
 };
 
 pub use encrypted_models::{
+    CollectionAccessLevel,
     CollectionMetadata,
     ItemMetadata,
 };
