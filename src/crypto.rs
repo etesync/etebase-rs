@@ -174,8 +174,8 @@ impl LoginCryptoManager {
         Ok(ret)
     }
 
-    pub fn pubkey(&self) -> Vec<u8> {
-        self.pubkey[..].to_vec()
+    pub fn pubkey(&self) -> &[u8] {
+        &self.pubkey[..]
     }
 }
 
@@ -231,12 +231,12 @@ impl BoxCryptoManager {
         Ok(to_enc_error!(box_::open(cipher, &box_::Nonce(*nonce), &pubkey, &privkey), "decryption failed")?)
     }
 
-    pub fn pubkey(&self) -> Vec<u8> {
-        self.pubkey[..].to_vec()
+    pub fn pubkey(&self) -> &[u8] {
+        &self.pubkey[..]
     }
 
-    pub fn privkey(&self) -> Vec<u8> {
-        self.privkey[..].to_vec()
+    pub fn privkey(&self) -> &[u8] {
+        &self.privkey[..]
     }
 }
 
