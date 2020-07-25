@@ -1205,14 +1205,34 @@ fn login_and_password_change() -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
     let mut etebase2 = Account::login(client.clone(), USER2.username, USER2.password)?;
 
+    let col_mgr2 = etebase2.collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_content = b"SomeContent";
+
+    let col = col_mgr2.create(&col_meta, col_content)?;
+    col_mgr2.upload(&col, None)?;
+
     etebase2.change_password(another_password)?;
+
+    {
+        // Verify we can still access the data
+        let collections = col_mgr2.list(None)?;
+        verify_collection(collections.data().first().unwrap(), &col_meta, col_content)?;
+    }
 
     etebase2.logout()?;
 
     assert_err!(Account::login(client.clone(), USER2.username, "BadPassword"), Error::Http(_));
 
-    // FIXME: add tests to verify that we can actually manipulate the data
     let mut etebase2 = Account::login(client.clone(), USER2.username, another_password)?;
+
+    let col_mgr2 = etebase2.collection_manager()?;
+
+    {
+        // Verify we can still access the data
+        let collections = col_mgr2.list(None)?;
+        verify_collection(collections.data().first().unwrap(), &col_meta, col_content)?;
+    }
 
     etebase2.change_password(USER2.password)?;
 
