@@ -1276,3 +1276,56 @@ fn session_save_and_restore() -> Result<()> {
 
     etebase.logout()
 }
+
+#[test]
+fn cache_collections_and_items() -> Result<()> {
+    let etebase = init_test(&USER)?;
+
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_content = b"SomeContent";
+
+    let col = col_mgr.create(&col_meta, col_content)?;
+    col_mgr.upload(&col, None)?;
+
+    let it_mgr = col_mgr.item_manager(&col)?;
+
+    let meta = ItemMetadata::new().set_name(Some("Item"));
+    let content = b"SomeItemContent";
+    let item = it_mgr.create(&meta, content)?;
+
+    it_mgr.batch(iter::once(&item), None)?;
+
+    // With content
+    {
+        let saved_col = col_mgr.cache_save_with_content(&col)?;
+        let loaded_col = col_mgr.cache_load(&saved_col)?;
+        assert_eq!(col.uid(), loaded_col.uid());
+        assert_eq!(col.etag_owned(), loaded_col.etag_owned());
+        verify_collection(&loaded_col, &col_meta, col_content)?;
+
+        let saved_item = it_mgr.cache_save_with_content(&item)?;
+        let loaded_item = it_mgr.cache_load(&saved_item)?;
+        assert_eq!(item.uid(), loaded_item.uid());
+        assert_eq!(item.etag_owned(), loaded_item.etag_owned());
+        assert_eq!(item.decrypt_meta()?, loaded_item.decrypt_meta()?);
+        verify_item(&loaded_item, &meta, content)?;
+    }
+
+    // Without content
+    {
+        let saved_col = col_mgr.cache_save(&col)?;
+        let loaded_col = col_mgr.cache_load(&saved_col)?;
+        assert_eq!(col.uid(), loaded_col.uid());
+        assert_eq!(col.etag_owned(), loaded_col.etag_owned());
+        assert_eq!(col.decrypt_meta()?, loaded_col.decrypt_meta()?);
+
+        let saved_item = it_mgr.cache_save(&item)?;
+        let loaded_item = it_mgr.cache_load(&saved_item)?;
+        assert_eq!(item.uid(), loaded_item.uid());
+        assert_eq!(item.etag_owned(), loaded_item.etag_owned());
+        assert_eq!(item.decrypt_meta()?, loaded_item.decrypt_meta()?);
+    }
+
+    etebase.logout()
+}

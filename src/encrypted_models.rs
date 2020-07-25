@@ -42,6 +42,12 @@ pub fn gen_uid_base64() -> StringBase64 {
   return to_base64(&randombytes(24)).unwrap();
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct CachedContent {
+    version: u8,
+    data: Vec<u8>,
+}
+
 pub struct AccountCryptoManager(pub CryptoManager);
 
 impl AccountCryptoManager {
@@ -323,6 +329,30 @@ impl EncryptedCollection {
 
             stoken: None,
         })
+    }
+
+    pub fn cache_load(cached: &[u8]) -> Result<Self> {
+        let cached: CachedContent = rmp_serde::from_read_ref(cached)?;
+        Ok(rmp_serde::from_read_ref(&cached.data)?)
+    }
+
+    // FIXME: Actually make it not save content
+    pub fn cache_save(&self) -> Result<Vec<u8>> {
+        let data = rmp_serde::to_vec(self)?;
+        let content = CachedContent {
+            version: 1, // Cache version format
+            data,
+        };
+        Ok(rmp_serde::to_vec(&content)?)
+    }
+
+    pub fn cache_save_with_content(&self) -> Result<Vec<u8>> {
+        let data = rmp_serde::to_vec(self)?;
+        let content = CachedContent {
+            version: 1, // Cache version format
+            data,
+        };
+        Ok(rmp_serde::to_vec(&content)?)
     }
 
     pub(crate) fn mark_saved(&self) {
@@ -687,6 +717,30 @@ impl EncryptedItem {
         ret.mark_saved();
 
         ret
+    }
+
+    pub fn cache_load(cached: &[u8]) -> Result<Self> {
+        let cached: CachedContent = rmp_serde::from_read_ref(cached)?;
+        Ok(rmp_serde::from_read_ref(&cached.data)?)
+    }
+
+    // FIXME: Actually make it not save content
+    pub fn cache_save(&self) -> Result<Vec<u8>> {
+        let data = rmp_serde::to_vec(self)?;
+        let content = CachedContent {
+            version: 1, // Cache version format
+            data,
+        };
+        Ok(rmp_serde::to_vec(&content)?)
+    }
+
+    pub fn cache_save_with_content(&self) -> Result<Vec<u8>> {
+        let data = rmp_serde::to_vec(self)?;
+        let content = CachedContent {
+            version: 1, // Cache version format
+            data,
+        };
+        Ok(rmp_serde::to_vec(&content)?)
     }
 
     pub(crate) fn mark_saved(&self) {

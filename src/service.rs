@@ -437,6 +437,19 @@ impl CollectionManager {
         Ok(())
     }
 
+    pub fn cache_load(&self, cached: &[u8]) -> Result<Collection> {
+        let col = EncryptedCollection::cache_load(cached)?;
+        Collection::new(col.crypto_manager(&self.account_crypto_manager)?, col)
+    }
+
+    pub fn cache_save(&self, collection: &Collection) -> Result<Vec<u8>> {
+        collection.col.cache_save()
+    }
+
+    pub fn cache_save_with_content(&self, collection: &Collection) -> Result<Vec<u8>> {
+        collection.col.cache_save_with_content()
+    }
+
     pub fn item_manager(&self, collection: &Collection) -> Result<ItemManager> {
         ItemManager::new(Rc::clone(&self.client), Rc::clone(&collection.cm), collection)
     }
@@ -542,6 +555,19 @@ impl ItemManager {
         let items = items.map(|x| &x.item);
         let deps = deps.map(|x| &x.item);
         self.item_manager_online.transaction(items, deps, options)
+    }
+
+    pub fn cache_load(&self, cached: &[u8]) -> Result<Item> {
+        let item = EncryptedItem::cache_load(cached)?;
+        Item::new(item.crypto_manager(&self.collection_crypto_manager)?, item)
+    }
+
+    pub fn cache_save(&self, item: &Item) -> Result<Vec<u8>> {
+        item.item.cache_save()
+    }
+
+    pub fn cache_save_with_content(&self, item: &Item) -> Result<Vec<u8>> {
+        item.item.cache_save_with_content()
     }
 }
 
