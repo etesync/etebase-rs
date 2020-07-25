@@ -77,7 +77,6 @@ fn init_test(user: &TestUser) -> Result<Account> {
     etebase::init()?;
     user_reset(&user)?;
 
-    // FIXME: move to prepare user for test
     let client = Client::new(CLIENT_NAME, &test_url())?;
     let session_key = from_base64(sessionStorageKey)?;
 
@@ -1226,23 +1225,33 @@ fn session_save_and_restore() -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
     let etebase = init_test(&USER)?;
 
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_content = b"SomeContent";
+
+    let col = col_mgr.create(&col_meta, col_content)?;
+    col_mgr.upload(&col, None)?;
+
     // Verify we can store and restore without an encryption key
     {
         let saved = etebase.save(None)?;
-        let mut etebase2 = Account::restore(client.clone(), &saved, None)?;
+        let etebase2 = Account::restore(client.clone(), &saved, None)?;
 
-        // FIXME: we should verify we can access data instead
-        &etebase2.fetch_token()?;
+        let col_mgr2 = etebase2.collection_manager()?;
+        let collections = col_mgr2.list(None)?;
+        verify_collection(collections.data().first().unwrap(), &col_meta, col_content)?;
     }
 
     // Verify we can store and restore with an encryption key
     {
         let key = etebase::utils::randombytes(32);
         let saved = etebase.save(Some(&key))?;
-        let mut etebase2 = Account::restore(client.clone(), &saved, Some(&key))?;
+        assert_err!(Account::restore(client.clone(), &saved, None), Error::Encryption(_));
+        let etebase2 = Account::restore(client.clone(), &saved, Some(&key))?;
 
-        // FIXME: we should verify we can access data instead
-        &etebase2.fetch_token()?;
+        let col_mgr2 = etebase2.collection_manager()?;
+        let collections = col_mgr2.list(None)?;
+        verify_collection(collections.data().first().unwrap(), &col_meta, col_content)?;
     }
 
     etebase.logout()
