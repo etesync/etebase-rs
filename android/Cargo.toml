@@ -1,0 +1,29 @@
+[package]
+name = "etebase-android"
+description = "Android bindings to etebase-rs"
+homepage = "https://www.etebase.com"
+repository = "https://github.com/etesync/etesync-rs/tree/etebase/android/"
+version = "0.1.0"
+authors = ["Tom Hacohen <tom@stosb.com>"]
+edition = "2018"
+license = "LGPL-2.1-only"
+readme = "../README.md"
+
+[lib]
+crate-type = ["cdylib"]
+
+[build-dependencies]
+flapigen = "^0.6.0-pre4"
+env_logger = "^0.7"
+
+[dependencies]
+log = "0.4.6"
+log-panics = "2.0"
+android_logger = "0.8"
+jni-sys = "0.3.0"
+openssl = { version = "0.10.30", features = ["vendored"] }
+etebase = { path = "../" }
+
+[features]
+default = ["android"]
+android = []

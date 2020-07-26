@@ -1,0 +1,188 @@
+pub use etebase::{
+    User,
+    Client,
+    Account,
+
+    Collection,
+    Item,
+
+    error::Result,
+    managers::{
+        CollectionManager,
+        ItemManager,
+    },
+};
+
+#[cfg(feature = "java")]
+use crate::jni_c_header::*;
+
+#[cfg(feature = "android")]
+use jni_sys::*;
+
+foreign_typemap!(
+    ($p:r_type) <T> Result<T> => swig_i_type!(T) {
+        $out = match $p {
+            Ok(x) => {
+                swig_from_rust_to_i_type!(T, x, ret)
+                ret
+            }
+            Err(err) => {
+                let msg = err.to_string();
+                let exception_class = swig_jni_find_class!(ETEBASE_EXCEPTION, "com/etebase/client/exceptions/EtebaseException");
+                jni_throw(env, exception_class, &msg);
+                // jni_throw_exception(env, &msg);
+                return <swig_i_type!(T)>::jni_invalid_value();
+            }
+        };
+    };
+    ($p:f_type, unique_prefix="/*etebase::error::Result<swig_subst_type!(T)>*/") => "/*etebase::error::Result<swig_subst_type!(T)>*/swig_f_type!(T)"
+        "swig_foreign_from_i_type!(T, $p)";
+);
+
+foreign_typemap!(
+    ($p:r_type) Option<&str> => internal_aliases::JStringOptStr {
+        $out = match $p {
+            Some(s) => from_std_string_jstring(s.to_owned(), env),
+            None => ::std::ptr::null_mut(),
+        };
+    };
+    ($p:f_type, option = "NoNullAnnotations") => "java.util.Optional<String>" r#"
+        $out = java.util.Optional.ofNullable($p);
+"#;
+    ($p:f_type, option = "NullAnnotations") => "@NonNull java.util.Optional<String>" r#"
+        $out = java.util.Optional.ofNullable($p);
+"#;
+);
+
+foreign_typemap!(
+    ($p:r_type) Vec<u8> => jbyteArray {
+        let slice = &($p)[..];
+        let slice = unsafe { std::mem::transmute::<&[u8], &[i8]>(slice) };
+        let raw = JavaByteArray::from_slice_to_raw(slice, env);
+        $out = raw;
+    };
+    ($p:f_type) => "jbyteArray";
+);
+
+foreign_typemap!(
+    ($p:r_type) &'a [u8] => jbyteArray {
+        let slice = unsafe { std::mem::transmute::<&[u8], &[i8]>($p) };
+        let raw = JavaByteArray::from_slice_to_raw(slice, env);
+        $out = raw;
+    };
+    ($p:f_type) => "jbyteArray";
+    ($p:r_type) &'a [u8] <= jbyteArray {
+        let arr = JavaByteArray::new(env, $p);
+        let slice = arr.to_slice();
+        let slice = unsafe { std::mem::transmute::<&[i8], &[u8]>(slice) };
+        $out = slice;
+    };
+    ($p:f_type) <= "jbyteArray";
+);
+
+foreign_class!(class Client {
+    self_type Client;
+    private constructor = empty;
+    fn Client::new(client_name: &str, server_url: &str) -> Result<Client>; alias create;
+    fn Client::set_api_base(&mut self, server_url: &str) -> Result<()>;
+    foreign_code r#"
+    static {
+        System.loadLibrary("etebase_android");
+    }
+"#;
+});
+
+foreign_class!(class User {
+    self_type User;
+    private constructor = empty;
+});
+
+foreign_class!(class Account {
+    self_type Account;
+    private constructor = empty;
+    fn Account::login(client: Client, username: &str, password: &str) -> Result<Account>;
+    fn Account::signup(client: Client, user: &User, password: &str) -> Result<Account>;
+    fn Account::fetch_token(&mut self) -> Result<()>;
+    fn Account::force_api_base(&mut self, api_base: &str) -> Result<()>;
+    fn Account::change_password(&mut self, password: &str) -> Result<()>;
+    fn Account::logout(&mut self) -> Result<()>;
+    fn Account::collection_manager(&self) -> Result<CollectionManager>;
+});
+
+// FIXME: support fetch options!
+pub fn col_fetch(mgr: &CollectionManager, col_uid: &str) -> Result<Collection> {
+    mgr.fetch(col_uid, None)
+}
+
+// FIXME: support metadata!
+pub fn col_create(mgr: &CollectionManager, content: &[u8]) -> Result<Collection> {
+    mgr.create(&etebase::CollectionMetadata::new("type", "name"), content)
+}
+
+foreign_class!(class CollectionManager {
+    self_type CollectionManager;
+    private constructor = empty;
+    fn col_fetch(&self, col_uid: &str) -> Result<Collection>; alias fetch;
+    fn col_create(&self, content: &[u8]) -> Result<Collection>; alias create;
+    fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager>;
+});
+
+// FIXME: support fetch options!
+pub fn item_fetch(mgr: &ItemManager, item_uid: &str) -> Result<Item> {
+    mgr.fetch(item_uid, None)
+}
+
+// FIXME: support metadata!
+pub fn item_create(mgr: &ItemManager, content: &[u8]) -> Result<Item> {
+    mgr.create(&etebase::ItemMetadata::new(), content)
+}
+
+foreign_class!(class ItemManager {
+    self_type ItemManager;
+    private constructor = empty;
+    fn item_fetch(&self, item_uid: &str) -> Result<Item>; alias fetch;
+    fn item_create(&self, content: &[u8]) -> Result<Item>; alias create;
+});
+
+pub fn col_verify(col: &Collection) -> bool {
+    col.verify().unwrap_or(false)
+}
+
+foreign_class!(class Collection {
+    self_type Collection;
+    private constructor = empty;
+    fn col_verify(&self) -> bool; alias verify;
+
+    // FIXME fn Collection::set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()>;
+    // FIXME fn Collection::decrypt_meta(&self) -> Result<CollectionMetadata>;
+    // FIXME Figure out how to support generic:
+    // fn Collection::decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output>;
+    fn Collection::set_content(&mut self, content: &[u8]) -> Result<()>;
+    fn Collection::decrypt_content(&self) -> Result<Vec<u8>>;
+    fn Collection::delete(&mut self) -> Result<()>; alias mark_deleted;
+    fn Collection::is_deleted(&self) -> bool;
+    fn Collection::uid(&self) -> &str;
+    fn Collection::etag_owned(&self) -> Option<String>; alias etag;
+    fn Collection::stoken(&self) -> Option<&str>;
+});
+
+pub fn item_verify(item: &Item) -> bool {
+    item.verify().unwrap_or(false)
+}
+
+foreign_class!(class Item {
+    self_type Item;
+    private constructor = empty;
+    fn item_verify(&self) -> bool; alias verify;
+
+    // FIXME fn Item::set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()>;
+    // FIXME fn Item::decrypt_meta(&self) -> Result<ItemMetadata>;
+    // FIXME Figure out how to support generic:
+    // fn Item::decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output>;
+    fn Item::set_content(&mut self, content: &[u8]) -> Result<()>;
+    fn Item::decrypt_content(&self) -> Result<Vec<u8>>;
+    fn Item::delete(&mut self) -> Result<()>; alias mark_deleted;
+    fn Item::is_deleted(&self) -> bool;
+    fn Item::uid(&self) -> &str;
+    fn Item::etag_owned(&self) -> Option<String>; alias etag;
+});
