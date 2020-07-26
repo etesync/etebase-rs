@@ -53,6 +53,12 @@ impl fmt::Display for Error {
     }
 }
 
+impl From<Error> for String {
+    fn from(err: Error) -> String {
+        err.to_string()
+    }
+}
+
 impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         None
