@@ -13,9 +13,6 @@ readme = "README.md"
 [lib]
 crate-type = ["lib", "cdylib"]
 
-[build-dependencies]
-cbindgen = "^0.14.2"
-
 [dependencies]
 block-padding= "^0.2.0"
 sodiumoxide = "^0.2.6"
