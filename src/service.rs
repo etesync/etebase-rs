@@ -290,7 +290,7 @@ impl Account {
         Ok(())
     }
 
-    pub fn logout(self) -> Result<()> {
+    pub fn logout(&self) -> Result<()> {
         let authenticator = Authenticator::new(&self.client);
 
         authenticator.logout()
