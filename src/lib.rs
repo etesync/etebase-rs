@@ -33,6 +33,15 @@ pub use service::{
     Item,
 };
 
+pub mod managers {
+    pub use super::service::{
+        CollectionManager,
+        ItemManager,
+        CollectionMemberManager,
+        CollectionInvitationManager,
+    };
+}
+
 pub mod test_helpers {
     pub mod crypto {
         pub use super::super::crypto::*;
