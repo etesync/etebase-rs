@@ -59,10 +59,7 @@ use common::{
 fn user_reset(user: &TestUser) -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
     let body_struct = etebase::test_helpers::SignupBody {
-        user: &etebase::User {
-            username: user.username,
-            email: user.email,
-        },
+        user: &etebase::User::new(user.username,user.email),
         salt: &from_base64(user.salt)?,
         pubkey: &from_base64(user.pubkey)?,
         login_pubkey: &from_base64(user.loginPubkey)?,
@@ -852,11 +849,11 @@ fn collection_invitations() -> Result<()> {
     let user2_profile = invite_mgr.fetch_user_profile(USER2.username)?;
     // Should be verified by user1 off-band
     let user2_pubkey = invite_mgr2.pubkey();
-    assert_eq!(&user2_profile.pubkey, &user2_pubkey);
+    assert_eq!(&user2_profile.pubkey(), &user2_pubkey);
     // Off-band verification:
-    assert_eq!(pretty_fingerprint(&user2_profile.pubkey), pretty_fingerprint(user2_pubkey));
+    assert_eq!(pretty_fingerprint(&user2_profile.pubkey()), pretty_fingerprint(user2_pubkey));
 
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
 
     let invitations = invite_mgr.list_outgoing(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -874,7 +871,7 @@ fn collection_invitations() -> Result<()> {
     }
 
     // Invite and then disinvite
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -889,7 +886,7 @@ fn collection_invitations() -> Result<()> {
     }
 
     // Invite again, this time accept
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -927,7 +924,7 @@ fn collection_invitations() -> Result<()> {
     }
 
     // Add again
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -987,7 +984,7 @@ fn iterating_invitations() -> Result<()> {
         let content = b"";
         let col = col_mgr.create(&meta, content).unwrap();
         col_mgr.upload(&col, None)?;
-        invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+        invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
     }
 
     // Check incoming
@@ -1052,7 +1049,7 @@ fn collection_access_level() -> Result<()> {
     let member_mgr = col_mgr.member_manager(&col)?;
     let user2_profile = invite_mgr.fetch_user_profile(USER2.username)?;
 
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey, &CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     invite_mgr2.accept(invitations.data().first().unwrap())?;

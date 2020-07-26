@@ -196,7 +196,7 @@ pub struct LoginChallange {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignupBody<'a> {
-    pub user: &'a User<'a>,
+    pub user: &'a User,
     #[serde(with = "serde_bytes")]
     pub salt: &'a[u8],
     #[serde(with = "serde_bytes")]
@@ -242,15 +242,48 @@ pub struct LoginResponse {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct User<'a> {
-    pub username: &'a str,
-    pub email: &'a str,
+pub struct User {
+    username: String,
+    email: String,
+}
+
+impl User {
+    pub fn new(username: &str, email: &str) -> Self {
+        Self {
+            username: username.to_owned(),
+            email: email.to_owned(),
+        }
+    }
+
+    pub fn set_username(&mut self, username: &str) -> &mut Self {
+        self.username = username.to_owned();
+        self
+    }
+
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+
+    pub fn set_email(&mut self, email: &str) -> &mut Self {
+        self.email = email.to_owned();
+        self
+    }
+
+    pub fn email(&self) -> &str {
+        &self.email
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UserProfile {
     #[serde(with = "serde_bytes")]
-    pub pubkey: Vec<u8>,
+    pubkey: Vec<u8>,
+}
+
+impl UserProfile {
+    pub fn pubkey(&self) -> &[u8] {
+        &self.pubkey
+    }
 }
 
 pub struct Authenticator<'a> {
