@@ -23,7 +23,7 @@ foreign_class!(class Client {
     self_type Client;
     private constructor = empty;
     fn Client::new(client_name: &str, server_url: &str) -> Result<Client>; alias create;
-    fn Client::set_api_base(&mut self, server_url: &str) -> Result<()>;
+    fn Client::set_api_base(&mut self, server_url: &str) -> Result<()>; alias setApiBase;
     foreign_code r#"
     static {
         System.loadLibrary("etebase_android");
@@ -41,11 +41,11 @@ foreign_class!(class Account {
     private constructor = empty;
     fn Account::login(client: Client, username: &str, password: &str) -> Result<Account>;
     fn Account::signup(client: Client, user: &User, password: &str) -> Result<Account>;
-    fn Account::fetch_token(&mut self) -> Result<()>;
-    fn Account::force_api_base(&mut self, api_base: &str) -> Result<()>;
-    fn Account::change_password(&mut self, password: &str) -> Result<()>;
+    fn Account::fetch_token(&mut self) -> Result<()>; alias fetchToken;
+    fn Account::force_api_base(&mut self, api_base: &str) -> Result<()>; alias forceApiBase;
+    fn Account::change_password(&mut self, password: &str) -> Result<()>; alias changePassword;
     fn Account::logout(&mut self) -> Result<()>;
-    fn Account::collection_manager(&self) -> Result<CollectionManager>;
+    fn Account::collection_manager(&self) -> Result<CollectionManager>; alias getCollectionManager;
 });
 
 type CollectionListResponse = etebase::CollectionListResponse<Collection>;
@@ -53,9 +53,9 @@ type CollectionListResponse = etebase::CollectionListResponse<Collection>;
 foreign_class!(class CollectionListResponse {
     self_type CollectionListResponse;
     private constructor = empty;
-    fn CollectionListResponse::stoken(&self) -> Option<&str>;
-    fn CollectionListResponse::data(&self) -> &Vec<Collection>;
-    fn CollectionListResponse::done(&self) -> bool;
+    fn CollectionListResponse::stoken(&self) -> Option<&str>; alias getStoken;
+    fn CollectionListResponse::data(&self) -> &Vec<Collection>; alias getData;
+    fn CollectionListResponse::done(&self) -> bool; alias getDone;
 });
 
 type ItemListResponse = etebase::ItemListResponse<Item>;
@@ -63,9 +63,9 @@ type ItemListResponse = etebase::ItemListResponse<Item>;
 foreign_class!(class ItemListResponse {
     self_type ItemListResponse;
     private constructor = empty;
-    fn ItemListResponse::stoken(&self) -> Option<&str>;
-    fn ItemListResponse::data(&self) -> &Vec<Item>;
-    fn ItemListResponse::done(&self) -> bool;
+    fn ItemListResponse::stoken(&self) -> Option<&str>; alias getStoken;
+    fn ItemListResponse::data(&self) -> &Vec<Item>; alias getData;
+    fn ItemListResponse::done(&self) -> bool; alias getDone;
 });
 
 // FIXME: support fetch options!
@@ -97,7 +97,7 @@ foreign_class!(class CollectionManager {
     private constructor = empty;
     fn col_fetch(&self, col_uid: &str) -> Result<Collection>; alias fetch;
     fn col_create(&self, content: &[u8]) -> Result<Collection>; alias create;
-    fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager>;
+    fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager>; alias getItemManager;
     fn col_list(&self) -> Result<CollectionListResponse>; alias list;
     fn col_upload(&self, collection: &Collection) -> Result<()>; alias upload;
     fn col_transaction(&self, collection: &Collection) -> Result<()>; alias transaction;
@@ -117,6 +117,10 @@ pub fn item_list(mgr: &ItemManager) -> Result<ItemListResponse> {
     mgr.list(None)
 }
 
+pub fn item_fetch_updates(mgr: &ItemManager, items: Vec<&Item>) -> Result<ItemListResponse> {
+    mgr.fetch_updates(items.into_iter(), None)
+}
+
 // FIXME: make deps an option?
 // FIXME: support fetch options!
 pub fn item_batch(mgr: &ItemManager, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()> {
@@ -134,6 +138,7 @@ foreign_class!(class ItemManager {
     fn item_fetch(&self, item_uid: &str) -> Result<Item>; alias fetch;
     fn item_create(&self, content: &[u8]) -> Result<Item>; alias create;
     fn item_list(&self) -> Result<ItemListResponse>; alias list;
+    fn item_fetch_updates(&self, items: Vec<&Item>) -> Result<ItemListResponse>; alias fetchUpdates;
     fn item_batch(&self, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()>; alias batch;
     fn item_transaction(&self, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()>; alias transaction;
 });
@@ -151,14 +156,14 @@ foreign_class!(class Collection {
     // FIXME fn Collection::decrypt_meta(&self) -> Result<CollectionMetadata>;
     // FIXME Figure out how to support generic:
     // fn Collection::decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output>;
-    fn Collection::set_content(&mut self, content: &[u8]) -> Result<()>;
-    fn Collection::decrypt_content(&self) -> Result<Vec<u8>>;
-    fn Collection::delete(&mut self) -> Result<()>; alias mark_deleted;
-    fn Collection::is_deleted(&self) -> bool;
-    fn Collection::uid(&self) -> &str;
-    fn Collection::etag_owned(&self) -> Option<String>; alias etag;
-    fn Collection::stoken(&self) -> Option<&str>;
-    fn Collection::item(&self) -> Result<Item>;
+    fn Collection::set_content(&mut self, content: &[u8]) -> Result<()>; alias setContent;
+    fn Collection::decrypt_content(&self) -> Result<Vec<u8>>; alias getContent;
+    fn Collection::delete(&mut self) -> Result<()>; alias markDeleted;
+    fn Collection::is_deleted(&self) -> bool; alias isDeleted;
+    fn Collection::uid(&self) -> &str; alias getUid;
+    fn Collection::etag_owned(&self) -> Option<String>; alias getEtag;
+    fn Collection::stoken(&self) -> Option<&str>; alias getStoken;
+    fn Collection::item(&self) -> Result<Item>; alias asItem;
 });
 
 pub fn item_verify(item: &Item) -> bool {
@@ -174,10 +179,10 @@ foreign_class!(class Item {
     // FIXME fn Item::decrypt_meta(&self) -> Result<ItemMetadata>;
     // FIXME Figure out how to support generic:
     // fn Item::decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output>;
-    fn Item::set_content(&mut self, content: &[u8]) -> Result<()>;
-    fn Item::decrypt_content(&self) -> Result<Vec<u8>>;
-    fn Item::delete(&mut self) -> Result<()>; alias mark_deleted;
-    fn Item::is_deleted(&self) -> bool;
-    fn Item::uid(&self) -> &str;
-    fn Item::etag_owned(&self) -> Option<String>; alias etag;
+    fn Item::set_content(&mut self, content: &[u8]) -> Result<()>; alias setContent;
+    fn Item::decrypt_content(&self) -> Result<Vec<u8>>; alias getContent;
+    fn Item::delete(&mut self) -> Result<()>; alias markDeleted;
+    fn Item::is_deleted(&self) -> bool; alias isDeleted;
+    fn Item::uid(&self) -> &str; alias getUid;
+    fn Item::etag_owned(&self) -> Option<String>; alias getEtag;
 });
