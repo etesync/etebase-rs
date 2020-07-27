@@ -653,6 +653,7 @@ impl CollectionMemberManager {
 }
 
 
+#[derive(Clone)]
 pub struct Collection {
     col: EncryptedCollection,
     cm: Rc<CollectionCryptoManager>,
@@ -719,16 +720,17 @@ impl Collection {
     }
 }
 
+#[derive(Clone)]
 pub struct Item {
     item: EncryptedItem,
-    cm: ItemCryptoManager,
+    cm: Rc<ItemCryptoManager>,
 }
 
 impl Item {
     fn new(crypto_manager: ItemCryptoManager, encrypted_item: EncryptedItem) -> Result<Self> {
         Ok(Self {
             item: encrypted_item,
-            cm: crypto_manager,
+            cm: Rc::new(crypto_manager),
         })
     }
 
