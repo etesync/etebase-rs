@@ -18,7 +18,7 @@ fn main() {
                 .join("client"),
             "com.etebase.client".into(),
         )
-        .use_null_annotation_from_package("androidx.annotation".into()),
+        // FIXME: breaks for some reason .use_null_annotation_from_package("androidx.annotation".into()),
     ))
     .merge_type_map("typemaps", include_str!("src/jni_typemaps.rs"))
     .remove_not_generated_files_from_output_directory(true)
