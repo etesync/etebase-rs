@@ -48,6 +48,26 @@ foreign_class!(class Account {
     fn Account::collection_manager(&self) -> Result<CollectionManager>;
 });
 
+type CollectionListResponse = etebase::CollectionListResponse<Collection>;
+
+foreign_class!(class CollectionListResponse {
+    self_type CollectionListResponse;
+    private constructor = empty;
+    fn CollectionListResponse::stoken(&self) -> Option<&str>;
+    fn CollectionListResponse::data(&self) -> &Vec<Collection>;
+    fn CollectionListResponse::done(&self) -> bool;
+});
+
+type ItemListResponse = etebase::ItemListResponse<Item>;
+
+foreign_class!(class ItemListResponse {
+    self_type ItemListResponse;
+    private constructor = empty;
+    fn ItemListResponse::stoken(&self) -> Option<&str>;
+    fn ItemListResponse::data(&self) -> &Vec<Item>;
+    fn ItemListResponse::done(&self) -> bool;
+});
+
 // FIXME: support fetch options!
 pub fn col_fetch(mgr: &CollectionManager, col_uid: &str) -> Result<Collection> {
     mgr.fetch(col_uid, None)
@@ -56,6 +76,10 @@ pub fn col_fetch(mgr: &CollectionManager, col_uid: &str) -> Result<Collection> {
 // FIXME: support metadata!
 pub fn col_create(mgr: &CollectionManager, content: &[u8]) -> Result<Collection> {
     mgr.create(&etebase::CollectionMetadata::new("type", "name"), content)
+}
+
+pub fn col_list(mgr: &CollectionManager) -> Result<CollectionListResponse> {
+    mgr.list(None)
 }
 
 // FIXME: support fetch options!
@@ -74,7 +98,7 @@ foreign_class!(class CollectionManager {
     fn col_fetch(&self, col_uid: &str) -> Result<Collection>; alias fetch;
     fn col_create(&self, content: &[u8]) -> Result<Collection>; alias create;
     fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager>;
-    // fn CollectionManager::list(&self, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>>;
+    fn col_list(&self) -> Result<CollectionListResponse>; alias list;
     fn col_upload(&self, collection: &Collection) -> Result<()>; alias upload;
     fn col_transaction(&self, collection: &Collection) -> Result<()>; alias transaction;
 });
@@ -87,6 +111,10 @@ pub fn item_fetch(mgr: &ItemManager, item_uid: &str) -> Result<Item> {
 // FIXME: support metadata!
 pub fn item_create(mgr: &ItemManager, content: &[u8]) -> Result<Item> {
     mgr.create(&etebase::ItemMetadata::new(), content)
+}
+
+pub fn item_list(mgr: &ItemManager) -> Result<ItemListResponse> {
+    mgr.list(None)
 }
 
 // FIXME: make deps an option?
@@ -105,6 +133,7 @@ foreign_class!(class ItemManager {
     private constructor = empty;
     fn item_fetch(&self, item_uid: &str) -> Result<Item>; alias fetch;
     fn item_create(&self, content: &[u8]) -> Result<Item>; alias create;
+    fn item_list(&self) -> Result<ItemListResponse>; alias list;
     fn item_batch(&self, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()>; alias batch;
     fn item_transaction(&self, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()>; alias transaction;
 });
@@ -129,6 +158,7 @@ foreign_class!(class Collection {
     fn Collection::uid(&self) -> &str;
     fn Collection::etag_owned(&self) -> Option<String>; alias etag;
     fn Collection::stoken(&self) -> Option<&str>;
+    fn Collection::item(&self) -> Result<Item>;
 });
 
 pub fn item_verify(item: &Item) -> bool {

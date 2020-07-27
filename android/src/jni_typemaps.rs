@@ -96,3 +96,11 @@ foreign_typemap!(
     ($p:f_type, option = "NoNullAnnotations") <= "swig_f_type!(T) []";
     ($p:f_type, option = "NullAnnotations") <= "@NonNull swig_f_type!(T, NoNullAnnotations) []";
 );
+
+foreign_typemap!(
+    ($p:r_type) <T: SwigForeignClass> &Vec<T> => internal_aliases::JForeignObjectsArray<T> {
+        $out = vec_of_objects_to_jobject_array(env, ($p).to_vec());
+    };
+    ($p:f_type, option = "NoNullAnnotations") => "swig_f_type!(T) []";
+    ($p:f_type, option = "NullAnnotations") => "@NonNull swig_f_type!(T, NoNullAnnotations) []";
+);
