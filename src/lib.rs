@@ -3,6 +3,7 @@
 
 mod crypto;
 mod chunker;
+mod http_client;
 mod online_managers;
 mod encrypted_models;
 mod service;
@@ -11,8 +12,9 @@ pub mod error;
 
 pub use crypto::pretty_fingerprint;
 
+pub use http_client::Client;
+
 pub use online_managers::{
-    Client,
     User,
     UserProfile,
     FetchOptions,

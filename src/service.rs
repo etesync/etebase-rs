@@ -39,9 +39,9 @@ use super::{
         CollectionMetadata,
         ItemMetadata,
     },
+    http_client::Client,
     online_managers::{
         Authenticator,
-        Client,
         User,
         UserProfile,
         LoginResponseUser,
