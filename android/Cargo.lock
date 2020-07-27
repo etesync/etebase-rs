@@ -120,9 +120,8 @@ checksum = "37ab347416e802de484e4d03c7316c48f1ecb56574dfd4a46a80f173ce1de04d"
 
 [[package]]
 name = "flapigen"
-version = "0.6.0-pre4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "974b7392baf11a202d3fa84f98f8894dd4360791c0da79a15dc588ef5cb30142"
+version = "0.6.0-pre5"
+source = "git+https://github.com/Dushistov/flapigen-rs#47277cb596c8c231213268ccabf85ed676259adc"
 dependencies = [
  "bitflags",
  "heck",

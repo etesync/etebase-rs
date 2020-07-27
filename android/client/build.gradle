@@ -37,5 +37,15 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation 'androidx.annotation:annotation:1.1.0'
+
+    def okhttp3Version = "3.12.1"
+    implementation "com.squareup.okhttp3:logging-interceptor:$okhttp3Version"
+
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.0.9'
+
+    // Required -- JUnit 4 framework
+    androidTestImplementation 'androidx.test:runner:1.1.0'
+    androidTestImplementation 'androidx.test:rules:1.1.0'
+
+    testImplementation 'junit:junit:4.12'
 }

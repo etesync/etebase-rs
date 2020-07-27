@@ -13,18 +13,48 @@ use etebase::{
     },
 };
 
+use crate::{
+    Response,
+    HttpClient,
+    client_new_with_impl,
+};
+
 #[cfg(feature = "java")]
 use crate::jni_c_header::*;
 
 #[cfg(feature = "android")]
 use jni_sys::*;
 
+fn response_reset_ok(resp: &mut Response, bytes: &[u8], status: u16) {
+    resp.reset_ok(bytes.to_vec(), status);
+}
+
+foreign_class!(class Response {
+    self_type Response;
+    private constructor = empty;
+    fn response_reset_ok(&mut self, bytes: &[u8], status: u16); alias reset_ok;
+    fn Response::reset_err(&mut self, err: String);
+});
+
+foreign_callback!(callback HttpClient {
+    self_type HttpClient;
+    get = HttpClient::get(&self, url: &str, auth_token: &str, response: Response);
+    post = HttpClient::post(&self, url: &str, auth_token: &str, body: Vec<u8>, response: Response);
+    put = HttpClient::put(&self, url: &str, auth_token: &str, body: Vec<u8>, response: Response);
+    patch = HttpClient::patch(&self, url: &str, auth_token: &str, body: Vec<u8>, response: Response);
+    del = HttpClient::delete(&self, url: &str, auth_token: &str, response: Response);
+});
+
 foreign_class!(class Client {
     self_type Client;
     private constructor = empty;
-    fn Client::new(client_name: &str, server_url: &str) -> Result<Client>; alias create;
+    fn client_new_with_impl(server_url: &str, imp: Box<HttpClient>) -> Result<Client>;
     fn Client::set_api_base(&mut self, server_url: &str) -> Result<()>; alias setApiBase;
     foreign_code r#"
+    public static Client create(okhttp3.OkHttpClient client, String server_url) {
+        return com.etebase.client.http_bridge.HttpClientBridge.create(client, server_url);
+    }
+
     static {
         System.loadLibrary("etebase_android");
     }
