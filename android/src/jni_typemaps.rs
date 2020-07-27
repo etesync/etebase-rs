@@ -61,4 +61,38 @@ foreign_typemap!(
     ($p:f_type) <= "jbyteArray";
 );
 
+#[allow(dead_code)]
+fn jobject_array_to_vec_of_refs<T: SwigForeignClass>(
+    env: *mut JNIEnv,
+    arr: internal_aliases::JForeignObjectsArray<T>,
+) -> Vec<&'static T> {
+    let field_id = <T>::jni_class_pointer_field();
+    assert!(!field_id.is_null());
+    let length = unsafe { (**env).GetArrayLength.unwrap()(env, arr.inner) };
+    let len = <usize as ::std::convert::TryFrom<jsize>>::try_from(length)
+        .expect("invalid jsize, in jsize => usize conversation");
+    let mut result = Vec::with_capacity(len);
+    for i in 0..length {
+        let native: &mut T = unsafe {
+            let obj = (**env).GetObjectArrayElement.unwrap()(env, arr.inner, i);
+            if (**env).ExceptionCheck.unwrap()(env) != 0 {
+                panic!("Failed to retrieve element {} from this `jobjectArray'", i);
+            }
+            let ptr = (**env).GetLongField.unwrap()(env, obj, field_id);
+            let native = (jlong_to_pointer(ptr) as *mut T).as_mut().unwrap();
+            (**env).DeleteLocalRef.unwrap()(env, obj);
+            native
+        };
+        result.push(&*native);
+    }
 
+    result
+}
+
+foreign_typemap!(
+    ($p:r_type) <'a, T: SwigForeignClass> Vec<&'a T> <= internal_aliases::JForeignObjectsArray<T> {
+        $out = jobject_array_to_vec_of_refs(env, $p);
+    };
+    ($p:f_type, option = "NoNullAnnotations") <= "swig_f_type!(T) []";
+    ($p:f_type, option = "NullAnnotations") <= "@NonNull swig_f_type!(T, NoNullAnnotations) []";
+);

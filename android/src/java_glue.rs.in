@@ -58,12 +58,25 @@ pub fn col_create(mgr: &CollectionManager, content: &[u8]) -> Result<Collection>
     mgr.create(&etebase::CollectionMetadata::new("type", "name"), content)
 }
 
+// FIXME: support fetch options!
+pub fn col_upload(mgr: &CollectionManager, collection: &Collection) -> Result<()> {
+    mgr.upload(collection, None)
+}
+
+// FIXME: support fetch options!
+pub fn col_transaction(mgr: &CollectionManager, collection: &Collection) -> Result<()> {
+    mgr.transaction(collection, None)
+}
+
 foreign_class!(class CollectionManager {
     self_type CollectionManager;
     private constructor = empty;
     fn col_fetch(&self, col_uid: &str) -> Result<Collection>; alias fetch;
     fn col_create(&self, content: &[u8]) -> Result<Collection>; alias create;
     fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager>;
+    // fn CollectionManager::list(&self, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>>;
+    fn col_upload(&self, collection: &Collection) -> Result<()>; alias upload;
+    fn col_transaction(&self, collection: &Collection) -> Result<()>; alias transaction;
 });
 
 // FIXME: support fetch options!
@@ -76,11 +89,24 @@ pub fn item_create(mgr: &ItemManager, content: &[u8]) -> Result<Item> {
     mgr.create(&etebase::ItemMetadata::new(), content)
 }
 
+// FIXME: make deps an option?
+// FIXME: support fetch options!
+pub fn item_batch(mgr: &ItemManager, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()> {
+    mgr.batch_deps(items.into_iter(), deps.into_iter(), None)
+}
+
+// FIXME: support fetch options!
+pub fn item_transaction(mgr: &ItemManager, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()> {
+    mgr.transaction_deps(items.into_iter(), deps.into_iter(), None)
+}
+
 foreign_class!(class ItemManager {
     self_type ItemManager;
     private constructor = empty;
     fn item_fetch(&self, item_uid: &str) -> Result<Item>; alias fetch;
     fn item_create(&self, content: &[u8]) -> Result<Item>; alias create;
+    fn item_batch(&self, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()>; alias batch;
+    fn item_transaction(&self, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()>; alias transaction;
 });
 
 pub fn col_verify(col: &Collection) -> bool {
