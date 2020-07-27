@@ -21,8 +21,7 @@ log = "0.4.6"
 log-panics = "2.0"
 android_logger = "0.8"
 jni-sys = "0.3.0"
-openssl = { version = "0.10.30", features = ["vendored"] }
-etebase = { path = "../" }
+etebase = { path = "../", default-features = false }
 
 [features]
 default = ["android"]
