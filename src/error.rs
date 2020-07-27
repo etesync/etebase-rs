@@ -71,22 +71,6 @@ impl From<String> for Error {
     }
 }
 
-impl From<reqwest::Error> for Error {
-    fn from(err: reqwest::Error) -> Error {
-        if err.is_status() {
-            match err.status() {
-                Some(reqwest::StatusCode::UNAUTHORIZED) => Error::Unauthorized(err.to_string()),
-                Some(reqwest::StatusCode::CONFLICT) => Error::Conflict(err.to_string()),
-                _ => Error::Http(err.to_string()),
-            }
-        } else if err.is_builder() || err.is_timeout() || err.is_redirect() {
-            Error::Generic(err.to_string())
-        } else {
-            Error::Connection(err.to_string())
-        }
-    }
-}
-
 impl From<url::ParseError> for Error {
     fn from(err: url::ParseError) -> Error {
         Error::UrlParse(err.to_string())

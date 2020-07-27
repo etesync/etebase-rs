@@ -14,6 +14,13 @@ pub use crypto::pretty_fingerprint;
 
 pub use http_client::Client;
 
+pub mod http_custom_client {
+    pub use crate::http_client::{
+        ClientImplementation,
+        Response,
+    };
+}
+
 pub use online_managers::{
     User,
     UserProfile,
