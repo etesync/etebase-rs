@@ -16,9 +16,12 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 block-padding= "^0.2.0"
 sodiumoxide = "^0.2.6"
-http = "^0.2.0"
 url = "^2.1.1"
 serde = { version = "^1.0.105", features = ["derive"] }
 serde_bytes = "^0.11.5"
 rmp-serde = "^0.14.3"
-reqwest = { version = "^0.10.4", features = ["blocking"] }
+reqwest = { version = "^0.10.4", features = ["blocking"], optional = true }
+
+[features]
+default = ["networking"]
+networking = ["reqwest"]

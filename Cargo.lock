@@ -90,7 +90,6 @@ name = "etebase"
 version = "0.1.0"
 dependencies = [
  "block-padding",
- "http",
  "reqwest",
  "rmp-serde",
  "serde",
