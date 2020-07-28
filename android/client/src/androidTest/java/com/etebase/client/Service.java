@@ -13,7 +13,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @RunWith(AndroidJUnit4.class)
 public class Service {
     @Test
-    public void testSmoketest () {
+    public void testSmoketest() {
         OkHttpClient httpClient =  new OkHttpClient.Builder()
                 // don't allow redirects by default, because it would break PROPFIND handling
                 .followRedirects(false)
@@ -65,6 +65,40 @@ public class Service {
         item_list = it_mgr.list(fetchOptions);
         assertEquals(item_list.getData().length, 0);
         assertEquals(new String(it2_first.getContent(), UTF_8), "Something item2");
+
+        etebase.logout();
+    }
+
+    @Test
+    public void testCache() {
+        OkHttpClient httpClient =  new OkHttpClient.Builder()
+                // don't allow redirects by default, because it would break PROPFIND handling
+                .followRedirects(false)
+                .build();
+        Client client = Client.create(httpClient,"http://10.100.102.5:12345");
+        Account etebase = Account.login(client,"test_user","SomePassword");
+        CollectionManager col_mgr = etebase.getCollectionManager();
+        CollectionMetadata collectionMetadata = new CollectionMetadata("Type","Name");
+        Collection col = col_mgr.create(collectionMetadata, "Something".getBytes());
+        col_mgr.upload(col,null);
+
+        String cached = etebase.save(null);
+        etebase = Account.restore(client, cached,null);
+        col_mgr = etebase.getCollectionManager();
+        col = col_mgr.fetch(col.getUid(),null);
+        assertArrayEquals(col.getContent(), "Something".getBytes());
+        byte[] cachedCol = col_mgr.cacheSave(col);
+        col = col_mgr.cacheLoad(cachedCol);
+        assertEquals(col.getMeta().getCollectionType(), "Type");
+
+        ItemManager it_mgr = col_mgr.getItemManager(col);
+        ItemMetadata itemMetadata = new ItemMetadata();
+        itemMetadata.setItemType("Bla");
+        Item item = it_mgr.create(itemMetadata, "Something item".getBytes());
+        it_mgr.batch(new Item[] {item}, null, null);
+        byte[] cachedItem = it_mgr.cacheSaveWithContent(item);
+        item = it_mgr.cacheLoad(cachedItem);
+        assertArrayEquals(item.getContent(), "Something item".getBytes());
 
         etebase.logout();
     }

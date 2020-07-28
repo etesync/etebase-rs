@@ -103,6 +103,11 @@ foreign_class!(class Account {
     fn Account::logout(&mut self) -> Result<()>;
     fn Account::collection_manager(&self) -> Result<CollectionManager>; alias getCollectionManager;
     fn Account::invitation_manager(&self) -> Result<CollectionInvitationManager>; alias getInvitationManager;
+
+    fn Account::save(&self, encryption_key: Option<&[u8]>) -> Result<String>;
+    fn restore(client: &Client, account_data_stored: &str, encryption_key: Option<&[u8]>) -> Result<Account> {
+        Account::restore(client.clone(), account_data_stored, encryption_key)
+    }
 });
 
 type CollectionListResponse = etebase::CollectionListResponse<Collection>;
@@ -232,6 +237,9 @@ foreign_class!(class CollectionManager {
     fn col_list(&self, fetch_options: Option<&FetchOptions>) -> Result<CollectionListResponse>; alias list;
     fn col_upload(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<()>; alias upload;
     fn col_transaction(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<()>; alias transaction;
+    fn CollectionManager::cache_load(&self, cached: &[u8]) -> Result<Collection>; alias cacheLoad;
+    fn CollectionManager::cache_save(&self, collection: &Collection) -> Result<Vec<u8>>; alias cacheSave;
+    fn CollectionManager::cache_save_with_content(&self, collection: &Collection) -> Result<Vec<u8>>; alias cacheSaveWithContent;
 
     fn CollectionManager::member_manager(&self, col: &Collection) -> Result<CollectionMemberManager>; alias getMemberManager;
 });
@@ -276,6 +284,10 @@ foreign_class!(class ItemManager {
     fn item_fetch_updates(&self, items: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse>; alias fetchUpdates;
     fn item_batch(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<()>; alias batch;
     fn item_transaction(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<()>; alias transaction;
+
+    fn ItemManager::cache_load(&self, cached: &[u8]) -> Result<Item>; alias cacheLoad;
+    fn ItemManager::cache_save(&self, item: &Item) -> Result<Vec<u8>>; alias cacheSave;
+    fn ItemManager::cache_save_with_content(&self, item: &Item) -> Result<Vec<u8>>; alias cacheSaveWithContent;
 });
 
 pub fn col_verify(col: &Collection) -> bool {

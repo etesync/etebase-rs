@@ -61,6 +61,20 @@ foreign_typemap!(
     ($p:f_type) <= "jbyteArray";
 );
 
+foreign_typemap!(
+    ($p:r_type) Option<&'a [u8]> <= jbyteArray {
+        $out = if !$p.is_null() {
+            let arr = JavaByteArray::new(env, $p);
+            let slice = arr.to_slice();
+            let slice = unsafe { std::mem::transmute::<&[i8], &[u8]>(slice) };
+            Some(slice)
+        } else {
+            None
+        };
+    };
+    ($p:f_type) <= "jbyteArray";
+);
+
 #[allow(dead_code)]
 fn jobject_array_to_vec_of_refs<T: SwigForeignClass>(
     env: *mut JNIEnv,
