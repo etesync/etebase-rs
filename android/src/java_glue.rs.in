@@ -325,9 +325,8 @@ foreign_class!(class Collection {
 
     fn Collection::set_meta(&mut self, meta: &CollectionMetadata) -> Result<()>; alias setMeta;
     fn Collection::decrypt_meta(&self) -> Result<CollectionMetadata>; alias getMeta;
-    // FIXME Figure out how to support generic:
-    // fn Collection::set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()>;
-    // fn Collection::decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output>;
+    fn Collection::set_meta_raw(&mut self, meta: &[u8]) -> Result<()>; alias setMetaRaw;
+    fn Collection::decrypt_meta_raw(&self) -> Result<Vec<u8>>; alias getMetaRaw;
     fn Collection::set_content(&mut self, content: &[u8]) -> Result<()>; alias setContent;
     fn Collection::decrypt_content(&self) -> Result<Vec<u8>>; alias getContent;
     fn Collection::delete(&mut self) -> Result<()>; alias markDeleted;
@@ -349,9 +348,8 @@ foreign_class!(class Item {
 
     fn Item::set_meta(&mut self, meta: &ItemMetadata) -> Result<()>; alias setMeta;
     fn Item::decrypt_meta(&self) -> Result<ItemMetadata>; alias getMeta;
-    // FIXME Figure out how to support generic:
-    // FIXME fn Item::set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()>;
-    // fn Item::decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output>;
+    fn Item::set_meta_raw(&mut self, meta: &[u8]) -> Result<()>; alias setMetaRaw;
+    fn Item::decrypt_meta_raw(&self) -> Result<Vec<u8>>; alias getMetaRaw;
     fn Item::set_content(&mut self, content: &[u8]) -> Result<()>; alias setContent;
     fn Item::decrypt_content(&self) -> Result<Vec<u8>>; alias getContent;
     fn Item::delete(&mut self) -> Result<()>; alias markDeleted;
