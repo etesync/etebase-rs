@@ -18,11 +18,9 @@ pub enum Error {
     TryInto(&'static str),
     Integrity(String),
     Encryption(&'static str),
-    EncryptionMac(&'static str),
-    PermissionDenied(&'static str),
-    InvalidData(&'static str),
     Unauthorized(String),
     Conflict(String),
+    PermissionDenied(String),
 
     Connection(String),
     Http(String),
@@ -41,9 +39,7 @@ impl fmt::Display for Error {
             Error::TryInto(s) => s.fmt(f),
             Error::Integrity(s) => s.fmt(f),
             Error::Encryption(s) => s.fmt(f),
-            Error::EncryptionMac(s) => s.fmt(f),
             Error::PermissionDenied(s) => s.fmt(f),
-            Error::InvalidData(s) => s.fmt(f),
             Error::Unauthorized(s) => s.fmt(f),
             Error::Conflict(s) => s.fmt(f),
 

@@ -1089,7 +1089,7 @@ fn collection_access_level() -> Result<()> {
         let meta = ItemMetadata::new().set_name(Some("Some item")).clone();
         let content = b"";
         let item = it_mgr2.create(&meta, content)?;
-        assert_err!(it_mgr2.batch(iter::once(&item), None), Error::Http(_));
+        assert_err!(it_mgr2.batch(iter::once(&item), None), Error::PermissionDenied(_));
     }
 
     member_mgr.modify_access_level(USER2.username, &CollectionAccessLevel::Admin)?;

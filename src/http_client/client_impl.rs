@@ -47,7 +47,9 @@ impl Response {
             return Ok(())
         }
         Err(match self.status {
+            // FIXME: Use the actual content for the message
             401 => Error::Unauthorized("Unauthorized".to_string()),
+            403 => Error::PermissionDenied("PermissionDenied".to_string()),
             409 => Error::Conflict("Conflict".to_string()),
             status => Error::Http(format!("HTTP error. Status: {}", status)),
         })
