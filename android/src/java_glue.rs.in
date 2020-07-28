@@ -1,10 +1,14 @@
+#![allow(non_snake_case)]
+
 use etebase::{
     User,
     Client,
     Account,
 
     Collection,
+    CollectionMetadata,
     Item,
+    ItemMetadata,
 
     error::Result,
     managers::{
@@ -110,14 +114,77 @@ foreign_class!(class FetchOptions {
     fn FetchOptions::stoken(&mut self, stoken: Option<&str>);
 });
 
+mod CollectionMetadataFixes {
+    #![allow(non_snake_case)]
+    use super::*;
+
+    pub fn setCollectionType(md: &mut CollectionMetadata, type_: &str) {
+        md.set_collection_type(type_);
+    }
+
+    pub fn setName(md: &mut CollectionMetadata, name: &str) {
+        md.set_name(name);
+    }
+
+    pub fn setDescription(md: &mut CollectionMetadata, description: Option<&str>) {
+        md.set_description(description);
+    }
+
+    pub fn setColor(md: &mut CollectionMetadata, color: Option<&str>) {
+        md.set_color(color);
+    }
+
+    pub fn setMtime(md: &mut CollectionMetadata, mtime: Option<i64>) {
+        md.set_mtime(mtime);
+    }
+}
+
+foreign_class!(class CollectionMetadata {
+    self_type CollectionMetadata;
+    constructor CollectionMetadata::new(type_: &str, name: &str) -> CollectionMetadata;
+    fn CollectionMetadataFixes::setCollectionType(&mut self, type_: &str);
+    fn CollectionMetadataFixes::setName(&mut self, name: &str);
+    fn CollectionMetadataFixes::setDescription(&mut self, description: Option<&str>);
+    fn CollectionMetadataFixes::setColor(&mut self, color: Option<&str>);
+    fn CollectionMetadataFixes::setMtime(&mut self, mtime: Option<i64>);
+    fn CollectionMetadata::collection_type(&self) -> &str; alias getCollectionType;
+    fn CollectionMetadata::name(&self) -> &str; alias getName;
+    fn CollectionMetadata::description(&self) -> Option<&str>; alias getDescription;
+    fn CollectionMetadata::color(&self) -> Option<&str>; alias getColor;
+    fn CollectionMetadata::mtime(&self) -> Option<i64>; alias getMtime;
+});
+
+mod ItemMetadataFixes {
+    #![allow(non_snake_case)]
+    use super::*;
+
+    pub fn setItemType(md: &mut ItemMetadata, type_: Option<&str>) {
+        md.set_item_type(type_);
+    }
+
+    pub fn setName(md: &mut ItemMetadata, name: Option<&str>) {
+        md.set_name(name);
+    }
+
+    pub fn setMtime(md: &mut ItemMetadata, mtime: Option<i64>) {
+        md.set_mtime(mtime);
+    }
+}
+
+foreign_class!(class ItemMetadata {
+    self_type ItemMetadata;
+    constructor ItemMetadata::new() -> ItemMetadata;
+    fn ItemMetadataFixes::setItemType(&mut self, type_: Option<&str>);
+    fn ItemMetadataFixes::setName(&mut self, name: Option<&str>);
+    fn ItemMetadataFixes::setMtime(&mut self, mtime: Option<i64>);
+    fn ItemMetadata::item_type(&self) -> Option<&str>; alias getItemType;
+    fn ItemMetadata::name(&self) -> Option<&str>; alias getName;
+    fn ItemMetadata::mtime(&self) -> Option<i64>; alias getMtime;
+});
+
 pub fn col_fetch(mgr: &CollectionManager, col_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Collection> {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
     mgr.fetch(col_uid, fetch_options.as_ref())
-}
-
-// FIXME: support metadata!
-pub fn col_create(mgr: &CollectionManager, content: &[u8]) -> Result<Collection> {
-    mgr.create(&etebase::CollectionMetadata::new("type", "name"), content)
 }
 
 pub fn col_list(mgr: &CollectionManager, fetch_options: Option<&FetchOptions>) -> Result<CollectionListResponse> {
@@ -139,7 +206,7 @@ foreign_class!(class CollectionManager {
     self_type CollectionManager;
     private constructor = empty;
     fn col_fetch(&self, col_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Collection>; alias fetch;
-    fn col_create(&self, content: &[u8]) -> Result<Collection>; alias create;
+    fn CollectionManager::create(&self, meta: &CollectionMetadata, content: &[u8]) -> Result<Collection>; alias create;
     fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager>; alias getItemManager;
     fn col_list(&self, fetch_options: Option<&FetchOptions>) -> Result<CollectionListResponse>; alias list;
     fn col_upload(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<()>; alias upload;
@@ -149,11 +216,6 @@ foreign_class!(class CollectionManager {
 pub fn item_fetch(mgr: &ItemManager, item_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Item> {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
     mgr.fetch(item_uid, fetch_options.as_ref())
-}
-
-// FIXME: support metadata!
-pub fn item_create(mgr: &ItemManager, content: &[u8]) -> Result<Item> {
-    mgr.create(&etebase::ItemMetadata::new(), content)
 }
 
 pub fn item_list(mgr: &ItemManager, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse> {
@@ -181,7 +243,7 @@ foreign_class!(class ItemManager {
     self_type ItemManager;
     private constructor = empty;
     fn item_fetch(&self, item_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Item>; alias fetch;
-    fn item_create(&self, content: &[u8]) -> Result<Item>; alias create;
+    fn ItemManager::create(&self, meta: &ItemMetadata, content: &[u8]) -> Result<Item>; alias create;
     fn item_list(&self, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse>; alias list;
     fn item_fetch_updates(&self, items: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse>; alias fetchUpdates;
     fn item_batch(&self, items: Vec<&Item>, deps: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<()>; alias batch;
@@ -197,9 +259,10 @@ foreign_class!(class Collection {
     private constructor = empty;
     fn col_verify(&self) -> bool; alias verify;
 
-    // FIXME fn Collection::set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()>;
-    // FIXME fn Collection::decrypt_meta(&self) -> Result<CollectionMetadata>;
+    fn Collection::set_meta(&mut self, meta: &CollectionMetadata) -> Result<()>; alias setMeta;
+    fn Collection::decrypt_meta(&self) -> Result<CollectionMetadata>; alias getMeta;
     // FIXME Figure out how to support generic:
+    // fn Collection::set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()>;
     // fn Collection::decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output>;
     fn Collection::set_content(&mut self, content: &[u8]) -> Result<()>; alias setContent;
     fn Collection::decrypt_content(&self) -> Result<Vec<u8>>; alias getContent;
@@ -220,9 +283,10 @@ foreign_class!(class Item {
     private constructor = empty;
     fn item_verify(&self) -> bool; alias verify;
 
-    // FIXME fn Item::set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()>;
-    // FIXME fn Item::decrypt_meta(&self) -> Result<ItemMetadata>;
+    fn Item::set_meta(&mut self, meta: &ItemMetadata) -> Result<()>; alias setMeta;
+    fn Item::decrypt_meta(&self) -> Result<ItemMetadata>; alias getMeta;
     // FIXME Figure out how to support generic:
+    // FIXME fn Item::set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()>;
     // fn Item::decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output>;
     fn Item::set_content(&mut self, content: &[u8]) -> Result<()>; alias setContent;
     fn Item::decrypt_content(&self) -> Result<Vec<u8>>; alias getContent;

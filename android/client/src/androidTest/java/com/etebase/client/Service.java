@@ -21,7 +21,8 @@ public class Service {
         Client client = Client.create(httpClient, "http://10.100.102.5:12345");
         Account etebase = Account.login(client, "test_user", "SomePassword");
         CollectionManager col_mgr = etebase.getCollectionManager();
-        Collection col = col_mgr.create("Something".getBytes());
+        CollectionMetadata collectionMetadata = new CollectionMetadata("Type", "Name");
+        Collection col = col_mgr.create(collectionMetadata, "Something".getBytes());
         byte[] content = col.getContent();
         String str = new String(content, UTF_8);
         assertEquals(str, "Something");
@@ -43,7 +44,9 @@ public class Service {
         col_mgr.transaction(col2, null);
 
         ItemManager it_mgr = col_mgr.getItemManager(col);
-        Item item = it_mgr.create("Something item".getBytes());
+        ItemMetadata itemMetadata = new ItemMetadata();
+        itemMetadata.setItemType("Bla");
+        Item item = it_mgr.create(itemMetadata, "Something item".getBytes());
         assertNotEquals(item.getUid(), "");
         assertNull(item.getEtag());
         byte[] it_content = item.getContent();
