@@ -3,7 +3,7 @@
 
 extern crate rmp_serde;
 
-use std::rc::Rc;
+use std::sync::Arc;
 use std::convert::TryInto;
 
 use serde::{Serialize, Deserialize};
@@ -117,8 +117,8 @@ pub struct Account {
     main_key: Vec<u8>,
     version: u8,
     pub user: LoginResponseUser,
-    client: Rc<Client>,
-    account_crypto_manager: Rc<AccountCryptoManager>,
+    client: Arc<Client>,
+    account_crypto_manager: Arc<AccountCryptoManager>,
 }
 
 impl Account {
@@ -150,8 +150,8 @@ impl Account {
             main_key,
             version,
             user: login_response.user,
-            client: Rc::new(client),
-            account_crypto_manager: Rc::new(account_crypto_manager),
+            client: Arc::new(client),
+            account_crypto_manager: Arc::new(account_crypto_manager),
         };
 
         Ok(ret)
@@ -191,8 +191,8 @@ impl Account {
             main_key,
             version,
             user: login_response.user,
-            client: Rc::new(client),
-            account_crypto_manager: Rc::new(account_crypto_manager),
+            client: Arc::new(client),
+            account_crypto_manager: Arc::new(account_crypto_manager),
         };
 
         Ok(ret)
@@ -224,7 +224,7 @@ impl Account {
         let login_response = authenticator.login(&response, &signature)?;
 
         client.set_token(Some(&login_response.token));
-        self.client = Rc::new(client);
+        self.client = Arc::new(client);
 
         Ok(())
     }
@@ -232,7 +232,7 @@ impl Account {
     pub fn force_api_base(&mut self, api_base: &str) -> Result<()> {
         let mut client = (*self.client).clone();
         client.set_api_base(api_base)?;
-        self.client = Rc::new(client);
+        self.client = Arc::new(client);
 
         Ok(())
     }
@@ -342,17 +342,17 @@ impl Account {
             user: account_data.user,
             version: account_data.version,
             main_key,
-            client: Rc::new(client),
-            account_crypto_manager: Rc::new(account_crypto_manager),
+            client: Arc::new(client),
+            account_crypto_manager: Arc::new(account_crypto_manager),
         })
     }
 
     pub fn collection_manager(&self) -> Result<CollectionManager> {
-        CollectionManager::new(Rc::clone(&self.client), Rc::clone(&self.account_crypto_manager))
+        CollectionManager::new(Arc::clone(&self.client), Arc::clone(&self.account_crypto_manager))
     }
 
     pub fn invitation_manager(&self) -> Result<CollectionInvitationManager> {
-        CollectionInvitationManager::new(Rc::clone(&self.client), Rc::clone(&self.account_crypto_manager), self.identity_crypto_manager()?)
+        CollectionInvitationManager::new(Arc::clone(&self.client), Arc::clone(&self.account_crypto_manager), self.identity_crypto_manager()?)
     }
 
     fn main_crypto_manager(&self) -> Result<MainCryptoManager> {
@@ -370,14 +370,14 @@ impl Account {
 }
 
 pub struct CollectionManager {
-    account_crypto_manager: Rc<AccountCryptoManager>,
-    client: Rc<Client>,
+    account_crypto_manager: Arc<AccountCryptoManager>,
+    client: Arc<Client>,
     collection_manager_online: CollectionManagerOnline,
 }
 
 impl CollectionManager {
-    fn new(client: Rc<Client>, account_crypto_manager: Rc<AccountCryptoManager>) -> Result<Self> {
-        let collection_manager_online = CollectionManagerOnline::new(Rc::clone(&client));
+    fn new(client: Arc<Client>, account_crypto_manager: Arc<AccountCryptoManager>) -> Result<Self> {
+        let collection_manager_online = CollectionManagerOnline::new(Arc::clone(&client));
         Ok(Self {
             account_crypto_manager,
             client,
@@ -413,7 +413,7 @@ impl CollectionManager {
         let col = &collection.col;
         match col.etag_owned() {
             Some(_) => {
-                let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
+                let item_manager_online = ItemManagerOnline::new(Arc::clone(&self.client), &col);
                 item_manager_online.batch(vec![col.item()].into_iter(), std::iter::empty(), options)?;
             },
             None => {
@@ -428,7 +428,7 @@ impl CollectionManager {
         let col = &collection.col;
         match col.etag_owned() {
             Some(_) => {
-                let item_manager_online = ItemManagerOnline::new(Rc::clone(&self.client), &col);
+                let item_manager_online = ItemManagerOnline::new(Arc::clone(&self.client), &col);
                 item_manager_online.transaction(vec![col.item()].into_iter(), std::iter::empty(), options)?;
             },
             None => {
@@ -453,22 +453,22 @@ impl CollectionManager {
     }
 
     pub fn item_manager(&self, collection: &Collection) -> Result<ItemManager> {
-        ItemManager::new(Rc::clone(&self.client), Rc::clone(&collection.cm), collection)
+        ItemManager::new(Arc::clone(&self.client), Arc::clone(&collection.cm), collection)
     }
 
     pub fn member_manager(&self, collection: &Collection) -> Result<CollectionMemberManager> {
-        CollectionMemberManager::new(Rc::clone(&self.client), collection)
+        CollectionMemberManager::new(Arc::clone(&self.client), collection)
     }
 }
 
 pub struct ItemManager {
-    collection_crypto_manager: Rc<CollectionCryptoManager>,
+    collection_crypto_manager: Arc<CollectionCryptoManager>,
     item_manager_online: ItemManagerOnline,
 }
 
 impl ItemManager {
-    fn new(client: Rc<Client>, collection_crypto_manager: Rc<CollectionCryptoManager>, collection: &Collection) -> Result<Self> {
-        let item_manager_online = ItemManagerOnline::new(Rc::clone(&client), &collection.col);
+    fn new(client: Arc<Client>, collection_crypto_manager: Arc<CollectionCryptoManager>, collection: &Collection) -> Result<Self> {
+        let item_manager_online = ItemManagerOnline::new(Arc::clone(&client), &collection.col);
         Ok(Self {
             collection_crypto_manager,
             item_manager_online,
@@ -575,14 +575,14 @@ impl ItemManager {
 }
 
 pub struct CollectionInvitationManager {
-    account_crypto_manager: Rc<AccountCryptoManager>,
+    account_crypto_manager: Arc<AccountCryptoManager>,
     identity_crypto_manager: BoxCryptoManager,
     invitation_manager_online: CollectionInvitationManagerOnline,
 }
 
 impl CollectionInvitationManager {
-    fn new(client: Rc<Client>, account_crypto_manager: Rc<AccountCryptoManager>, identity_crypto_manager: BoxCryptoManager) -> Result<Self> {
-        let invitation_manager_online = CollectionInvitationManagerOnline::new(Rc::clone(&client));
+    fn new(client: Arc<Client>, account_crypto_manager: Arc<AccountCryptoManager>, identity_crypto_manager: BoxCryptoManager) -> Result<Self> {
+        let invitation_manager_online = CollectionInvitationManagerOnline::new(Arc::clone(&client));
         Ok(Self {
             account_crypto_manager,
             identity_crypto_manager,
@@ -631,8 +631,8 @@ pub struct CollectionMemberManager {
 }
 
 impl CollectionMemberManager {
-    fn new(client: Rc<Client>, collection: &Collection) -> Result<Self> {
-        let member_manager_online = CollectionMemberManagerOnline::new(Rc::clone(&client), &collection.col);
+    fn new(client: Arc<Client>, collection: &Collection) -> Result<Self> {
+        let member_manager_online = CollectionMemberManagerOnline::new(Arc::clone(&client), &collection.col);
         Ok(Self {
             member_manager_online,
         })
@@ -659,14 +659,14 @@ impl CollectionMemberManager {
 #[derive(Clone)]
 pub struct Collection {
     col: EncryptedCollection,
-    cm: Rc<CollectionCryptoManager>,
+    cm: Arc<CollectionCryptoManager>,
 }
 
 impl Collection {
     fn new(crypto_manager: CollectionCryptoManager, encrypted_collection: EncryptedCollection) -> Result<Self> {
         Ok(Self {
             col: encrypted_collection,
-            cm: Rc::new(crypto_manager),
+            cm: Arc::new(crypto_manager),
         })
     }
 
@@ -734,14 +734,14 @@ impl Collection {
 #[derive(Clone)]
 pub struct Item {
     item: EncryptedItem,
-    cm: Rc<ItemCryptoManager>,
+    cm: Arc<ItemCryptoManager>,
 }
 
 impl Item {
     fn new(crypto_manager: ItemCryptoManager, encrypted_item: EncryptedItem) -> Result<Self> {
         Ok(Self {
             item: encrypted_item,
-            cm: Rc::new(crypto_manager),
+            cm: Arc::new(crypto_manager),
         })
     }
 

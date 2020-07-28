@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use url::Url;
 
@@ -24,7 +24,7 @@ use noop_client::Client as NoopImpl;
 pub struct Client {
     auth_token: Option<String>,
     pub(crate) api_base: Url,
-    imp: Rc<Box<dyn ClientImplementation>>,
+    imp: Arc<Box<dyn ClientImplementation>>,
 }
 
 impl Client {
@@ -44,7 +44,7 @@ impl Client {
         Ok(Self {
             api_base: Url::parse(server_url)?,
             auth_token: None,
-            imp: Rc::new(imp),
+            imp: Arc::new(imp),
         })
     }
 

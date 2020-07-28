@@ -3,7 +3,7 @@
 
 extern crate rmp_serde;
 
-use std::rc::Rc;
+use std::sync::Arc;
 use url::Url;
 
 use serde::{Serialize, Deserialize};
@@ -386,11 +386,11 @@ pub fn apply_fetch_options(url: Url, options: Option<&FetchOptions>) -> Url {
 
 pub struct CollectionManagerOnline {
     api_base: Url,
-    client: Rc<Client>,
+    client: Arc<Client>,
 }
 
 impl CollectionManagerOnline {
-    pub fn new(client: Rc<Client>) -> Self {
+    pub fn new(client: Arc<Client>) -> Self {
         Self {
             api_base: client.api_base.join("api/v1/collection/").unwrap(),
             client,
@@ -449,11 +449,11 @@ struct ItemBatchBody<'a> {
 
 pub struct ItemManagerOnline {
     api_base: Url,
-    client: Rc<Client>,
+    client: Arc<Client>,
 }
 
 impl ItemManagerOnline {
-    pub fn new(client: Rc<Client>, col: &EncryptedCollection) -> Self {
+    pub fn new(client: Arc<Client>, col: &EncryptedCollection) -> Self {
         Self {
             api_base: client.api_base.join(&format!("api/v1/collection/{}/item/", col.uid())).unwrap(),
             client,
@@ -621,11 +621,11 @@ impl CollectionMember {
 
 pub struct CollectionInvitationManagerOnline {
     api_base: Url,
-    client: Rc<Client>,
+    client: Arc<Client>,
 }
 
 impl CollectionInvitationManagerOnline {
-    pub fn new(client: Rc<Client>) -> Self {
+    pub fn new(client: Arc<Client>) -> Self {
         Self {
             api_base: client.api_base.join("api/v1/invitation/").unwrap(),
             client,
@@ -723,11 +723,11 @@ impl CollectionInvitationManagerOnline {
 
 pub struct CollectionMemberManagerOnline {
     api_base: Url,
-    client: Rc<Client>,
+    client: Arc<Client>,
 }
 
 impl CollectionMemberManagerOnline {
-    pub fn new(client: Rc<Client>, collection: &EncryptedCollection) -> Self {
+    pub fn new(client: Arc<Client>, collection: &EncryptedCollection) -> Self {
         Self {
             api_base: client.api_base.join(&format!("api/v1/collection/{}/member/", collection.uid())).unwrap(),
             client,
