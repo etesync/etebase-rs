@@ -102,4 +102,11 @@ public class Service {
 
         etebase.logout();
     }
+
+    @Test
+    public void testBase64() {
+        String encoded = Base64Url.toBase64("Test".getBytes());
+        byte[] decoded = Base64Url.fromBase64(encoded);
+        assertArrayEquals(decoded, "Test".getBytes());
+    }
 }
