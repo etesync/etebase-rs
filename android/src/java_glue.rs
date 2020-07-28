@@ -8,7 +8,8 @@
     clippy::too_many_arguments,
     clippy::trivially_copy_pass_by_ref,
     clippy::let_unit_value,
-    clippy::clone_on_copy
+    clippy::clone_on_copy,
+    non_upper_case_globals,
 )]
 
 include!(concat!(env!("OUT_DIR"), "/java_glue.rs"));

@@ -1,6 +1,9 @@
 package com.etebase.client;
 
 import androidx.test.runner.AndroidJUnit4;
+
+import com.etebase.client.exceptions.Base64Exception;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -108,5 +111,10 @@ public class Service {
         String encoded = Base64Url.toBase64("Test".getBytes());
         byte[] decoded = Base64Url.fromBase64(encoded);
         assertArrayEquals(decoded, "Test".getBytes());
+    }
+
+    @Test(expected=Base64Exception.class)
+    public void base64Exception() {
+        Base64Url.fromBase64("#@$@#$*@#$");
     }
 }

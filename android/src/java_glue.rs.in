@@ -1,5 +1,3 @@
-#![allow(non_snake_case)]
-
 use etebase::{
     User,
     Client,
@@ -21,7 +19,10 @@ use etebase::{
         to_base64,
     },
 
-    error::Result,
+    error::{
+        Error,
+        Result,
+    },
     managers::{
         CollectionManager,
         ItemManager,

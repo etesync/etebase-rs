@@ -33,7 +33,7 @@ impl Response {
     }
 
     pub fn reset_err(&mut self, err: String) {
-        self.inner.borrow_mut().reset_err(Error::from(err))
+        self.inner.borrow_mut().reset_err(Error::Connection(err))
     }
 
     pub fn inner_copy(&self) -> Rc<RefCell<EtebaseResponse>> {
