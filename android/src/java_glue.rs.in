@@ -91,8 +91,12 @@ foreign_class!(class User {
 foreign_class!(class Account {
     self_type Account;
     private constructor = empty;
-    fn Account::login(client: Client, username: &str, password: &str) -> Result<Account>;
-    fn Account::signup(client: Client, user: &User, password: &str) -> Result<Account>;
+    fn login(client: &Client, username: &str, password: &str) -> Result<Account> {
+        Account::login(client.clone(), username, password)
+    }
+    fn signup(client: &Client, user: &User, password: &str) -> Result<Account> {
+        Account::signup(client.clone(), user, password)
+    }
     fn Account::fetch_token(&mut self) -> Result<()>; alias fetchToken;
     fn Account::force_api_base(&mut self, api_base: &str) -> Result<()>; alias forceApiBase;
     fn Account::change_password(&mut self, password: &str) -> Result<()>; alias changePassword;
