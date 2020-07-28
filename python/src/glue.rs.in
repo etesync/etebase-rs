@@ -1,0 +1,583 @@
+use etebase::{
+    User,
+    Client,
+    Account,
+
+    Collection,
+    CollectionMetadata,
+    Item,
+    ItemMetadata,
+
+    CollectionAccessLevel,
+    SignedInvitation,
+    CollectionMember,
+    RemovedCollection,
+
+    UserProfile,
+
+    utils::{
+        from_base64,
+        to_base64,
+    },
+
+    error::Error,
+    managers::{
+        CollectionManager,
+        ItemManager,
+        CollectionInvitationManager,
+        CollectionMemberManager,
+    },
+};
+
+use crate::fixes::{
+    FetchOptions,
+};
+
+foreign_class!(class Base64Url {
+    fn from_base64(string: &str) -> Result<Vec<u8>, Error>;
+    fn to_base64(bytes: &[u8]) -> Result<String, Error>;
+});
+
+foreign_class!(class Client {
+    self_type Client;
+    private constructor = empty;
+    fn Client::new(client_name: &str, server_url: &str) -> Result<Client, Error>;
+    fn Client::set_api_base(&mut self, server_url: &str) -> Result<(), Error>;
+});
+
+mod User_ {
+    use super::*;
+
+    pub fn set_username(this: &mut User, username: &str) {
+        this.set_username(username);
+    }
+
+    pub fn get_username(this: &User) -> String {
+        this.username().to_owned()
+    }
+
+    pub fn set_email(this: &mut User, email: &str) {
+        this.set_email(email);
+    }
+
+    pub fn get_email(this: &User) -> String {
+        this.email().to_owned()
+    }
+}
+
+foreign_class!(class User {
+    self_type User;
+    constructor User::new(username: &str, email: &str) -> User;
+    fn User_::set_username(&mut self, username: &str);
+    fn User_::get_username(&self) -> String;
+    fn User_::set_email(&mut self, email: &str);
+    fn User_::get_email(&self) -> String;
+});
+
+mod Account_ {
+    use super::*;
+
+    pub fn login(client: &Client, username: &str, password: &str) -> Result<Account, Error> {
+        Account::login(client.clone(), username, password)
+    }
+
+    pub fn signup(client: &Client, user: &User, password: &str) -> Result<Account, Error> {
+        Account::signup(client.clone(), user, password)
+    }
+
+    pub fn restore(client: &Client, account_data_stored: &str, encryption_key: Option<Vec<u8>>) -> Result<Account, Error> {
+        Account::restore(client.clone(), account_data_stored, encryption_key.as_deref())
+    }
+
+    pub fn save(this: &Account, encryption_key: Option<Vec<u8>>) -> Result<String, Error> {
+        this.save(encryption_key.as_deref())
+    }
+}
+
+foreign_class!(class Account {
+    self_type Account;
+    private constructor = empty;
+    fn Account_::login(client: &Client, username: &str, password: &str) -> Result<Account, Error>;
+    fn Account_::signup(client: &Client, user: &User, password: &str) -> Result<Account, Error>;
+    fn Account::fetch_token(&mut self) -> Result<(), Error>;
+    fn Account::force_api_base(&mut self, api_base: &str) -> Result<(), Error>;
+    fn Account::change_password(&mut self, password: &str) -> Result<(), Error>;
+    fn Account::logout(&mut self) -> Result<(), Error>;
+    fn Account::collection_manager(&self) -> Result<CollectionManager, Error>;
+    fn Account::invitation_manager(&self) -> Result<CollectionInvitationManager, Error>;
+
+    fn Account_::save(&self, encryption_key: Option<Vec<u8>>) -> Result<String, Error>;
+    fn Account_::restore(client: &Client, account_data_stored: &str, encryption_key: Option<Vec<u8>>) -> Result<Account, Error>;
+});
+
+mod RemovedCollection_ {
+    use super::*;
+
+    pub fn uid(col: &RemovedCollection) -> String {
+        col.uid().to_owned()
+    }
+}
+
+foreign_class!(class RemovedCollection {
+    self_type RemovedCollection;
+    private constructor = empty;
+    fn RemovedCollection_::uid(&self) -> String {
+    }
+});
+
+type CollectionListResponse = etebase::CollectionListResponse<Collection>;
+
+mod CollectionListResponse_ {
+    use super::*;
+
+    pub fn stoken(this: &CollectionListResponse) -> Option<String> {
+        this.stoken().map(str::to_string)
+    }
+
+    pub fn get_removed_memberships(this: &CollectionListResponse) -> Vec<RemovedCollection> {
+        match this.removed_memberships() {
+            Some(removed) => removed.to_vec(),
+            None => vec![],
+        }
+    }
+}
+
+foreign_class!(class CollectionListResponse {
+    self_type CollectionListResponse;
+    private constructor = empty;
+    fn CollectionListResponse_::stoken(&self) -> Option<String>;
+    fn CollectionListResponse::data(&self) -> &Vec<Collection>;
+    fn CollectionListResponse::done(&self) -> bool;
+    fn CollectionListResponse_::get_removed_memberships(&self) -> Vec<RemovedCollection>;
+});
+
+type ItemListResponse = etebase::ItemListResponse<Item>;
+
+mod ItemListResponse_ {
+    use super::*;
+
+    pub fn stoken(this: &ItemListResponse) -> Option<String> {
+        this.stoken().map(str::to_string)
+    }
+}
+
+foreign_class!(class ItemListResponse {
+    self_type ItemListResponse;
+    private constructor = empty;
+    fn ItemListResponse_::stoken(&self) -> Option<String>;
+    fn ItemListResponse::data(&self) -> &Vec<Item>;
+    fn ItemListResponse::done(&self) -> bool;
+});
+
+mod FetchOptions_ {
+    use super::*;
+
+    pub fn iterator(this: &mut FetchOptions, iterator: Option<String>) {
+        this.iterator(iterator.as_deref())
+    }
+    pub fn stoken(this: &mut FetchOptions, stoken: Option<String>) {
+        this.stoken(stoken.as_deref())
+    }
+}
+
+foreign_class!(class FetchOptions {
+    self_type FetchOptions;
+    constructor FetchOptions::new() -> FetchOptions;
+    fn FetchOptions::limit(&mut self, limit: usize);
+    fn FetchOptions::prefetch(&mut self, prefetch: bool);
+    fn FetchOptions::with_collection(&mut self, with_collection: bool);
+    fn FetchOptions_::iterator(&mut self, iterator: Option<String>);
+    fn FetchOptions_::stoken(&mut self, stoken: Option<String>);
+});
+
+mod CollectionMetadata_ {
+    use super::*;
+
+    pub fn set_collection_type(this: &mut CollectionMetadata, type_: &str) {
+        this.set_collection_type(type_);
+    }
+
+    pub fn set_name(this: &mut CollectionMetadata, name: &str) {
+        this.set_name(name);
+    }
+
+    pub fn set_description(this: &mut CollectionMetadata, description: Option<String>) {
+        this.set_description(description.as_deref());
+    }
+
+    pub fn set_color(this: &mut CollectionMetadata, color: Option<String>) {
+        this.set_color(color.as_deref());
+    }
+
+    pub fn set_mtime(this: &mut CollectionMetadata, mtime: Option<i64>) {
+        this.set_mtime(mtime);
+    }
+
+    pub fn get_collection_type(this: &CollectionMetadata) -> String {
+        this.collection_type().to_owned()
+    }
+
+    pub fn get_name(this: &CollectionMetadata) -> String {
+        this.collection_type().to_owned()
+    }
+
+    pub fn get_description(this: &CollectionMetadata) -> Option<String> {
+        this.description().map(str::to_string)
+    }
+
+    pub fn get_color(this: &CollectionMetadata) -> Option<String> {
+        this.color().map(str::to_string)
+    }
+}
+
+foreign_class!(class CollectionMetadata {
+    self_type CollectionMetadata;
+    constructor CollectionMetadata::new(type_: &str, name: &str) -> CollectionMetadata;
+    fn CollectionMetadata_::set_collection_type(&mut self, type_: &str);
+    fn CollectionMetadata_::set_name(&mut self, name: &str);
+    fn CollectionMetadata_::set_description(&mut self, description: Option<String>);
+    fn CollectionMetadata_::set_color(&mut self, color: Option<String>);
+    fn CollectionMetadata_::set_mtime(&mut self, mtime: Option<i64>);
+    fn CollectionMetadata_::get_collection_type(&self) -> String;
+    fn CollectionMetadata_::get_name(&self) -> String;
+    fn CollectionMetadata_::get_description(&self) -> Option<String>;
+    fn CollectionMetadata_::get_color(&self) -> Option<String>; alias get_color;
+    fn CollectionMetadata::mtime(&self) -> Option<i64>; alias get_mtime;
+});
+
+mod ItemMetadata_ {
+    use super::*;
+
+    pub fn set_item_type(this: &mut ItemMetadata, type_: Option<String>) {
+        this.set_item_type(type_.as_deref());
+    }
+
+    pub fn set_name(this: &mut ItemMetadata, name: Option<String>) {
+        this.set_name(name.as_deref());
+    }
+
+    pub fn set_mtime(this: &mut ItemMetadata, mtime: Option<i64>) {
+        this.set_mtime(mtime);
+    }
+
+    pub fn get_item_type(this: &ItemMetadata) -> Option<String> {
+        this.item_type().map(str::to_string)
+    }
+
+    pub fn get_name(this: &ItemMetadata) -> Option<String> {
+        this.name().map(str::to_string)
+    }
+}
+
+foreign_class!(class ItemMetadata {
+    self_type ItemMetadata;
+    constructor ItemMetadata::new() -> ItemMetadata;
+    fn ItemMetadata_::set_item_type(&mut self, type_: Option<String>);
+    fn ItemMetadata_::set_name(&mut self, name: Option<String>);
+    fn ItemMetadata_::set_mtime(&mut self, mtime: Option<i64>);
+    fn ItemMetadata_::get_item_type(&self) -> Option<String>;
+    fn ItemMetadata_::get_name(&self) -> Option<String>;
+    fn ItemMetadata::mtime(&self) -> Option<i64>; alias get_mtime;
+});
+
+mod CollectionManager_ {
+    use super::*;
+
+    pub fn fetch(this: &CollectionManager, col_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Collection, Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        this.fetch(col_uid, fetch_options.as_ref())
+    }
+
+    pub fn list(this: &CollectionManager, fetch_options: Option<&FetchOptions>) -> Result<CollectionListResponse, Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        this.list(fetch_options.as_ref())
+    }
+
+    pub fn upload(this: &CollectionManager, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<(), Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        this.upload(collection, fetch_options.as_ref())
+    }
+
+    pub fn transaction(this: &CollectionManager, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<(), Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        this.transaction(collection, fetch_options.as_ref())
+    }
+}
+
+foreign_class!(class CollectionManager {
+    self_type CollectionManager;
+    private constructor = empty;
+    // FIXME: fn CollectionManager_::fetch(&self, col_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Collection, Error>;
+    fn CollectionManager::create(&self, meta: &CollectionMetadata, content: &[u8]) -> Result<Collection, Error>;
+    // FIXME: fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager, Error>;
+    // FIXME: fn CollectionManager_::list(&self, fetch_options: Option<&FetchOptions>) -> Result<CollectionListResponse, Error>;
+    // FIXME: fn CollectionManager_::upload(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<(), Error>;
+    // FIXME: fn CollectionManager_::transaction(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<(), Error>;
+    fn CollectionManager::cache_load(&self, cached: &[u8]) -> Result<Collection, Error>;
+    fn CollectionManager::cache_save(&self, collection: &Collection) -> Result<Vec<u8>, Error>;
+    fn CollectionManager::cache_save_with_content(&self, collection: &Collection) -> Result<Vec<u8>, Error>;
+
+    fn CollectionManager::member_manager(&self, col: &Collection) -> Result<CollectionMemberManager, Error>;
+});
+
+mod ItemManager_ {
+    use super::*;
+
+    pub fn fetch(mgr: &ItemManager, item_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Item, Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        mgr.fetch(item_uid, fetch_options.as_ref())
+    }
+
+    pub fn list(mgr: &ItemManager, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse, Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        mgr.list(fetch_options.as_ref())
+    }
+
+    pub fn fetch_updates(mgr: &ItemManager, items: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse, Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        mgr.fetch_updates(items.into_iter(), fetch_options.as_ref())
+    }
+
+    pub fn batch(mgr: &ItemManager, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<(), Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        match deps {
+            Some(deps) => mgr.batch_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref()),
+            None => mgr.batch(items.into_iter(), fetch_options.as_ref()),
+        }
+    }
+
+    pub fn transaction(mgr: &ItemManager, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<(), Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        match deps {
+            Some(deps) => mgr.transaction_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref()),
+            None => mgr.transaction(items.into_iter(), fetch_options.as_ref()),
+        }
+    }
+}
+
+foreign_class!(class ItemManager {
+    self_type ItemManager;
+    private constructor = empty;
+    // FIXME: fn ItemManager_::fetch(&self, item_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Item, Error>;
+    fn ItemManager::create(&self, meta: &ItemMetadata, content: &[u8]) -> Result<Item, Error>;
+    // FIXME: fn ItemManager_::list(&self, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse, Error>;
+    // FIXME: fn ItemManager_::fetch_updates(&self, items: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse, Error>;
+    // FIXME: fn ItemManager_::batch(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<(), Error>;
+    // FIXME: fn ItemManager_::transaction(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<(), Error>;
+
+    fn ItemManager::cache_load(&self, cached: &[u8]) -> Result<Item, Error>;
+    fn ItemManager::cache_save(&self, item: &Item) -> Result<Vec<u8>, Error>;
+    fn ItemManager::cache_save_with_content(&self, item: &Item) -> Result<Vec<u8>, Error>;
+});
+
+mod Collection_ {
+    use super::*;
+
+    pub fn verify(this: &Collection) -> bool {
+        this.verify().unwrap_or(false)
+    }
+
+    pub fn uid(this: &Collection) -> String {
+        this.uid().to_owned()
+    }
+
+    pub fn stoken(this: &Collection) -> Option<String> {
+        this.stoken().map(str::to_string)
+    }
+}
+
+foreign_class!(class Collection {
+    self_type Collection;
+    private constructor = empty;
+    fn Collection_::verify(&self) -> bool;
+
+    fn Collection::set_meta(&mut self, meta: &CollectionMetadata) -> Result<(), Error>;
+    fn Collection::decrypt_meta(&self) -> Result<CollectionMetadata, Error>;
+    fn Collection::set_meta_raw(&mut self, meta: &[u8]) -> Result<(), Error>; alias set_meta_raw;
+    fn Collection::decrypt_meta_raw(&self) -> Result<Vec<u8>, Error>; alias get_meta_raw;
+    fn Collection::set_content(&mut self, content: &[u8]) -> Result<(), Error>; alias set_content;
+    fn Collection::decrypt_content(&self) -> Result<Vec<u8>, Error>; alias get_content;
+    fn Collection::delete(&mut self) -> Result<(), Error>;
+    fn Collection::is_deleted(&self) -> bool;
+    fn Collection_::uid(&self) -> String; alias get_uid;
+    fn Collection::etag_owned(&self) -> Option<String>; alias get_etag;
+    fn Collection_::stoken(&self) -> Option<String>; alias get_stoken;
+    fn Collection::item(&self) -> Result<Item, Error>;
+});
+
+mod Item_ {
+    use super::*;
+
+    pub fn verify(this: &Item) -> bool {
+        this.verify().unwrap_or(false)
+    }
+
+    pub fn uid(this: &Item) -> String {
+        this.uid().to_owned()
+    }
+}
+
+foreign_class!(class Item {
+    self_type Item;
+    private constructor = empty;
+    fn Item_::verify(&self) -> bool;
+
+    fn Item::set_meta(&mut self, meta: &ItemMetadata) -> Result<(), Error>;
+    fn Item::decrypt_meta(&self) -> Result<ItemMetadata, Error>;
+    fn Item::set_meta_raw(&mut self, meta: &[u8]) -> Result<(), Error>;
+    fn Item::decrypt_meta_raw(&self) -> Result<Vec<u8>, Error>;
+    fn Item::set_content(&mut self, content: &[u8]) -> Result<(), Error>;
+    fn Item::decrypt_content(&self) -> Result<Vec<u8>, Error>;
+    fn Item::delete(&mut self) -> Result<(), Error>;
+    fn Item::is_deleted(&self) -> bool;
+    fn Item_::uid(&self) -> String;
+    fn Item::etag_owned(&self) -> Option<String>;
+});
+
+foreign_class!(class UserProfile {
+    self_type UserProfile;
+    private constructor = empty;
+    fn UserProfile::pubkey(&self) -> &[u8];
+});
+
+type InvitationListResponse = etebase::IteratorListResponse<SignedInvitation>;
+
+mod InvitationListResponse_ {
+    use super::*;
+
+    pub fn iterator(this: &InvitationListResponse) -> Option<String> {
+        this.iterator().map(str::to_string)
+    }
+}
+
+foreign_class!(class InvitationListResponse {
+    self_type InvitationListResponse;
+    private constructor = empty;
+    fn InvitationListResponse_::iterator(&self) -> Option<String>;
+    fn InvitationListResponse::data(&self) -> &Vec<SignedInvitation>;
+    fn InvitationListResponse::done(&self) -> bool;
+});
+
+mod CollectionInvitationManager_ {
+    use super::*;
+
+    pub fn list_incoming(mgr: &CollectionInvitationManager, fetch_options: Option<&FetchOptions>) -> Result<InvitationListResponse, Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        mgr.list_incoming(fetch_options.as_ref())
+    }
+
+    pub fn list_outgoing(mgr: &CollectionInvitationManager, fetch_options: Option<&FetchOptions>) -> Result<InvitationListResponse, Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        mgr.list_outgoing(fetch_options.as_ref())
+    }
+
+    pub fn invite(this: &CollectionInvitationManager, collection: &Collection, username: &str, pubkey: &[u8], access_level: &str) -> Result<(), Error> {
+        this.invite(collection, username, pubkey, &CollectionAccessLevel::from(access_level))
+    }
+}
+
+foreign_class!(class CollectionInvitationManager {
+    self_type CollectionInvitationManager;
+    private constructor = empty;
+
+    // FIXME: fn CollectionInvitationManager_::list_incoming(&self, options: Option<&FetchOptions>) -> Result<InvitationListResponse, Error>;
+    // FIXME: fn CollectionInvitationManager_::list_outgoing(&self, options: Option<&FetchOptions>) -> Result<InvitationListResponse, Error>;
+    fn CollectionInvitationManager::accept(&self, invitation: &SignedInvitation) -> Result<(), Error>;
+    fn CollectionInvitationManager::reject(&self, invitation: &SignedInvitation) -> Result<(), Error>;
+    fn CollectionInvitationManager::fetch_user_profile(&self, username: &str) -> Result<UserProfile, Error>;
+    fn CollectionInvitationManager_::invite(&self, collection: &Collection, username: &str, pubkey: &[u8], access_level: &str) -> Result<(), Error>;
+    fn CollectionInvitationManager::disinvite(&self, invitation: &SignedInvitation) -> Result<(), Error>;
+    fn CollectionInvitationManager::pubkey(&self) -> &[u8];
+});
+
+mod SignedInvitation_ {
+    use super::*;
+
+    pub fn uid(this: &SignedInvitation) -> String {
+        this.uid().to_owned()
+    }
+
+    pub fn username(this: &SignedInvitation) -> String {
+        this.username().to_owned()
+    }
+
+    pub fn collection(this: &SignedInvitation) -> String {
+        this.collection().to_owned()
+    }
+
+    pub fn get_access_level(this: &SignedInvitation) -> String {
+        String::from(this.access_level())
+    }
+}
+
+foreign_class!(class SignedInvitation {
+    self_type SignedInvitation;
+    private constructor = empty;
+
+    fn SignedInvitation_::uid(&self) -> String; alias get_uid;
+    fn SignedInvitation_::username(&self) -> String; alias get_username;
+    fn SignedInvitation_::collection(&self) -> String; alias get_collection;
+    fn SignedInvitation_::get_access_level(&self) -> String;
+    fn SignedInvitation::from_pubkey(&self) -> &[u8];
+});
+
+mod CollectionMember_ {
+    use super::*;
+
+    pub fn username(this: &CollectionMember) -> String {
+        this.username().to_owned()
+    }
+
+    pub fn get_access_level(this: &CollectionMember) -> String {
+        String::from(this.access_level())
+    }
+}
+
+foreign_class!(class CollectionMember {
+    self_type CollectionMember;
+    private constructor = empty;
+
+    fn CollectionMember_::username(&self) -> String;
+    fn CollectionMember_::get_access_level(&self) -> String;
+});
+
+type MemberListResponse = etebase::IteratorListResponse<CollectionMember>;
+
+mod MemberListResponse_ {
+    use super::*;
+
+    pub fn iterator(this: &MemberListResponse) -> Option<String> {
+        this.iterator().map(str::to_string)
+    }
+}
+
+foreign_class!(class MemberListResponse {
+    self_type MemberListResponse;
+    private constructor = empty;
+    fn MemberListResponse_::iterator(&self) -> Option<String>;
+    fn MemberListResponse::data(&self) -> &Vec<CollectionMember>;
+    fn MemberListResponse::done(&self) -> bool;
+});
+
+mod CollectionMemberManager_ {
+    use super::*;
+
+    pub fn list(this: &CollectionMemberManager, fetch_options: Option<&FetchOptions>) -> Result<MemberListResponse, Error> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        this.list(fetch_options.as_ref())
+    }
+
+    pub fn modify_access_level(this: &CollectionMemberManager, username: &str, access_level: &str) -> Result<(), Error> {
+        this.modify_access_level(username, &CollectionAccessLevel::from(access_level))
+    }
+}
+
+foreign_class!(class CollectionMemberManager {
+    self_type CollectionMemberManager;
+    private constructor = empty;
+
+    // FIXME: fn list(&self, fetch_options: Option<&FetchOptions>) -> Result<MemberListResponse, Error>;
+    fn CollectionMemberManager::remove(&self, username: &str) -> Result<(), Error>;
+    fn CollectionMemberManager::leave(&self) -> Result<(), Error>;
+    fn CollectionMemberManager_::modify_access_level(&self, username: &str, access_level: &str) -> Result<(), Error>;
+});
