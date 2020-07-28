@@ -79,6 +79,27 @@ public class Service {
     }
 
     @Test
+    public void testRemovedCollections() {
+        Client client = Client.create(httpClient, SERVER_URL);
+        Account etebase = Account.restore(client, storedSession, null);
+        etebase.forceApiBase(SERVER_URL);
+        etebase.fetchToken();
+        CollectionManager col_mgr = etebase.getCollectionManager();
+        CollectionMetadata collectionMetadata = new CollectionMetadata("Type", "Name");
+        Collection col = col_mgr.create(collectionMetadata, "Something".getBytes());
+        col_mgr.upload(col, null);
+        CollectionListResponse col_list = col_mgr.list(null);
+        FetchOptions fetchOptions = new FetchOptions();
+        fetchOptions.stoken(col_list.getStoken().get());
+        col_list = col_mgr.list(fetchOptions);
+        assertEquals(0, col_list.getRemovedMemberships().length);
+
+        // FIXME: actually test we get the removed memberships ever.
+
+        etebase.logout();
+    }
+
+    @Test
     public void testCache() {
         Client client = Client.create(httpClient, SERVER_URL);
         Account etebase = Account.restore(client, storedSession, null);

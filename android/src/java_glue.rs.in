@@ -11,6 +11,7 @@ use etebase::{
     CollectionAccessLevel,
     SignedInvitation,
     CollectionMember,
+    RemovedCollection,
 
     UserProfile,
 
@@ -121,6 +122,12 @@ foreign_class!(class Account {
     }
 });
 
+foreign_class!(class RemovedCollection {
+    self_type RemovedCollection;
+    private constructor = empty;
+    fn RemovedCollection::uid(&self) -> &str;
+});
+
 type CollectionListResponse = etebase::CollectionListResponse<Collection>;
 
 foreign_class!(class CollectionListResponse {
@@ -129,6 +136,12 @@ foreign_class!(class CollectionListResponse {
     fn CollectionListResponse::stoken(&self) -> Option<&str>; alias getStoken;
     fn CollectionListResponse::data(&self) -> &Vec<Collection>; alias getData;
     fn CollectionListResponse::done(&self) -> bool; alias getDone;
+    fn getRemovedMemberships(&self) -> Vec<RemovedCollection> {
+        match this.removed_memberships() {
+            Some(removed) => removed.to_vec(),
+            None => vec![],
+        }
+    }
 });
 
 type ItemListResponse = etebase::ItemListResponse<Item>;
