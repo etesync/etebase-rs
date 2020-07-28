@@ -282,6 +282,12 @@ pub enum CollectionAccessLevel {
     Unknown(String),
 }
 
+impl From<&str> for CollectionAccessLevel {
+    fn from(input: &str) -> Self {
+        Self::from(input.to_owned())
+    }
+}
+
 impl From<String> for CollectionAccessLevel {
     fn from(input: String) -> Self {
         match &input[..] {
@@ -295,6 +301,12 @@ impl From<String> for CollectionAccessLevel {
 
 impl From<CollectionAccessLevel> for String {
     fn from(input: CollectionAccessLevel) -> Self {
+        Self::from(&input)
+    }
+}
+
+impl From<&CollectionAccessLevel> for String {
+    fn from(input: &CollectionAccessLevel) -> Self {
         match input {
             CollectionAccessLevel::Admin => "adm".to_owned(),
             CollectionAccessLevel::ReadWrite => "rw".to_owned(),
