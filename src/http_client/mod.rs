@@ -7,8 +7,6 @@ use super::error::Result;
 mod client_impl;
 #[cfg(feature = "networking")]
 mod reqwest_client;
-#[cfg(not(feature = "networking"))]
-mod noop_client;
 
 pub use client_impl::{
     ClientImplementation,
@@ -17,29 +15,29 @@ pub use client_impl::{
 
 #[cfg(feature = "networking")]
 use reqwest_client::Client as ReqwestImpl;
-#[cfg(not(feature = "networking"))]
-use noop_client::Client as NoopImpl;
 
 #[derive(Clone)]
 pub struct Client {
     auth_token: Option<String>,
     pub(crate) api_base: Url,
+    #[cfg(feature = "networking")]
+    imp: Arc<ReqwestImpl>,
+    #[cfg(not(feature = "networking"))]
     imp: Arc<Box<dyn ClientImplementation>>,
 }
 
 impl Client {
     #[cfg(feature = "networking")]
     pub fn new(client_name: &str, server_url: &str) -> Result<Self> {
-        let imp = Box::new(ReqwestImpl::new(client_name)?);
-        Self::new_with_impl(server_url, imp)
+        let imp = ReqwestImpl::new(client_name)?;
+        Ok(Self {
+            api_base: Url::parse(server_url)?,
+            auth_token: None,
+            imp: Arc::new(imp),
+        })
     }
 
     #[cfg(not(feature = "networking"))]
-    pub fn new(client_name: &str, server_url: &str) -> Result<Self> {
-        let imp = Box::new(NoopImpl::new(client_name)?);
-        Self::new_with_impl(server_url, imp)
-    }
-
     pub fn new_with_impl(server_url: &str, imp: Box<dyn ClientImplementation>) -> Result<Self> {
         Ok(Self {
             api_base: Url::parse(server_url)?,
