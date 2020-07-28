@@ -53,7 +53,7 @@ public class Service {
         String it_str = new String(it_content, UTF_8);
         assertEquals(it_str, "Something item");
         Item[] emptyArray = new Item[] {};
-        it_mgr.batch(new Item[] {item}, emptyArray, null);
+        it_mgr.batch(new Item[] {item}, null, null);
         assertNotNull(item.getEtag());
         item.setContent("Something item2".getBytes());
         it_mgr.transaction(new Item[] {item}, emptyArray, null);

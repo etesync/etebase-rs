@@ -247,15 +247,20 @@ pub fn item_fetch_updates(mgr: &ItemManager, items: Vec<&Item>, fetch_options: O
     mgr.fetch_updates(items.into_iter(), fetch_options.as_ref())
 }
 
-// FIXME: make deps an option?
-pub fn item_batch(mgr: &ItemManager, items: Vec<&Item>, deps: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<()> {
+pub fn item_batch(mgr: &ItemManager, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<()> {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    mgr.batch_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref())
+    match deps {
+        Some(deps) => mgr.batch_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref()),
+        None => mgr.batch(items.into_iter(), fetch_options.as_ref()),
+    }
 }
 
-pub fn item_transaction(mgr: &ItemManager, items: Vec<&Item>, deps: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<()> {
+pub fn item_transaction(mgr: &ItemManager, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<()> {
     let fetch_options = fetch_options.map(|x| x.to_fetch_options());
-    mgr.transaction_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref())
+    match deps {
+        Some(deps) => mgr.transaction_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref()),
+        None => mgr.transaction(items.into_iter(), fetch_options.as_ref()),
+    }
 }
 
 foreign_class!(class ItemManager {
@@ -265,8 +270,8 @@ foreign_class!(class ItemManager {
     fn ItemManager::create(&self, meta: &ItemMetadata, content: &[u8]) -> Result<Item>; alias create;
     fn item_list(&self, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse>; alias list;
     fn item_fetch_updates(&self, items: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse>; alias fetchUpdates;
-    fn item_batch(&self, items: Vec<&Item>, deps: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<()>; alias batch;
-    fn item_transaction(&self, items: Vec<&Item>, deps: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<()>; alias transaction;
+    fn item_batch(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<()>; alias batch;
+    fn item_transaction(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<()>; alias transaction;
 });
 
 pub fn col_verify(col: &Collection) -> bool {

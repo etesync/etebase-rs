@@ -104,3 +104,14 @@ foreign_typemap!(
     ($p:f_type, option = "NoNullAnnotations") => "swig_f_type!(T) []";
     ($p:f_type, option = "NullAnnotations") => "@NonNull swig_f_type!(T, NoNullAnnotations) []";
 );
+
+foreign_typemap!(
+    ($p:r_type) <'a, T: SwigForeignClass> Option<Vec<&'a T>> <= internal_aliases::JForeignObjectsArray<T> {
+        $out = if !$p.inner.is_null() {
+            let tmp = jobject_array_to_vec_of_refs(env, $p);
+            Some(tmp)
+        } else {
+            None
+        };
+    };
+);
