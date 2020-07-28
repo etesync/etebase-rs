@@ -10,6 +10,8 @@ use etebase::{
     Item,
     ItemMetadata,
 
+    UserProfile,
+
     error::Result,
     managers::{
         CollectionManager,
@@ -69,7 +71,15 @@ foreign_class!(class Client {
 
 foreign_class!(class User {
     self_type User;
-    private constructor = empty;
+    constructor User::new(username: &str, email: &str) -> User;
+    fn setUsername(&mut self, username: &str) {
+        this.set_username(username);
+    }
+    fn User::username(&self) -> &str; alias getUsername;
+    fn setEmail(&mut self, email: &str) {
+        this.set_email(email);
+    }
+    fn User::email(&self) -> &str; alias getEmail;
 });
 
 foreign_class!(class Account {
@@ -294,4 +304,10 @@ foreign_class!(class Item {
     fn Item::is_deleted(&self) -> bool; alias isDeleted;
     fn Item::uid(&self) -> &str; alias getUid;
     fn Item::etag_owned(&self) -> Option<String>; alias getEtag;
+});
+
+foreign_class!(class UserProfile {
+    self_type UserProfile;
+    private constructor = empty;
+    fn UserProfile::pubkey(&self) -> &[u8]; alias getEmail;
 });
