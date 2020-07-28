@@ -10,6 +10,10 @@ use serde::{Serialize, Deserialize};
 
 use super::error::Result;
 use super::http_client::Client;
+use crate::utils::{
+    StrBase64,
+    StringBase64,
+};
 use super::encrypted_models::{
     CollectionAccessLevel,
     EncryptedCollection,
@@ -29,11 +33,24 @@ pub fn test_reset(client: &Client, body_struct: SignupBody) -> Result<()> {
     Ok(())
 }
 
+#[derive(Deserialize, Clone)]
+pub struct RemovedCollection {
+    uid: StringBase64,
+}
+
+impl RemovedCollection {
+    pub fn uid(&self) -> &StrBase64 {
+        &self.uid
+    }
+}
+
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CollectionListResponse<T> {
     pub(crate) data: Vec<T>,
     pub(crate) done: bool,
     pub(crate) stoken: Option<String>,
+    pub(crate) removed_memberships: Option<Vec<RemovedCollection>>,
 }
 
 impl<T> CollectionListResponse<T> {
@@ -48,6 +65,10 @@ impl<T> CollectionListResponse<T> {
     pub fn done(&self) -> bool {
         self.done
     }
+    pub fn removed_memberships(&self) -> Option<&Vec<RemovedCollection>> {
+        self.removed_memberships.as_ref()
+    }
+
 }
 
 #[derive(Deserialize)]

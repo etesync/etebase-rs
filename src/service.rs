@@ -405,6 +405,7 @@ impl CollectionManager {
             data: data?,
             done: response.done,
             stoken: response.stoken,
+            removed_memberships: response.removed_memberships,
         })
     }
 

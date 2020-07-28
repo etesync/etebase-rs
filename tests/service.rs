@@ -921,7 +921,7 @@ fn collection_invitations() -> Result<()> {
         let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
         let collections = col_mgr2.list(Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 0);
-        // FIXME: verify removed_memberships
+        assert_eq!(collections.removed_memberships().unwrap().len(), 1);
     }
 
     // Add again
@@ -941,7 +941,7 @@ fn collection_invitations() -> Result<()> {
         assert_eq!(collections.data().len(), 1);
         let first_col = collections.data().first().unwrap();
         assert_eq!(first_col.uid(), col.uid());
-        // FIXME: verify removed_memberships is empty
+        assert!(collections.removed_memberships().is_none());
     }
 
     // Remove
@@ -955,14 +955,14 @@ fn collection_invitations() -> Result<()> {
         let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
         let collections = col_mgr2.list(Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 0);
-        // FIXME: verify removed_memberships
+        assert_eq!(collections.removed_memberships().unwrap().len(), 1);
 
         let stoken = new_col.stoken();
 
         let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
         let collections = col_mgr2.list(Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 0);
-        // FIXME: verify removed_memberships
+        assert_eq!(collections.removed_memberships().unwrap().len(), 1);
     }
 
     etebase2.logout()?;

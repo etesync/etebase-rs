@@ -28,6 +28,8 @@ pub use online_managers::{
     CollectionListResponse,
     ItemListResponse,
     IteratorListResponse,
+
+    RemovedCollection,
 };
 
 pub use encrypted_models::{
