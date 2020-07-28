@@ -1,7 +1,7 @@
 mod java_glue;
 pub use crate::java_glue::*;
 
-use std::rc::Rc;
+use std::sync::Arc;
 use std::cell::RefCell;
 
 use etebase::{
@@ -18,13 +18,13 @@ use etebase::{
 };
 
 pub struct Response {
-    inner: Rc<RefCell<EtebaseResponse>>,
+    inner: Arc<RefCell<EtebaseResponse>>,
 }
 
 impl Response {
     pub fn new() -> Self {
         Self {
-            inner: Rc::new(RefCell::new(EtebaseResponse::new_err(Error::ProgrammingError("Got a generic response error")))),
+            inner: Arc::new(RefCell::new(EtebaseResponse::new_err(Error::ProgrammingError("Got a generic response error")))),
         }
     }
 
@@ -36,8 +36,8 @@ impl Response {
         self.inner.borrow_mut().reset_err(Error::Connection(err))
     }
 
-    pub fn inner_copy(&self) -> Rc<RefCell<EtebaseResponse>> {
-        Rc::clone(&self.inner)
+    pub fn inner_copy(&self) -> Arc<RefCell<EtebaseResponse>> {
+        Arc::clone(&self.inner)
     }
 }
 
@@ -50,13 +50,13 @@ pub trait HttpClient {
 }
 
 struct JavaHttpClient {
-    imp: Box<dyn HttpClient>,
+    imp: Arc<Box<dyn HttpClient>>,
 }
 
 impl JavaHttpClient {
     pub fn new(imp: Box<dyn HttpClient>) -> Self {
         Self {
-            imp,
+            imp: Arc::new(imp),
         }
     }
 }
