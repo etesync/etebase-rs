@@ -315,12 +315,11 @@ pub struct EncryptedCollection {
 }
 
 impl EncryptedCollection {
-    pub fn new(parent_crypto_manager: &AccountCryptoManager, meta: &CollectionMetadata, content: &[u8]) -> Result<Self> {
+    pub fn new(parent_crypto_manager: &AccountCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
         let version = CURRENT_VERSION;
         let collection_key = parent_crypto_manager.0.encrypt(&randombytes(SYMMETRIC_KEY_SIZE), None)?;
-        let meta = rmp_serde::to_vec_named(meta)?;
         let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, version, &collection_key)?;
-        let item = EncryptedItem::new_raw(&crypto_manager, &meta, content)?;
+        let item = EncryptedItem::new(&crypto_manager, &meta, content)?;
 
         Ok(Self {
             item,
@@ -682,12 +681,7 @@ pub struct EncryptedItem {
 }
 
 impl EncryptedItem {
-    pub fn new(parent_crypto_manager: &CollectionCryptoManager, meta: &ItemMetadata, content: &[u8]) -> Result<Self> {
-        let meta = rmp_serde::to_vec_named(meta)?;
-        Self::new_raw(parent_crypto_manager, &meta, content)
-    }
-
-    fn new_raw(parent_crypto_manager: &CollectionCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
+    pub fn new(parent_crypto_manager: &CollectionCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
         let uid = gen_uid_base64();
         let version = CURRENT_VERSION;
         let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, &uid, version, None)?;
