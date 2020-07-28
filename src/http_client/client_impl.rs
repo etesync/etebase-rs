@@ -11,6 +11,7 @@ pub trait ClientImplementation {
     fn delete(&self, url: &str, auth_token: Option<&str>) -> Response;
 }
 
+#[derive(Clone)]
 pub struct Response {
     bytes: Vec<u8>,
     status: u16,
@@ -32,6 +33,16 @@ impl Response {
             status: 0,
             err: Some(err),
         }
+    }
+
+    pub fn reset_ok(&mut self, bytes: Vec<u8>, status: u16) {
+        self.bytes = bytes;
+        self.status = status;
+        self.err = None;
+    }
+
+    pub fn reset_err(&mut self, err: Error) {
+        self.err = Some(err);
     }
 
     pub fn bytes(&self) -> &[u8] {
