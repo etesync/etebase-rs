@@ -10,12 +10,18 @@ use etebase::{
     Item,
     ItemMetadata,
 
+    CollectionAccessLevel,
+    SignedInvitation,
+    CollectionMember,
+
     UserProfile,
 
     error::Result,
     managers::{
         CollectionManager,
         ItemManager,
+        CollectionInvitationManager,
+        CollectionMemberManager,
     },
 };
 
@@ -92,6 +98,7 @@ foreign_class!(class Account {
     fn Account::change_password(&mut self, password: &str) -> Result<()>; alias changePassword;
     fn Account::logout(&mut self) -> Result<()>;
     fn Account::collection_manager(&self) -> Result<CollectionManager>; alias getCollectionManager;
+    fn Account::invitation_manager(&self) -> Result<CollectionInvitationManager>; alias getInvitationManager;
 });
 
 type CollectionListResponse = etebase::CollectionListResponse<Collection>;
@@ -221,6 +228,8 @@ foreign_class!(class CollectionManager {
     fn col_list(&self, fetch_options: Option<&FetchOptions>) -> Result<CollectionListResponse>; alias list;
     fn col_upload(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<()>; alias upload;
     fn col_transaction(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<()>; alias transaction;
+
+    fn CollectionManager::member_manager(&self, col: &Collection) -> Result<CollectionMemberManager>; alias getMemberManager;
 });
 
 pub fn item_fetch(mgr: &ItemManager, item_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Item> {
@@ -310,4 +319,93 @@ foreign_class!(class UserProfile {
     self_type UserProfile;
     private constructor = empty;
     fn UserProfile::pubkey(&self) -> &[u8]; alias getEmail;
+});
+
+type InvitationListResponse = etebase::IteratorListResponse<SignedInvitation>;
+
+foreign_class!(class InvitationListResponse {
+    self_type InvitationListResponse;
+    private constructor = empty;
+    fn InvitationListResponse::iterator(&self) -> Option<&str>; alias getStoken;
+    fn InvitationListResponse::data(&self) -> &Vec<SignedInvitation>; alias getData;
+    fn InvitationListResponse::done(&self) -> bool; alias getDone;
+});
+
+mod CollectionInvitationManagerFixes {
+    #![allow(non_snake_case)]
+    use super::*;
+
+    pub fn list_incoming(mgr: &CollectionInvitationManager, fetch_options: Option<&FetchOptions>) -> Result<InvitationListResponse> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        mgr.list_incoming(fetch_options.as_ref())
+    }
+
+    pub fn list_outgoing(mgr: &CollectionInvitationManager, fetch_options: Option<&FetchOptions>) -> Result<InvitationListResponse> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        mgr.list_outgoing(fetch_options.as_ref())
+    }
+}
+
+foreign_class!(class CollectionInvitationManager {
+    self_type CollectionInvitationManager;
+    private constructor = empty;
+
+    fn CollectionInvitationManagerFixes::list_incoming(&self, options: Option<&FetchOptions>) -> Result<InvitationListResponse>; alias listIncoming;
+    fn CollectionInvitationManagerFixes::list_outgoing(&self, options: Option<&FetchOptions>) -> Result<InvitationListResponse>; alias listOutgoing;
+    fn CollectionInvitationManager::accept(&self, invitation: &SignedInvitation) -> Result<()>;
+    fn CollectionInvitationManager::reject(&self, invitation: &SignedInvitation) -> Result<()>;
+    fn CollectionInvitationManager::fetch_user_profile(&self, username: &str) -> Result<UserProfile>; alias fetchUserProfile;
+    fn invite(&self, collection: &Collection, username: &str, pubkey: &[u8], access_level: &str) -> Result<()> {
+        this.invite(collection, username, pubkey, &CollectionAccessLevel::from(access_level))
+    }
+    fn CollectionInvitationManager::disinvite(&self, invitation: &SignedInvitation) -> Result<()>;
+    fn CollectionInvitationManager::pubkey(&self) -> &[u8];
+});
+
+foreign_class!(class SignedInvitation {
+    self_type SignedInvitation;
+    private constructor = empty;
+
+    fn SignedInvitation::uid(&self) -> &str; alias getUid;
+    fn SignedInvitation::username(&self) -> &str; alias getUsername;
+    fn SignedInvitation::collection(&self) -> &str; alias getCollection;
+    fn getAccessLevel(&self) -> String {
+        String::from(this.access_level())
+    }
+    fn SignedInvitation::from_pubkey(&self) -> &[u8]; alias getFromPubkey;
+});
+
+foreign_class!(class CollectionMember {
+    self_type CollectionMember;
+    private constructor = empty;
+
+    fn CollectionMember::username(&self) -> &str; alias getUsername;
+    fn getAccessLevel(&self) -> String {
+        String::from(this.access_level())
+    }
+});
+
+type MemberListResponse = etebase::IteratorListResponse<CollectionMember>;
+
+foreign_class!(class MemberListResponse {
+    self_type MemberListResponse;
+    private constructor = empty;
+    fn MemberListResponse::iterator(&self) -> Option<&str>; alias getStoken;
+    fn MemberListResponse::data(&self) -> &Vec<CollectionMember>; alias getData;
+    fn MemberListResponse::done(&self) -> bool; alias getDone;
+});
+
+foreign_class!(class CollectionMemberManager {
+    self_type CollectionMemberManager;
+    private constructor = empty;
+
+    fn list(&self, fetch_options: Option<&FetchOptions>) -> Result<MemberListResponse> {
+        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+        this.list(fetch_options.as_ref())
+    }
+    fn CollectionMemberManager::remove(&self, username: &str) -> Result<()>;
+    fn CollectionMemberManager::leave(&self) -> Result<()>;
+    fn modifyAccessLevel(&self, username: &str, access_level: &str) -> Result<()> {
+        this.modify_access_level(username, &CollectionAccessLevel::from(access_level))
+    }
 });

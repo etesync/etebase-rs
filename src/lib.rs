@@ -24,6 +24,7 @@ pub mod http_custom_client {
 pub use online_managers::{
     User,
     UserProfile,
+    CollectionMember,
     FetchOptions,
     CollectionListResponse,
     ItemListResponse,
@@ -36,6 +37,7 @@ pub use encrypted_models::{
     CollectionAccessLevel,
     CollectionMetadata,
     ItemMetadata,
+    SignedInvitation,
 };
 
 pub use service::{
