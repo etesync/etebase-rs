@@ -687,6 +687,14 @@ impl Collection {
         T::from_msgpack(&decrypted)
     }
 
+    pub fn set_meta_raw(&mut self, meta: &[u8]) -> Result<()> {
+        self.col.set_meta(&self.cm, &meta)
+    }
+
+    pub fn decrypt_meta_raw(&self) -> Result<Vec<u8>> {
+        self.col.decrypt_meta(&self.cm)
+    }
+
     pub fn set_content(&mut self, content: &[u8]) -> Result<()> {
         self.col.set_content(&self.cm, content)
     }
@@ -752,6 +760,14 @@ impl Item {
     pub fn decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
         let decrypted = self.item.decrypt_meta(&self.cm)?;
         T::from_msgpack(&decrypted)
+    }
+
+    pub fn set_meta_raw(&mut self, meta: &[u8]) -> Result<()> {
+        self.item.set_meta(&self.cm, &meta)
+    }
+
+    pub fn decrypt_meta_raw(&self) -> Result<Vec<u8>> {
+        self.item.decrypt_meta(&self.cm)
     }
 
     pub fn set_content(&mut self, content: &[u8]) -> Result<()> {
