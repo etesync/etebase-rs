@@ -105,7 +105,7 @@ impl CollectionMetadata {
         }
     }
 
-    pub fn set_collection_type(mut self, type_: &str) -> Self {
+    pub fn set_collection_type(&mut self, type_: &str) -> &mut Self {
         self.type_ = type_.to_string();
         self
     }
@@ -114,7 +114,7 @@ impl CollectionMetadata {
         &self.type_
     }
 
-    pub fn set_name(mut self, name: &str) -> Self {
+    pub fn set_name(&mut self, name: &str) -> &mut Self {
         self.name = name.to_string();
         self
     }
@@ -123,7 +123,7 @@ impl CollectionMetadata {
         &self.name
     }
 
-    pub fn set_description(mut self, description: Option<&str>) -> Self {
+    pub fn set_description(&mut self, description: Option<&str>) -> &mut Self {
         self.description = description.and_then(|x| Some(x.to_string()));
         self
     }
@@ -132,7 +132,7 @@ impl CollectionMetadata {
         self.description.as_deref()
     }
 
-    pub fn set_color(mut self, color: Option<&str>) -> Self {
+    pub fn set_color(&mut self, color: Option<&str>) -> &mut Self {
         self.color = color.and_then(|x| Some(x.to_string()));
         self
     }
@@ -141,7 +141,7 @@ impl CollectionMetadata {
         self.color.as_deref()
     }
 
-    pub fn set_mtime(mut self, mtime: Option<i64>) -> Self {
+    pub fn set_mtime(&mut self, mtime: Option<i64>) -> &mut Self {
         self.mtime = mtime;
         self
     }
@@ -180,7 +180,7 @@ impl ItemMetadata {
         }
     }
 
-    pub fn set_item_type(mut self, type_: Option<&str>) -> Self {
+    pub fn set_item_type(&mut self, type_: Option<&str>) -> &mut Self {
         self.type_ = type_.and_then(|x| Some(x.to_string()));
         self
     }
@@ -189,7 +189,7 @@ impl ItemMetadata {
         self.type_.as_deref()
     }
 
-    pub fn set_name(mut self, name: Option<&str>) -> Self {
+    pub fn set_name(&mut self, name: Option<&str>) -> &mut Self {
         self.name = name.and_then(|x| Some(x.to_string()));
         self
     }
@@ -198,7 +198,7 @@ impl ItemMetadata {
         self.name.as_deref()
     }
 
-    pub fn set_mtime(mut self, mtime: Option<i64>) -> Self {
+    pub fn set_mtime(&mut self, mtime: Option<i64>) -> &mut Self {
         self.mtime = mtime;
         self
     }

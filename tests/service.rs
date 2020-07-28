@@ -102,13 +102,13 @@ fn verify_item(item: &Item, meta: &ItemMetadata, content: &[u8]) -> Result<()> {
 fn simple_collection_handling() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
     let content = b"SomeContent";
 
     let mut col = col_mgr.create(&meta, content)?;
     verify_collection(&col, &meta, content)?;
 
-    let meta2 = meta.clone().set_name("Collection meta2");
+    let meta2 = meta.clone().set_name("Collection meta2").clone();
     col.set_meta(&meta2)?;
     verify_collection(&col, &meta2, content)?;
 
@@ -131,12 +131,12 @@ fn simple_item_handling() -> Result<()> {
 
     let it_mgr = col_mgr.item_manager(&col)?;
 
-    let meta = ItemMetadata::new().set_name(Some("Item 1"));
+    let meta = ItemMetadata::new().set_name(Some("Item 1")).clone();
     let content = b"ItemContent";
     let mut item = it_mgr.create(&meta, content)?;
     verify_item(&item, &meta, content)?;
 
-    let meta2 = ItemMetadata::new().set_name(Some("Item 2"));
+    let meta2 = ItemMetadata::new().set_name(Some("Item 2")).clone();
     item.set_meta(&meta2)?;
     verify_item(&item, &meta2, content)?;
 
@@ -152,7 +152,7 @@ fn simple_item_handling() -> Result<()> {
 fn simple_collection_sync() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
     let content = b"SomeContent";
 
     let mut col = col_mgr.create(&meta, content)?;
@@ -174,7 +174,7 @@ fn simple_collection_sync() -> Result<()> {
         assert_eq!(collections.data().len(), 0);
     }
 
-    let meta2 = meta.clone().set_name("Collection meta2");
+    let meta2 = meta.clone().set_name("Collection meta2").clone();
     col.set_meta(&meta2)?;
 
     col_mgr.upload(&col, None)?;
@@ -212,7 +212,7 @@ fn simple_collection_sync() -> Result<()> {
 fn simple_item_sync() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr.create(&col_meta, col_content)?;
@@ -221,7 +221,7 @@ fn simple_item_sync() -> Result<()> {
 
     let it_mgr = col_mgr.item_manager(&col)?;
 
-    let meta = ItemMetadata::new().set_name(Some("Item 1"));
+    let meta = ItemMetadata::new().set_name(Some("Item 1")).clone();
     let content = b"Content 1";
 
     let mut item = it_mgr.create(&meta, content)?;
@@ -236,7 +236,7 @@ fn simple_item_sync() -> Result<()> {
 
     let mut item_old = it_mgr.fetch(item.uid(), None)?;
 
-    let meta2 = ItemMetadata::new().set_name(Some("Item 2"));
+    let meta2 = ItemMetadata::new().set_name(Some("Item 2")).clone();
     item.set_meta(&meta2)?;
 
     let col_old = col_mgr.fetch(col.uid(), None)?;
@@ -277,7 +277,7 @@ fn simple_item_sync() -> Result<()> {
 fn collection_as_item() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
     let col_content = b"SomeContent";
 
     let mut col = col_mgr.create(&col_meta, col_content)?;
@@ -300,7 +300,7 @@ fn collection_as_item() -> Result<()> {
         assert_eq!(&first_item.decrypt_meta_generic::<CollectionMetadata>()?, &col_meta);
     }
 
-    let meta = ItemMetadata::new();
+    let meta = ItemMetadata::new().clone();
     let content = b"Item data";
     let item = it_mgr.create(&meta, content)?;
 
@@ -364,7 +364,7 @@ fn collection_and_item_deletion() -> Result<()> {
 
     let it_mgr = col_mgr.item_manager(&col)?;
 
-    let meta = ItemMetadata::new().set_name(Some("Item 1"));
+    let meta = ItemMetadata::new().set_name(Some("Item 1")).clone();
     let content = b"Content 1";
 
     let mut item = it_mgr.create(&meta, content)?;
@@ -420,7 +420,7 @@ fn empty_content() -> Result<()> {
 
     let it_mgr = col_mgr.item_manager(&col)?;
 
-    let meta = ItemMetadata::new().set_name(Some("Item 1"));
+    let meta = ItemMetadata::new().set_name(Some("Item 1")).clone();
     let content = b"";
 
     let item = it_mgr.create(&meta, content)?;
@@ -456,7 +456,7 @@ fn list_response_correctness() -> Result<()> {
 
     let items: Vec<Item> = (0..5).into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -522,7 +522,7 @@ fn item_transactions() -> Result<()> {
     col_mgr.upload(&col, None)?;
 
     let it_mgr = col_mgr.item_manager(&col)?;
-    let meta = ItemMetadata::new().set_name(Some("Item 1"));
+    let meta = ItemMetadata::new().set_name(Some("Item 1")).clone();
     let content = b"";
     let mut item = it_mgr.create(&meta, content)?;
 
@@ -534,7 +534,7 @@ fn item_transactions() -> Result<()> {
 
     let items: Vec<Item> = (0..5).into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -547,7 +547,7 @@ fn item_transactions() -> Result<()> {
         assert_eq!(items.data().len(), 6);
     }
 
-    let meta2 = ItemMetadata::new().set_name(Some("some"));
+    let meta2 = ItemMetadata::new().set_name(Some("some")).clone();
     item.set_meta(&meta2)?;
     let deps = vec![&item];
 
@@ -559,7 +559,7 @@ fn item_transactions() -> Result<()> {
     }
 
     {
-        let meta3 = ItemMetadata::new().set_name(Some("some2"));
+        let meta3 = ItemMetadata::new().set_name(Some("some2")).clone();
         item.set_meta(&meta3)?;
 
         let deps2 = items.iter().chain(iter::once(&item_old));
@@ -575,7 +575,7 @@ fn item_transactions() -> Result<()> {
     }
 
     {
-        let meta3 = ItemMetadata::new().set_name(Some("some3"));
+        let meta3 = ItemMetadata::new().set_name(Some("some3")).clone();
         let mut item2 = it_mgr.fetch(items[0].uid(), None)?;
         item2.set_meta(&meta3)?;
 
@@ -591,7 +591,7 @@ fn item_transactions() -> Result<()> {
 
     {
         // Global stoken test
-        let meta3 = ItemMetadata::new().set_name(Some("some4"));
+        let meta3 = ItemMetadata::new().set_name(Some("some4")).clone();
         item.set_meta(&meta3)?;
 
         let new_col = col_mgr.fetch(col.uid(), None)?;
@@ -620,7 +620,7 @@ fn item_batch_stoken() -> Result<()> {
     col_mgr.upload(&col, None)?;
 
     let it_mgr = col_mgr.item_manager(&col)?;
-    let meta = ItemMetadata::new().set_name(Some("Item Orig"));
+    let meta = ItemMetadata::new().set_name(Some("Item Orig")).clone();
     let content = b"";
     let mut item = it_mgr.create(&meta, content)?;
 
@@ -630,7 +630,7 @@ fn item_batch_stoken() -> Result<()> {
 
     let items: Vec<Item> = (0..5).into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -639,11 +639,11 @@ fn item_batch_stoken() -> Result<()> {
     it_mgr.batch(items.iter(), None)?;
 
     {
-        let meta3 = ItemMetadata::new().set_name(Some("some2"));
+        let meta3 = ItemMetadata::new().set_name(Some("some2")).clone();
         item2.set_meta(&meta3)?;
         it_mgr.batch(iter::once(&item2), None)?;
 
-        let meta3 = ItemMetadata::new().set_name(Some("some3"));
+        let meta3 = ItemMetadata::new().set_name(Some("some3")).clone();
         item.set_meta(&meta3)?;
 
         // Old stoken in the item itself should work for batch and fail for transaction or batch with deps
@@ -655,7 +655,7 @@ fn item_batch_stoken() -> Result<()> {
 
     {
         // Global stoken test
-        let meta3 = ItemMetadata::new().set_name(Some("some4"));
+        let meta3 = ItemMetadata::new().set_name(Some("some4")).clone();
         item.set_meta(&meta3)?;
 
         let new_col = col_mgr.fetch(col.uid(), None)?;
@@ -684,7 +684,7 @@ fn item_fetch_updates() -> Result<()> {
     col_mgr.upload(&col, None)?;
 
     let it_mgr = col_mgr.item_manager(&col)?;
-    let meta = ItemMetadata::new().set_name(Some("Item Orig"));
+    let meta = ItemMetadata::new().set_name(Some("Item Orig")).clone();
     let content = b"";
     let item = it_mgr.create(&meta, content)?;
 
@@ -692,7 +692,7 @@ fn item_fetch_updates() -> Result<()> {
 
     let items: Vec<Item> = (0..5).into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -719,7 +719,7 @@ fn item_fetch_updates() -> Result<()> {
 
     {
         let mut item2 = it_mgr.fetch(items[0].uid(), None)?;
-        let meta3 = ItemMetadata::new().set_name(Some("some2"));
+        let meta3 = ItemMetadata::new().set_name(Some("some2")).clone();
         item2.set_meta(&meta3)?;
         it_mgr.batch(iter::once(&item2), None)?;
     }
@@ -767,18 +767,18 @@ fn item_revisions() -> Result<()> {
     col_mgr.upload(&col, None)?;
 
     let it_mgr = col_mgr.item_manager(&col)?;
-    let meta = ItemMetadata::new().set_name(Some("Item Orig"));
+    let meta = ItemMetadata::new().set_name(Some("Item Orig")).clone();
     let content = b"";
     let mut item = it_mgr.create(&meta, content)?;
 
     for i in 0..5 {
-        let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+        let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
         item.set_meta(&meta)?;
         it_mgr.batch(iter::once(&item), None)?;
     }
 
     {
-        let meta = ItemMetadata::new().set_name(Some("Latest"));
+        let meta = ItemMetadata::new().set_name(Some("Latest")).clone();
         item.set_meta(&meta)?;
         it_mgr.batch(iter::once(&item), None)?;
     }
@@ -797,7 +797,7 @@ fn item_revisions() -> Result<()> {
         assert!(revisions.done());
 
         for i in 0..5 {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
             let rev = &revisions.data()[4 - i];
             assert_eq!(&rev.decrypt_meta()?, &meta);
         }
@@ -832,7 +832,7 @@ fn collection_invitations() -> Result<()> {
 
     let items: Vec<Item> = (0..5).into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -1033,7 +1033,7 @@ fn collection_access_level() -> Result<()> {
 
     let items: Vec<Item> = (0..5).into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i)));
+            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -1068,7 +1068,7 @@ fn collection_access_level() -> Result<()> {
             }
         }
 
-        let meta = ItemMetadata::new().set_name(Some("Some item"));
+        let meta = ItemMetadata::new().set_name(Some("Some item")).clone();
         let content = b"";
         let item = it_mgr2.create(&meta, content)?;
         it_mgr2.batch(iter::once(&item), None)?;
@@ -1086,7 +1086,7 @@ fn collection_access_level() -> Result<()> {
             }
         }
 
-        let meta = ItemMetadata::new().set_name(Some("Some item"));
+        let meta = ItemMetadata::new().set_name(Some("Some item")).clone();
         let content = b"";
         let item = it_mgr2.create(&meta, content)?;
         assert_err!(it_mgr2.batch(iter::once(&item), None), Error::Http(_));
@@ -1104,7 +1104,7 @@ fn collection_access_level() -> Result<()> {
             }
         }
 
-        let meta = ItemMetadata::new().set_name(Some("Some item"));
+        let meta = ItemMetadata::new().set_name(Some("Some item")).clone();
         let content = b"";
         let item = it_mgr2.create(&meta, content)?;
         it_mgr2.batch(iter::once(&item), None)?;
@@ -1134,7 +1134,7 @@ fn collection_access_level() -> Result<()> {
 fn chunking_large_data() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr.create(&col_meta, col_content)?;
@@ -1143,7 +1143,7 @@ fn chunking_large_data() -> Result<()> {
 
     let it_mgr = col_mgr.item_manager(&col)?;
 
-    let meta = ItemMetadata::new();
+    let meta = ItemMetadata::new().clone();
     let content = randombytes_deterministic(120 * 1024, &[0; 32]); // 120kb of pseuedorandom data
 
     let mut item = it_mgr.create(&meta, &content)?;
@@ -1203,7 +1203,7 @@ fn login_and_password_change() -> Result<()> {
     let mut etebase2 = Account::login(client.clone(), USER2.username, USER2.password)?;
 
     let col_mgr2 = etebase2.collection_manager()?;
-    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr2.create(&col_meta, col_content)?;
@@ -1243,7 +1243,7 @@ fn session_save_and_restore() -> Result<()> {
     let etebase = init_test(&USER)?;
 
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr.create(&col_meta, col_content)?;
@@ -1279,7 +1279,7 @@ fn cache_collections_and_items() -> Result<()> {
     let etebase = init_test(&USER)?;
 
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc"));
+    let col_meta = CollectionMetadata::new("type", "Collection").set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr.create(&col_meta, col_content)?;
@@ -1287,7 +1287,7 @@ fn cache_collections_and_items() -> Result<()> {
 
     let it_mgr = col_mgr.item_manager(&col)?;
 
-    let meta = ItemMetadata::new().set_name(Some("Item"));
+    let meta = ItemMetadata::new().set_name(Some("Item")).clone();
     let content = b"SomeItemContent";
     let item = it_mgr.create(&meta, content)?;
 
