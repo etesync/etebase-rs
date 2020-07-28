@@ -25,7 +25,8 @@ macro_rules! assert_err {
     ($x:expr, $err:pat) => {
         match ($x) {
             Err($err) => (),
-            _ => assert!(false),
+            Err(err) => None.expect(&err.to_string()),
+            _ => None.expect("Got OK when expected failure"),
         }
     }
 }
