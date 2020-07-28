@@ -17,6 +17,8 @@ use crate::{
     Response,
     HttpClient,
     client_new_with_impl,
+
+    FetchOptions,
 };
 
 #[cfg(feature = "java")]
@@ -98,9 +100,19 @@ foreign_class!(class ItemListResponse {
     fn ItemListResponse::done(&self) -> bool; alias getDone;
 });
 
-// FIXME: support fetch options!
-pub fn col_fetch(mgr: &CollectionManager, col_uid: &str) -> Result<Collection> {
-    mgr.fetch(col_uid, None)
+foreign_class!(class FetchOptions {
+    self_type FetchOptions;
+    constructor FetchOptions::new() -> FetchOptions;
+    fn FetchOptions::limit(&mut self, limit: usize);
+    fn FetchOptions::prefetch(&mut self, prefetch: bool);
+    fn FetchOptions::with_collection(&mut self, with_collection: bool);
+    fn FetchOptions::iterator(&mut self, iterator: Option<&str>);
+    fn FetchOptions::stoken(&mut self, stoken: Option<&str>);
+});
+
+pub fn col_fetch(mgr: &CollectionManager, col_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Collection> {
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    mgr.fetch(col_uid, fetch_options.as_ref())
 }
 
 // FIXME: support metadata!
@@ -108,34 +120,35 @@ pub fn col_create(mgr: &CollectionManager, content: &[u8]) -> Result<Collection>
     mgr.create(&etebase::CollectionMetadata::new("type", "name"), content)
 }
 
-pub fn col_list(mgr: &CollectionManager) -> Result<CollectionListResponse> {
-    mgr.list(None)
+pub fn col_list(mgr: &CollectionManager, fetch_options: Option<&FetchOptions>) -> Result<CollectionListResponse> {
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    mgr.list(fetch_options.as_ref())
 }
 
-// FIXME: support fetch options!
-pub fn col_upload(mgr: &CollectionManager, collection: &Collection) -> Result<()> {
-    mgr.upload(collection, None)
+pub fn col_upload(mgr: &CollectionManager, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<()> {
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    mgr.upload(collection, fetch_options.as_ref())
 }
 
-// FIXME: support fetch options!
-pub fn col_transaction(mgr: &CollectionManager, collection: &Collection) -> Result<()> {
-    mgr.transaction(collection, None)
+pub fn col_transaction(mgr: &CollectionManager, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<()> {
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    mgr.transaction(collection, fetch_options.as_ref())
 }
 
 foreign_class!(class CollectionManager {
     self_type CollectionManager;
     private constructor = empty;
-    fn col_fetch(&self, col_uid: &str) -> Result<Collection>; alias fetch;
+    fn col_fetch(&self, col_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Collection>; alias fetch;
     fn col_create(&self, content: &[u8]) -> Result<Collection>; alias create;
     fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager>; alias getItemManager;
-    fn col_list(&self) -> Result<CollectionListResponse>; alias list;
-    fn col_upload(&self, collection: &Collection) -> Result<()>; alias upload;
-    fn col_transaction(&self, collection: &Collection) -> Result<()>; alias transaction;
+    fn col_list(&self, fetch_options: Option<&FetchOptions>) -> Result<CollectionListResponse>; alias list;
+    fn col_upload(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<()>; alias upload;
+    fn col_transaction(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<()>; alias transaction;
 });
 
-// FIXME: support fetch options!
-pub fn item_fetch(mgr: &ItemManager, item_uid: &str) -> Result<Item> {
-    mgr.fetch(item_uid, None)
+pub fn item_fetch(mgr: &ItemManager, item_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Item> {
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    mgr.fetch(item_uid, fetch_options.as_ref())
 }
 
 // FIXME: support metadata!
@@ -143,34 +156,36 @@ pub fn item_create(mgr: &ItemManager, content: &[u8]) -> Result<Item> {
     mgr.create(&etebase::ItemMetadata::new(), content)
 }
 
-pub fn item_list(mgr: &ItemManager) -> Result<ItemListResponse> {
-    mgr.list(None)
+pub fn item_list(mgr: &ItemManager, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse> {
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    mgr.list(fetch_options.as_ref())
 }
 
-pub fn item_fetch_updates(mgr: &ItemManager, items: Vec<&Item>) -> Result<ItemListResponse> {
-    mgr.fetch_updates(items.into_iter(), None)
+pub fn item_fetch_updates(mgr: &ItemManager, items: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse> {
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    mgr.fetch_updates(items.into_iter(), fetch_options.as_ref())
 }
 
 // FIXME: make deps an option?
-// FIXME: support fetch options!
-pub fn item_batch(mgr: &ItemManager, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()> {
-    mgr.batch_deps(items.into_iter(), deps.into_iter(), None)
+pub fn item_batch(mgr: &ItemManager, items: Vec<&Item>, deps: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<()> {
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    mgr.batch_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref())
 }
 
-// FIXME: support fetch options!
-pub fn item_transaction(mgr: &ItemManager, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()> {
-    mgr.transaction_deps(items.into_iter(), deps.into_iter(), None)
+pub fn item_transaction(mgr: &ItemManager, items: Vec<&Item>, deps: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<()> {
+    let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    mgr.transaction_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref())
 }
 
 foreign_class!(class ItemManager {
     self_type ItemManager;
     private constructor = empty;
-    fn item_fetch(&self, item_uid: &str) -> Result<Item>; alias fetch;
+    fn item_fetch(&self, item_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Item>; alias fetch;
     fn item_create(&self, content: &[u8]) -> Result<Item>; alias create;
-    fn item_list(&self) -> Result<ItemListResponse>; alias list;
-    fn item_fetch_updates(&self, items: Vec<&Item>) -> Result<ItemListResponse>; alias fetchUpdates;
-    fn item_batch(&self, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()>; alias batch;
-    fn item_transaction(&self, items: Vec<&Item>, deps: Vec<&Item>) -> Result<()>; alias transaction;
+    fn item_list(&self, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse>; alias list;
+    fn item_fetch_updates(&self, items: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse>; alias fetchUpdates;
+    fn item_batch(&self, items: Vec<&Item>, deps: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<()>; alias batch;
+    fn item_transaction(&self, items: Vec<&Item>, deps: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<()>; alias transaction;
 });
 
 pub fn col_verify(col: &Collection) -> bool {
