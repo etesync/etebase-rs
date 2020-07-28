@@ -3,6 +3,7 @@ package com.etebase.client;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.etebase.client.exceptions.Base64Exception;
+import com.etebase.client.exceptions.UnauthorizedException;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,13 +18,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class Service {
     private static String storedSession = "gqd2ZXJzaW9uAa1lbmNyeXB0ZWREYXRhxQGr_KWyDChQ6tXOJwJKf0Kw3QyR99itPIF3vZ5w6pVXSIq7AWul3fIXjIZOsBEwTVRumw7e9Af38D5oIL2VLNPLlmTOMjzIvuB00z3zDMFbH8pwrg2p_FvAhLHGjUGoXzU2XIxS4If7rQUfEz1zWkHPqWMrj4hACML5fks302dOUw7OsSMekcQaaVqMyj82MY3lG2qj8CL6ykSED7nW6OYWwMBJ1rSDGXhQRd5JuCGl6kgAHxKS6gkkIAWeUKjC6-Th2etk1XPKDiks0SZrQpmuXG8h_TBdd4igjRUqnIk09z5wvJFViXIU4M3pQomyFPk3Slh7KHvWhzxG0zbC2kUngQZ5h-LbVTLuT_TQWjYmHiOIihenrzl7z9MLebUq6vuwusZMRJ1Atau0Y2HcOzulYt4tLRP49d56qFEId3R4xomZ666hy-EFodsbzpxEKHeBUro3_gifOOKR8zkyLKTRz1UipZfKvnWk_RHFgZlSClRsXyaP34wstUavSiz-HNmTEmflNQKM7Awfel108FcSbW9NQAogW2Y2copP-P-R-DiHThrXmgDsWkTQFA";
     private static String SERVER_URL = "http://10.100.102.5:12345";
+    private static OkHttpClient httpClient =  new OkHttpClient.Builder()
+            // don't allow redirects by default, because it would break PROPFIND handling
+            .followRedirects(false)
+            .build();
 
     @Test
     public void testSmoketest() {
-        OkHttpClient httpClient =  new OkHttpClient.Builder()
-                // don't allow redirects by default, because it would break PROPFIND handling
-                .followRedirects(false)
-                .build();
         Client client = Client.create(httpClient, SERVER_URL);
         Account etebase = Account.restore(client, storedSession, null);
         etebase.forceApiBase(SERVER_URL);
@@ -79,10 +80,6 @@ public class Service {
 
     @Test
     public void testCache() {
-        OkHttpClient httpClient =  new OkHttpClient.Builder()
-                // don't allow redirects by default, because it would break PROPFIND handling
-                .followRedirects(false)
-                .build();
         Client client = Client.create(httpClient, SERVER_URL);
         Account etebase = Account.restore(client, storedSession, null);
         etebase.forceApiBase(SERVER_URL);
@@ -123,5 +120,16 @@ public class Service {
     @Test(expected=Base64Exception.class)
     public void base64Exception() {
         Base64Url.fromBase64("#@$@#$*@#$");
+    }
+
+    @Test(expected= UnauthorizedException.class)
+    public void testUanuthorizedException() {
+        Client client = Client.create(httpClient, SERVER_URL);
+        Account etebase = Account.restore(client, storedSession, null);
+        etebase.forceApiBase(SERVER_URL);
+        etebase.fetchToken();
+        etebase.logout();
+        CollectionManager collectionManager = etebase.getCollectionManager();
+        collectionManager.list(null);
     }
 }
