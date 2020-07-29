@@ -531,7 +531,7 @@ foreign_class!(
 foreign_class!(class UserProfile {
     self_type UserProfile;
     private constructor = empty;
-    fn UserProfile::pubkey(&self) -> &[u8];
+    fn UserProfile::pubkey(&self) -> &[u8]; alias get_pubkey;
 });
 
 type InvitationListResponse = etebase::IteratorListResponse<SignedInvitation>;
@@ -581,7 +581,7 @@ foreign_class!(class CollectionInvitationManager {
     fn CollectionInvitationManager::fetch_user_profile(&self, username: &str) -> Result<UserProfile, Error>;
     fn CollectionInvitationManager_::invite(&self, collection: &Collection, username: &str, pubkey: &[u8], access_level: &str) -> Result<(), Error>;
     fn CollectionInvitationManager::disinvite(&self, invitation: &SignedInvitation) -> Result<(), Error>;
-    fn CollectionInvitationManager::pubkey(&self) -> &[u8];
+    fn CollectionInvitationManager::pubkey(&self) -> &[u8]; alias get_pubkey;
 });
 
 mod SignedInvitation_ {
