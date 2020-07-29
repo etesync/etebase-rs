@@ -50,6 +50,15 @@ foreign_typemap!(
 );
 
 foreign_typemap!(
+    ($p:r_type) CallbackOption<&str> => internal_aliases::JStringOptStr {
+        $out = match $p {
+            Some(s) => from_std_string_jstring(s.to_owned(), env),
+            None => ::std::ptr::null_mut(),
+        };
+    };
+);
+
+foreign_typemap!(
     ($p:r_type) Vec<u8> => jbyteArray {
         let slice = &($p)[..];
         let slice = unsafe { std::mem::transmute::<&[u8], &[i8]>(slice) };

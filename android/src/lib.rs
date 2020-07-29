@@ -42,11 +42,11 @@ impl Response {
 }
 
 pub trait HttpClient {
-    fn get(&self, url: &str, auth_token: &str, response: Response);
-    fn post(&self, url: &str, auth_token: &str, body: Vec<u8>, response: Response);
-    fn put(&self, url: &str, auth_token: &str, body: Vec<u8>, response: Response);
-    fn patch(&self, url: &str, auth_token: &str, body: Vec<u8>, response: Response);
-    fn delete(&self, url: &str, auth_token: &str, response: Response);
+    fn get(&self, url: &str, auth_token: Option<&str>, response: Response);
+    fn post(&self, url: &str, auth_token: Option<&str>, body: Vec<u8>, response: Response);
+    fn put(&self, url: &str, auth_token: Option<&str>, body: Vec<u8>, response: Response);
+    fn patch(&self, url: &str, auth_token: Option<&str>, body: Vec<u8>, response: Response);
+    fn delete(&self, url: &str, auth_token: Option<&str>, response: Response);
 }
 
 struct JavaHttpClient {
@@ -65,7 +65,7 @@ impl ClientImplementation for JavaHttpClient {
     fn get(&self, url: &str, auth_token: Option<&str>) -> EtebaseResponse {
         let response = Response::new();
         let inner = response.inner_copy();
-        self.imp.get(url, auth_token.unwrap_or(""), response);
+        self.imp.get(url, auth_token, response);
         let inner = inner.borrow();
         inner.clone()
     }
@@ -73,28 +73,28 @@ impl ClientImplementation for JavaHttpClient {
     fn post(&self, url: &str, auth_token: Option<&str>, body: Vec<u8>) -> EtebaseResponse {
         let response = Response::new();
         let inner = response.inner_copy();
-        self.imp.post(url, auth_token.unwrap_or(""), body, response);
+        self.imp.post(url, auth_token, body, response);
         let inner = inner.borrow();
         inner.clone()
     }
     fn put(&self, url: &str, auth_token: Option<&str>, body: Vec<u8>) -> EtebaseResponse {
         let response = Response::new();
         let inner = response.inner_copy();
-        self.imp.put(url, auth_token.unwrap_or(""), body, response);
+        self.imp.put(url, auth_token, body, response);
         let inner = inner.borrow();
         inner.clone()
     }
     fn patch(&self, url: &str, auth_token: Option<&str>, body: Vec<u8>) -> EtebaseResponse {
         let response = Response::new();
         let inner = response.inner_copy();
-        self.imp.patch(url, auth_token.unwrap_or(""), body, response);
+        self.imp.patch(url, auth_token, body, response);
         let inner = inner.borrow();
         inner.clone()
     }
     fn delete(&self, url: &str, auth_token: Option<&str>) -> EtebaseResponse {
         let response = Response::new();
         let inner = response.inner_copy();
-        self.imp.delete(url, auth_token.unwrap_or(""), response);
+        self.imp.delete(url, auth_token, response);
         let inner = inner.borrow();
         inner.clone()
     }

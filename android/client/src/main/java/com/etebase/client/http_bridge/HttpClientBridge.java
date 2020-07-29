@@ -31,7 +31,7 @@ public class HttpClientBridge implements HttpClient {
                     .header("ACCEPT", "application/msgpack")
                     .get()
                     .url(httpUrl);
-            if (auth_token.length() > 0) {
+            if (auth_token != null) {
                 req = req.header(HEADER_AUTHORIZATION, "Token " + auth_token);
             }
             okhttp3.Response resp = client.newCall(req.build()).execute();
@@ -49,7 +49,7 @@ public class HttpClientBridge implements HttpClient {
                     .header("ACCEPT", "application/msgpack")
                     .post(requestBody)
                     .url(httpUrl);
-            if (auth_token.length() > 0) {
+            if (auth_token != null) {
                 req = req.header(HEADER_AUTHORIZATION, "Token " + auth_token);
             }
             okhttp3.Response resp = client.newCall(req.build()).execute();
@@ -68,7 +68,7 @@ public class HttpClientBridge implements HttpClient {
                     .header("ACCEPT", "application/msgpack")
                     .put(requestBody)
                     .url(httpUrl);
-            if (auth_token.length() > 0) {
+            if (auth_token != null) {
                 req = req.header(HEADER_AUTHORIZATION, "Token " + auth_token);
             }
             okhttp3.Response resp = client.newCall(req.build()).execute();
@@ -87,7 +87,7 @@ public class HttpClientBridge implements HttpClient {
                     .header("ACCEPT", "application/msgpack")
                     .patch(requestBody)
                     .url(httpUrl);
-            if (auth_token.length() > 0) {
+            if (auth_token != null) {
                 req = req.header(HEADER_AUTHORIZATION, "Token " + auth_token);
             }
             okhttp3.Response resp = client.newCall(req.build()).execute();
@@ -105,7 +105,7 @@ public class HttpClientBridge implements HttpClient {
                     .header("ACCEPT", "application/msgpack")
                     .delete()
                     .url(httpUrl);
-            if (auth_token.length() > 0) {
+            if (auth_token != null) {
                 req = req.header(HEADER_AUTHORIZATION, "Token " + auth_token);
             }
             okhttp3.Response resp = client.newCall(req.build()).execute();

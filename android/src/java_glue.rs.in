@@ -57,13 +57,15 @@ foreign_class!(class Response {
     fn Response::reset_err(&mut self, err: String);
 });
 
+type CallbackOption<T> = std::option::Option<T>;
+
 foreign_callback!(callback HttpClient {
     self_type HttpClient;
-    get = HttpClient::get(&self, url: &str, auth_token: &str, response: Response);
-    post = HttpClient::post(&self, url: &str, auth_token: &str, body: Vec<u8>, response: Response);
-    put = HttpClient::put(&self, url: &str, auth_token: &str, body: Vec<u8>, response: Response);
-    patch = HttpClient::patch(&self, url: &str, auth_token: &str, body: Vec<u8>, response: Response);
-    del = HttpClient::delete(&self, url: &str, auth_token: &str, response: Response);
+    get = HttpClient::get(&self, url: &str, auth_token: CallbackOption<&str>, response: Response);
+    post = HttpClient::post(&self, url: &str, auth_token: CallbackOption<&str>, body: Vec<u8>, response: Response);
+    put = HttpClient::put(&self, url: &str, auth_token: CallbackOption<&str>, body: Vec<u8>, response: Response);
+    patch = HttpClient::patch(&self, url: &str, auth_token: CallbackOption<&str>, body: Vec<u8>, response: Response);
+    del = HttpClient::delete(&self, url: &str, auth_token: CallbackOption<&str>, response: Response);
 });
 
 foreign_class!(class Base64Url {
