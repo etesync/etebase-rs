@@ -90,5 +90,3 @@ pub use error::Error;
 pub fn init() -> error::Result<()> {
     crypto::init()
 }
-
-mod capi;
