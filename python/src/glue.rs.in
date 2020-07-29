@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use etebase::{
     User,
     Client,
@@ -5,7 +7,6 @@ use etebase::{
 
     Collection,
     CollectionMetadata,
-    Item,
     ItemMetadata,
 
     CollectionAccessLevel,
@@ -151,7 +152,7 @@ foreign_class!(class CollectionListResponse {
     fn CollectionListResponse_::get_removed_memberships(&self) -> Vec<RemovedCollection>;
 });
 
-type ItemListResponse = etebase::ItemListResponse<Item>;
+type ItemListResponse = etebase::ItemListResponse<etebase::Item>;
 
 mod ItemListResponse_ {
     use super::*;
@@ -159,13 +160,17 @@ mod ItemListResponse_ {
     pub fn stoken(this: &ItemListResponse) -> Option<String> {
         this.stoken().map(str::to_string)
     }
+
+    pub fn data(this: &ItemListResponse) -> Vec<Item> {
+        this.data().iter().map(|x| Item::new(x.clone())).collect()
+    }
 }
 
 foreign_class!(class ItemListResponse {
     self_type ItemListResponse;
     private constructor = empty;
     fn ItemListResponse_::stoken(&self) -> Option<String>;
-    fn ItemListResponse::data(&self) -> &Vec<Item>;
+    fn ItemListResponse_::data(&self) -> Vec<Item>;
     fn ItemListResponse::done(&self) -> bool;
 });
 
@@ -329,7 +334,11 @@ mod ItemManager_ {
 
     pub fn fetch(mgr: &ItemManager, item_uid: &str, fetch_options: Option<FetchOptions>) -> Result<Item, Error> {
         let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
-        mgr.fetch(item_uid, fetch_options.as_ref())
+        Ok(Item::new(mgr.fetch(item_uid, fetch_options.as_ref())?))
+    }
+
+    pub fn create(this: &ItemManager, meta: &ItemMetadata, content: &[u8]) -> Result<Item, Error> {
+        Ok(Item::new(this.create(meta, content)?))
     }
 
     pub fn list(mgr: &ItemManager, fetch_options: Option<FetchOptions>) -> Result<ItemListResponse, Error> {
@@ -337,25 +346,51 @@ mod ItemManager_ {
         mgr.list(fetch_options.as_ref())
     }
 
-    pub fn fetch_updates(mgr: &ItemManager, items: Vec<&Item>, fetch_options: Option<FetchOptions>) -> Result<ItemListResponse, Error> {
+    pub fn fetch_updates(mgr: &ItemManager, items: Vec<Item>, fetch_options: Option<FetchOptions>) -> Result<ItemListResponse, Error> {
         let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
-        mgr.fetch_updates(items.into_iter(), fetch_options.as_ref())
+        let items_v: Vec<_> = items.iter().map(|x| x.inner.lock().unwrap()).collect();
+        let items = items_v.iter().map(|x| &**x);
+        mgr.fetch_updates(items, fetch_options.as_ref())
     }
 
-    pub fn batch(mgr: &ItemManager, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error> {
+    pub fn batch(mgr: &ItemManager, items: Vec<Item>, deps: Option<Vec<Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error> {
         let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
+        let items_v: Vec<_> = items.iter().map(|x| x.inner.lock().unwrap()).collect();
+        let items = items_v.iter().map(|x| &**x);
         match deps {
-            Some(deps) => mgr.batch_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref()),
-            None => mgr.batch(items.into_iter(), fetch_options.as_ref()),
+            Some(deps) => {
+                let deps_v: Vec<_> = deps.iter().map(|x| x.inner.lock().unwrap()).collect();
+                let deps = deps_v.iter().map(|x| &**x);
+                mgr.batch_deps(items, deps, fetch_options.as_ref())
+            },
+            None => mgr.batch(items, fetch_options.as_ref()),
         }
     }
 
-    pub fn transaction(mgr: &ItemManager, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error> {
+    pub fn transaction(mgr: &ItemManager, items: Vec<Item>, deps: Option<Vec<Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error> {
         let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
+        let items_v: Vec<_> = items.iter().map(|x| x.inner.lock().unwrap()).collect();
+        let items = items_v.iter().map(|x| &**x);
         match deps {
-            Some(deps) => mgr.transaction_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref()),
-            None => mgr.transaction(items.into_iter(), fetch_options.as_ref()),
+            Some(deps) => {
+                let deps_v: Vec<_> = deps.iter().map(|x| x.inner.lock().unwrap()).collect();
+                let deps = deps_v.iter().map(|x| &**x);
+                mgr.transaction_deps(items, deps, fetch_options.as_ref())
+            },
+            None => mgr.transaction(items, fetch_options.as_ref()),
         }
+    }
+
+    pub fn cache_load(this: &ItemManager, cached: &[u8]) -> Result<Item, Error> {
+        Ok(Item::new(this.cache_load(cached)?))
+    }
+
+    pub fn cache_save(this: &ItemManager, item: &Item) -> Result<Vec<u8>, Error> {
+        Ok(this.cache_save(&item.inner.lock().unwrap())?)
+    }
+
+    pub fn cache_save_with_content(this: &ItemManager, item: &Item) -> Result<Vec<u8>, Error> {
+        Ok(this.cache_save(&item.inner.lock().unwrap())?)
     }
 }
 
@@ -363,15 +398,14 @@ foreign_class!(class ItemManager {
     self_type ItemManager;
     private constructor = empty;
     fn ItemManager_::fetch(&self, item_uid: &str, fetch_options: Option<FetchOptions>) -> Result<Item, Error>;
-    fn ItemManager::create(&self, meta: &ItemMetadata, content: &[u8]) -> Result<Item, Error>;
+    fn ItemManager_::create(&self, meta: &ItemMetadata, content: &[u8]) -> Result<Item, Error>;
     fn ItemManager_::list(&self, fetch_options: Option<FetchOptions>) -> Result<ItemListResponse, Error>;
-    // FIXME: fn ItemManager_::fetch_updates(&self, items: Vec<&Item>, fetch_options: Option<FetchOptions>) -> Result<ItemListResponse, Error>;
-    // FIXME: fn ItemManager_::batch(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error>;
-    // FIXME: fn ItemManager_::transaction(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error>;
-
-    fn ItemManager::cache_load(&self, cached: &[u8]) -> Result<Item, Error>;
-    fn ItemManager::cache_save(&self, item: &Item) -> Result<Vec<u8>, Error>;
-    fn ItemManager::cache_save_with_content(&self, item: &Item) -> Result<Vec<u8>, Error>;
+    fn ItemManager_::fetch_updates(&self, items: Vec<Item>, fetch_options: Option<FetchOptions>) -> Result<ItemListResponse, Error>;
+    fn ItemManager_::batch(&self, items: Vec<Item>, deps: Option<Vec<Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error>;
+    fn ItemManager_::transaction(&self, items: Vec<Item>, deps: Option<Vec<Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error>;
+    fn ItemManager_::cache_load(&self, cached: &[u8]) -> Result<Item, Error>;
+    fn ItemManager_::cache_save(&self, item: &Item) -> Result<Vec<u8>, Error>;
+    fn ItemManager_::cache_save_with_content(&self, item: &Item) -> Result<Vec<u8>, Error>;
 });
 
 mod Collection_ {
@@ -387,6 +421,10 @@ mod Collection_ {
 
     pub fn stoken(this: &Collection) -> Option<String> {
         this.stoken().map(str::to_string)
+    }
+
+    pub fn item(this: &Collection) -> Result<Item, Error> {
+        Ok(Item::new(this.item()?))
     }
 }
 
@@ -406,37 +444,89 @@ foreign_class!(class Collection {
     fn Collection_::uid(&self) -> String; alias get_uid;
     fn Collection::etag_owned(&self) -> Option<String>; alias get_etag;
     fn Collection_::stoken(&self) -> Option<String>; alias get_stoken;
-    fn Collection::item(&self) -> Result<Item, Error>;
+    fn Collection_::item(&self) -> Result<Item, Error>;
 });
 
-mod Item_ {
-    use super::*;
+#[derive(Clone)]
+pub struct Item {
+    inner: Arc<Mutex<etebase::Item>>,
+}
 
-    pub fn verify(this: &Item) -> bool {
-        this.verify().unwrap_or(false)
+impl Item {
+    pub fn new(inner: etebase::Item) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(inner))
+        }
     }
 
-    pub fn uid(this: &Item) -> String {
-        this.uid().to_owned()
+    pub fn verify(&self) -> bool {
+        self.inner.lock().unwrap().verify().unwrap_or(false)
+    }
+
+    pub fn uid(&self) -> String {
+        self.inner.lock().unwrap().uid().to_owned()
+    }
+
+    pub fn to_inner(&self) -> std::sync::MutexGuard<etebase::Item> {
+        self.inner.lock().unwrap()
+    }
+
+    pub fn set_meta(&mut self, meta: &ItemMetadata) -> Result<(), Error> {
+        self.inner.lock().unwrap().set_meta(meta)
+    }
+
+    pub fn decrypt_meta(&self) -> Result<ItemMetadata, Error> {
+        self.inner.lock().unwrap().decrypt_meta()
+    }
+
+    pub fn set_meta_raw(&mut self, meta: &[u8]) -> Result<(), Error> {
+        self.inner.lock().unwrap().set_meta_raw(meta)
+    }
+
+    pub fn decrypt_meta_raw(&self) -> Result<Vec<u8>, Error> {
+        self.inner.lock().unwrap().decrypt_meta_raw()
+    }
+
+    pub fn set_content(&mut self, content: &[u8]) -> Result<(), Error> {
+        self.inner.lock().unwrap().set_content(content)
+    }
+
+    pub fn decrypt_content(&self) -> Result<Vec<u8>, Error> {
+        self.inner.lock().unwrap().decrypt_content()
+    }
+
+    pub fn delete(&mut self) -> Result<(), Error> {
+        self.inner.lock().unwrap().delete()
+    }
+
+    pub fn is_deleted(&self) -> bool {
+        self.inner.lock().unwrap().is_deleted()
+    }
+
+    pub fn etag(&self) -> Option<String> {
+        self.inner.lock().unwrap().etag_owned()
     }
 }
 
-foreign_class!(class Item {
-    self_type Item;
-    private constructor = empty;
-    fn Item_::verify(&self) -> bool;
+foreign_class!(
+    #[derive(Clone)]
+    class Item {
+        self_type Item;
+        private constructor = empty;
+        fn Item::verify(&self) -> bool;
 
-    fn Item::set_meta(&mut self, meta: &ItemMetadata) -> Result<(), Error>;
-    fn Item::decrypt_meta(&self) -> Result<ItemMetadata, Error>;
-    fn Item::set_meta_raw(&mut self, meta: &[u8]) -> Result<(), Error>;
-    fn Item::decrypt_meta_raw(&self) -> Result<Vec<u8>, Error>;
-    fn Item::set_content(&mut self, content: &[u8]) -> Result<(), Error>;
-    fn Item::decrypt_content(&self) -> Result<Vec<u8>, Error>;
-    fn Item::delete(&mut self) -> Result<(), Error>;
-    fn Item::is_deleted(&self) -> bool;
-    fn Item_::uid(&self) -> String;
-    fn Item::etag_owned(&self) -> Option<String>;
-});
+        fn Item::set_meta(&mut self, meta: &ItemMetadata) -> Result<(), Error>;
+        fn Item::decrypt_meta(&self) -> Result<ItemMetadata, Error>;
+        fn Item::set_meta_raw(&mut self, meta: &[u8]) -> Result<(), Error>;
+        fn Item::decrypt_meta_raw(&self) -> Result<Vec<u8>, Error>;
+        fn Item::set_content(&mut self, content: &[u8]) -> Result<(), Error>;
+        fn Item::decrypt_content(&self) -> Result<Vec<u8>, Error>;
+        fn Item::delete(&mut self) -> Result<(), Error>;
+        fn Item::is_deleted(&self) -> bool;
+        fn Item::uid(&self) -> String;
+        fn Item::etag(&self) -> Option<String>;
+    }
+);
 
 foreign_class!(class UserProfile {
     self_type UserProfile;
