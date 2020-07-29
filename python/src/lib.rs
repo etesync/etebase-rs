@@ -1,6 +1,7 @@
 #![allow(non_snake_case, unused)]
 
 mod fixes {
+    #[derive(Clone)]
     pub struct FetchOptions {
         limit: Option<usize>,
         stoken: Option<String>,

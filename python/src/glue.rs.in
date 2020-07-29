@@ -180,15 +180,19 @@ mod FetchOptions_ {
     }
 }
 
-foreign_class!(class FetchOptions {
-    self_type FetchOptions;
-    constructor FetchOptions::new() -> FetchOptions;
-    fn FetchOptions::limit(&mut self, limit: usize);
-    fn FetchOptions::prefetch(&mut self, prefetch: bool);
-    fn FetchOptions::with_collection(&mut self, with_collection: bool);
-    fn FetchOptions_::iterator(&mut self, iterator: Option<String>);
-    fn FetchOptions_::stoken(&mut self, stoken: Option<String>);
-});
+// FIXME: we shouldn't clone it, we should fix it properly after #339 is fixed
+foreign_class!(
+    #[derive(Clone)]
+    class FetchOptions {
+        self_type FetchOptions;
+        constructor FetchOptions::new() -> FetchOptions;
+        fn FetchOptions::limit(&mut self, limit: usize);
+        fn FetchOptions::prefetch(&mut self, prefetch: bool);
+        fn FetchOptions::with_collection(&mut self, with_collection: bool);
+        fn FetchOptions_::iterator(&mut self, iterator: Option<String>);
+        fn FetchOptions_::stoken(&mut self, stoken: Option<String>);
+    }
+);
 
 mod CollectionMetadata_ {
     use super::*;
@@ -283,23 +287,23 @@ foreign_class!(class ItemMetadata {
 mod CollectionManager_ {
     use super::*;
 
-    pub fn fetch(this: &CollectionManager, col_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Collection, Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn fetch(this: &CollectionManager, col_uid: &str, fetch_options: Option<FetchOptions>) -> Result<Collection, Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         this.fetch(col_uid, fetch_options.as_ref())
     }
 
-    pub fn list(this: &CollectionManager, fetch_options: Option<&FetchOptions>) -> Result<CollectionListResponse, Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn list(this: &CollectionManager, fetch_options: Option<FetchOptions>) -> Result<CollectionListResponse, Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         this.list(fetch_options.as_ref())
     }
 
-    pub fn upload(this: &CollectionManager, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<(), Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn upload(this: &CollectionManager, collection: &Collection, fetch_options: Option<FetchOptions>) -> Result<(), Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         this.upload(collection, fetch_options.as_ref())
     }
 
-    pub fn transaction(this: &CollectionManager, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<(), Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn transaction(this: &CollectionManager, collection: &Collection, fetch_options: Option<FetchOptions>) -> Result<(), Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         this.transaction(collection, fetch_options.as_ref())
     }
 }
@@ -307,12 +311,12 @@ mod CollectionManager_ {
 foreign_class!(class CollectionManager {
     self_type CollectionManager;
     private constructor = empty;
-    // FIXME: fn CollectionManager_::fetch(&self, col_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Collection, Error>;
+    fn CollectionManager_::fetch(&self, col_uid: &str, fetch_options: Option<FetchOptions>) -> Result<Collection, Error>;
     fn CollectionManager::create(&self, meta: &CollectionMetadata, content: &[u8]) -> Result<Collection, Error>;
-    // FIXME: fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager, Error>;
-    // FIXME: fn CollectionManager_::list(&self, fetch_options: Option<&FetchOptions>) -> Result<CollectionListResponse, Error>;
-    // FIXME: fn CollectionManager_::upload(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<(), Error>;
-    // FIXME: fn CollectionManager_::transaction(&self, collection: &Collection, fetch_options: Option<&FetchOptions>) -> Result<(), Error>;
+    fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager, Error>;
+    fn CollectionManager_::list(&self, fetch_options: Option<FetchOptions>) -> Result<CollectionListResponse, Error>;
+    fn CollectionManager_::upload(&self, collection: &Collection, fetch_options: Option<FetchOptions>) -> Result<(), Error>;
+    fn CollectionManager_::transaction(&self, collection: &Collection, fetch_options: Option<FetchOptions>) -> Result<(), Error>;
     fn CollectionManager::cache_load(&self, cached: &[u8]) -> Result<Collection, Error>;
     fn CollectionManager::cache_save(&self, collection: &Collection) -> Result<Vec<u8>, Error>;
     fn CollectionManager::cache_save_with_content(&self, collection: &Collection) -> Result<Vec<u8>, Error>;
@@ -323,31 +327,31 @@ foreign_class!(class CollectionManager {
 mod ItemManager_ {
     use super::*;
 
-    pub fn fetch(mgr: &ItemManager, item_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Item, Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn fetch(mgr: &ItemManager, item_uid: &str, fetch_options: Option<FetchOptions>) -> Result<Item, Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         mgr.fetch(item_uid, fetch_options.as_ref())
     }
 
-    pub fn list(mgr: &ItemManager, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse, Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn list(mgr: &ItemManager, fetch_options: Option<FetchOptions>) -> Result<ItemListResponse, Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         mgr.list(fetch_options.as_ref())
     }
 
-    pub fn fetch_updates(mgr: &ItemManager, items: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse, Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn fetch_updates(mgr: &ItemManager, items: Vec<&Item>, fetch_options: Option<FetchOptions>) -> Result<ItemListResponse, Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         mgr.fetch_updates(items.into_iter(), fetch_options.as_ref())
     }
 
-    pub fn batch(mgr: &ItemManager, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<(), Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn batch(mgr: &ItemManager, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         match deps {
             Some(deps) => mgr.batch_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref()),
             None => mgr.batch(items.into_iter(), fetch_options.as_ref()),
         }
     }
 
-    pub fn transaction(mgr: &ItemManager, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<(), Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn transaction(mgr: &ItemManager, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         match deps {
             Some(deps) => mgr.transaction_deps(items.into_iter(), deps.into_iter(), fetch_options.as_ref()),
             None => mgr.transaction(items.into_iter(), fetch_options.as_ref()),
@@ -358,12 +362,12 @@ mod ItemManager_ {
 foreign_class!(class ItemManager {
     self_type ItemManager;
     private constructor = empty;
-    // FIXME: fn ItemManager_::fetch(&self, item_uid: &str, fetch_options: Option<&FetchOptions>) -> Result<Item, Error>;
+    fn ItemManager_::fetch(&self, item_uid: &str, fetch_options: Option<FetchOptions>) -> Result<Item, Error>;
     fn ItemManager::create(&self, meta: &ItemMetadata, content: &[u8]) -> Result<Item, Error>;
-    // FIXME: fn ItemManager_::list(&self, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse, Error>;
-    // FIXME: fn ItemManager_::fetch_updates(&self, items: Vec<&Item>, fetch_options: Option<&FetchOptions>) -> Result<ItemListResponse, Error>;
-    // FIXME: fn ItemManager_::batch(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<(), Error>;
-    // FIXME: fn ItemManager_::transaction(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<&FetchOptions>) -> Result<(), Error>;
+    fn ItemManager_::list(&self, fetch_options: Option<FetchOptions>) -> Result<ItemListResponse, Error>;
+    // FIXME: fn ItemManager_::fetch_updates(&self, items: Vec<&Item>, fetch_options: Option<FetchOptions>) -> Result<ItemListResponse, Error>;
+    // FIXME: fn ItemManager_::batch(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error>;
+    // FIXME: fn ItemManager_::transaction(&self, items: Vec<&Item>, deps: Option<Vec<&Item>>, fetch_options: Option<FetchOptions>) -> Result<(), Error>;
 
     fn ItemManager::cache_load(&self, cached: &[u8]) -> Result<Item, Error>;
     fn ItemManager::cache_save(&self, item: &Item) -> Result<Vec<u8>, Error>;
@@ -461,13 +465,13 @@ foreign_class!(class InvitationListResponse {
 mod CollectionInvitationManager_ {
     use super::*;
 
-    pub fn list_incoming(mgr: &CollectionInvitationManager, fetch_options: Option<&FetchOptions>) -> Result<InvitationListResponse, Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn list_incoming(mgr: &CollectionInvitationManager, fetch_options: Option<FetchOptions>) -> Result<InvitationListResponse, Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         mgr.list_incoming(fetch_options.as_ref())
     }
 
-    pub fn list_outgoing(mgr: &CollectionInvitationManager, fetch_options: Option<&FetchOptions>) -> Result<InvitationListResponse, Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn list_outgoing(mgr: &CollectionInvitationManager, fetch_options: Option<FetchOptions>) -> Result<InvitationListResponse, Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         mgr.list_outgoing(fetch_options.as_ref())
     }
 
@@ -480,8 +484,8 @@ foreign_class!(class CollectionInvitationManager {
     self_type CollectionInvitationManager;
     private constructor = empty;
 
-    // FIXME: fn CollectionInvitationManager_::list_incoming(&self, options: Option<&FetchOptions>) -> Result<InvitationListResponse, Error>;
-    // FIXME: fn CollectionInvitationManager_::list_outgoing(&self, options: Option<&FetchOptions>) -> Result<InvitationListResponse, Error>;
+    fn CollectionInvitationManager_::list_incoming(&self, options: Option<FetchOptions>) -> Result<InvitationListResponse, Error>;
+    fn CollectionInvitationManager_::list_outgoing(&self, options: Option<FetchOptions>) -> Result<InvitationListResponse, Error>;
     fn CollectionInvitationManager::accept(&self, invitation: &SignedInvitation) -> Result<(), Error>;
     fn CollectionInvitationManager::reject(&self, invitation: &SignedInvitation) -> Result<(), Error>;
     fn CollectionInvitationManager::fetch_user_profile(&self, username: &str) -> Result<UserProfile, Error>;
@@ -562,8 +566,8 @@ foreign_class!(class MemberListResponse {
 mod CollectionMemberManager_ {
     use super::*;
 
-    pub fn list(this: &CollectionMemberManager, fetch_options: Option<&FetchOptions>) -> Result<MemberListResponse, Error> {
-        let fetch_options = fetch_options.map(|x| x.to_fetch_options());
+    pub fn list(this: &CollectionMemberManager, fetch_options: Option<FetchOptions>) -> Result<MemberListResponse, Error> {
+        let fetch_options = fetch_options.as_ref().map(|x| x.to_fetch_options());
         this.list(fetch_options.as_ref())
     }
 
@@ -576,7 +580,7 @@ foreign_class!(class CollectionMemberManager {
     self_type CollectionMemberManager;
     private constructor = empty;
 
-    // FIXME: fn list(&self, fetch_options: Option<&FetchOptions>) -> Result<MemberListResponse, Error>;
+    fn CollectionMemberManager_::list(&self, fetch_options: Option<FetchOptions>) -> Result<MemberListResponse, Error>;
     fn CollectionMemberManager::remove(&self, username: &str) -> Result<(), Error>;
     fn CollectionMemberManager::leave(&self) -> Result<(), Error>;
     fn CollectionMemberManager_::modify_access_level(&self, username: &str, access_level: &str) -> Result<(), Error>;
