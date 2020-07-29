@@ -104,8 +104,8 @@ foreign_class!(class Account {
     fn Account::force_api_base(&mut self, api_base: &str) -> Result<(), Error>;
     fn Account::change_password(&mut self, password: &str) -> Result<(), Error>;
     fn Account::logout(&mut self) -> Result<(), Error>;
-    fn Account::collection_manager(&self) -> Result<CollectionManager, Error>;
-    fn Account::invitation_manager(&self) -> Result<CollectionInvitationManager, Error>;
+    fn Account::collection_manager(&self) -> Result<CollectionManager, Error>; alias get_collection_manager;
+    fn Account::invitation_manager(&self) -> Result<CollectionInvitationManager, Error>; alias get_invitation_manager;
 
     fn Account_::save(&self, encryption_key: Option<Vec<u8>>) -> Result<String, Error>;
     fn Account_::restore(client: &Client, account_data_stored: &str, encryption_key: Option<Vec<u8>>) -> Result<Account, Error>;
@@ -146,9 +146,9 @@ mod CollectionListResponse_ {
 foreign_class!(class CollectionListResponse {
     self_type CollectionListResponse;
     private constructor = empty;
-    fn CollectionListResponse_::stoken(&self) -> Option<String>;
-    fn CollectionListResponse::data(&self) -> &Vec<Collection>;
-    fn CollectionListResponse::done(&self) -> bool;
+    fn CollectionListResponse_::stoken(&self) -> Option<String>; alias get_stoken;
+    fn CollectionListResponse::data(&self) -> &Vec<Collection>; alias get_data;
+    fn CollectionListResponse::done(&self) -> bool; alias is_done;
     fn CollectionListResponse_::get_removed_memberships(&self) -> Vec<RemovedCollection>;
 });
 
@@ -169,9 +169,9 @@ mod ItemListResponse_ {
 foreign_class!(class ItemListResponse {
     self_type ItemListResponse;
     private constructor = empty;
-    fn ItemListResponse_::stoken(&self) -> Option<String>;
-    fn ItemListResponse_::data(&self) -> Vec<Item>;
-    fn ItemListResponse::done(&self) -> bool;
+    fn ItemListResponse_::stoken(&self) -> Option<String>; alias get_stoken;
+    fn ItemListResponse_::data(&self) -> Vec<Item>; alias get_data;
+    fn ItemListResponse::done(&self) -> bool; alias is_done;
 });
 
 mod FetchOptions_ {
@@ -318,7 +318,7 @@ foreign_class!(class CollectionManager {
     private constructor = empty;
     fn CollectionManager_::fetch(&self, col_uid: &str, fetch_options: Option<FetchOptions>) -> Result<Collection, Error>;
     fn CollectionManager::create(&self, meta: &CollectionMetadata, content: &[u8]) -> Result<Collection, Error>;
-    fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager, Error>;
+    fn CollectionManager::item_manager(&self, col: &Collection) -> Result<ItemManager, Error>; alias get_item_manager;
     fn CollectionManager_::list(&self, fetch_options: Option<FetchOptions>) -> Result<CollectionListResponse, Error>;
     fn CollectionManager_::upload(&self, collection: &Collection, fetch_options: Option<FetchOptions>) -> Result<(), Error>;
     fn CollectionManager_::transaction(&self, collection: &Collection, fetch_options: Option<FetchOptions>) -> Result<(), Error>;
@@ -326,7 +326,7 @@ foreign_class!(class CollectionManager {
     fn CollectionManager::cache_save(&self, collection: &Collection) -> Result<Vec<u8>, Error>;
     fn CollectionManager::cache_save_with_content(&self, collection: &Collection) -> Result<Vec<u8>, Error>;
 
-    fn CollectionManager::member_manager(&self, col: &Collection) -> Result<CollectionMemberManager, Error>;
+    fn CollectionManager::member_manager(&self, col: &Collection) -> Result<CollectionMemberManager, Error>; alias get_member_manager;
 });
 
 mod ItemManager_ {
@@ -434,8 +434,8 @@ foreign_class!(class Collection {
     fn Collection_::verify(&self) -> bool;
 
     fn Collection::set_meta(&mut self, meta: &CollectionMetadata) -> Result<(), Error>;
-    fn Collection::decrypt_meta(&self) -> Result<CollectionMetadata, Error>;
-    fn Collection::set_meta_raw(&mut self, meta: &[u8]) -> Result<(), Error>; alias set_meta_raw;
+    fn Collection::decrypt_meta(&self) -> Result<CollectionMetadata, Error>; alias get_meta;
+    fn Collection::set_meta_raw(&mut self, meta: &[u8]) -> Result<(), Error>;
     fn Collection::decrypt_meta_raw(&self) -> Result<Vec<u8>, Error>; alias get_meta_raw;
     fn Collection::set_content(&mut self, content: &[u8]) -> Result<(), Error>; alias set_content;
     fn Collection::decrypt_content(&self) -> Result<Vec<u8>, Error>; alias get_content;
@@ -444,7 +444,7 @@ foreign_class!(class Collection {
     fn Collection_::uid(&self) -> String; alias get_uid;
     fn Collection::etag_owned(&self) -> Option<String>; alias get_etag;
     fn Collection_::stoken(&self) -> Option<String>; alias get_stoken;
-    fn Collection_::item(&self) -> Result<Item, Error>;
+    fn Collection_::item(&self) -> Result<Item, Error>; alias get_item;
 });
 
 #[derive(Clone)]
@@ -516,15 +516,15 @@ foreign_class!(
         fn Item::verify(&self) -> bool;
 
         fn Item::set_meta(&mut self, meta: &ItemMetadata) -> Result<(), Error>;
-        fn Item::decrypt_meta(&self) -> Result<ItemMetadata, Error>;
+        fn Item::decrypt_meta(&self) -> Result<ItemMetadata, Error>; alias get_meta;
         fn Item::set_meta_raw(&mut self, meta: &[u8]) -> Result<(), Error>;
-        fn Item::decrypt_meta_raw(&self) -> Result<Vec<u8>, Error>;
+        fn Item::decrypt_meta_raw(&self) -> Result<Vec<u8>, Error>; alias get_meta_raw;
         fn Item::set_content(&mut self, content: &[u8]) -> Result<(), Error>;
-        fn Item::decrypt_content(&self) -> Result<Vec<u8>, Error>;
+        fn Item::decrypt_content(&self) -> Result<Vec<u8>, Error>; alias get_content;
         fn Item::delete(&mut self) -> Result<(), Error>;
         fn Item::is_deleted(&self) -> bool;
-        fn Item::uid(&self) -> String;
-        fn Item::etag(&self) -> Option<String>;
+        fn Item::uid(&self) -> String; alias get_uid;
+        fn Item::etag(&self) -> Option<String>; alias get_etag;
     }
 );
 
@@ -547,9 +547,9 @@ mod InvitationListResponse_ {
 foreign_class!(class InvitationListResponse {
     self_type InvitationListResponse;
     private constructor = empty;
-    fn InvitationListResponse_::iterator(&self) -> Option<String>;
-    fn InvitationListResponse::data(&self) -> &Vec<SignedInvitation>;
-    fn InvitationListResponse::done(&self) -> bool;
+    fn InvitationListResponse_::iterator(&self) -> Option<String>; alias get_iterator;
+    fn InvitationListResponse::data(&self) -> &Vec<SignedInvitation>; alias get_data;
+    fn InvitationListResponse::done(&self) -> bool; alias is_done;
 });
 
 mod CollectionInvitationManager_ {
@@ -648,9 +648,9 @@ mod MemberListResponse_ {
 foreign_class!(class MemberListResponse {
     self_type MemberListResponse;
     private constructor = empty;
-    fn MemberListResponse_::iterator(&self) -> Option<String>;
-    fn MemberListResponse::data(&self) -> &Vec<CollectionMember>;
-    fn MemberListResponse::done(&self) -> bool;
+    fn MemberListResponse_::iterator(&self) -> Option<String>; alias get_iterator;
+    fn MemberListResponse::data(&self) -> &Vec<CollectionMember>; alias get_data;
+    fn MemberListResponse::done(&self) -> bool; alias is_done;
 });
 
 mod CollectionMemberManager_ {
