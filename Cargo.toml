@@ -1,6 +1,6 @@
 [package]
 name = "etebase"
-description = "A C and Rust client library for Etebase"
+description = "A Rust client library for Etebase"
 homepage = "https://www.etebase.com"
 repository = "https://github.com/etesync/etesync-rs/tree/etebase/"
 version = "0.1.0"
