@@ -194,9 +194,9 @@ fn simple_collection_sync() -> Result<()> {
         let content2 = b"Content2";
         col_old.set_content(content2)?;
 
-        assert_err!(col_mgr.transaction(&col, None), Error::Http(_));
+        assert_err!(col_mgr.transaction(&col, None), Error::Conflict(_));
         let fetch_options = FetchOptions::new().stoken(col_old.stoken());
-        assert_err!(col_mgr.upload(&col, Some(&fetch_options)), Error::Http(_));
+        assert_err!(col_mgr.upload(&col, Some(&fetch_options)), Error::Conflict(_));
     }
 
     let content2 = b"Content2";
@@ -252,7 +252,7 @@ fn simple_item_sync() -> Result<()> {
 
     {
         item_old.set_content(b"Bla bla")?;
-        assert_err!(it_mgr.transaction(iter::once(&item_old), None), Error::Http(_));
+        assert_err!(it_mgr.transaction(iter::once(&item_old), None), Error::Conflict(_));
     }
 
     let content2 = b"Content 2";
@@ -260,7 +260,7 @@ fn simple_item_sync() -> Result<()> {
 
     {
         let fetch_options = FetchOptions::new().stoken(col_old.stoken());
-        assert_err!(it_mgr.batch(iter::once(&item), Some(&fetch_options)), Error::Http(_));
+        assert_err!(it_mgr.batch(iter::once(&item), Some(&fetch_options)), Error::Conflict(_));
     }
 
     it_mgr.transaction(iter::once(&item), None)?;
@@ -566,13 +566,13 @@ fn item_transactions() -> Result<()> {
         let deps2 = items.iter().chain(iter::once(&item_old));
 
         // Old in the deps
-        assert_err!(it_mgr.transaction_deps(iter::once(&item), deps2.into_iter(), None), Error::Http(_));
+        assert_err!(it_mgr.transaction_deps(iter::once(&item), deps2.into_iter(), None), Error::Conflict(_));
         it_mgr.transaction(iter::once(&item), None)?;
 
         item_old2.set_meta(&meta3)?;
 
         // Old stoken in the item itself
-        assert_err!(it_mgr.transaction(iter::once(&item_old2), None), Error::Http(_));
+        assert_err!(it_mgr.transaction(iter::once(&item_old2), None), Error::Conflict(_));
     }
 
     {
@@ -583,7 +583,7 @@ fn item_transactions() -> Result<()> {
         item_old2.set_meta(&meta3)?;
 
         // Part of the transaction is bad, and part is good
-        assert_err!(it_mgr.transaction(vec![&item2, &item_old2].into_iter(), None), Error::Http(_));
+        assert_err!(it_mgr.transaction(vec![&item2, &item_old2].into_iter(), None), Error::Conflict(_));
 
         // Verify it hasn't changed after the transaction above failed
         let item2_fetch = it_mgr.fetch(item2.uid(), None)?;
@@ -600,7 +600,7 @@ fn item_transactions() -> Result<()> {
         let bad_etag = col.etag_owned();
 
         let fetch_options = FetchOptions::new().stoken(bad_etag.as_deref());
-        assert_err!(it_mgr.transaction(iter::once(&item), Some(&fetch_options)), Error::Http(_));
+        assert_err!(it_mgr.transaction(iter::once(&item), Some(&fetch_options)), Error::Conflict(_));
 
         let fetch_options = FetchOptions::new().stoken(stoken);
         it_mgr.transaction(iter::once(&item), Some(&fetch_options))?;
@@ -648,8 +648,8 @@ fn item_batch_stoken() -> Result<()> {
         item.set_meta(&meta3)?;
 
         // Old stoken in the item itself should work for batch and fail for transaction or batch with deps
-        assert_err!(it_mgr.transaction(iter::once(&item), None), Error::Http(_));
-        assert_err!(it_mgr.batch_deps(iter::once(&item), iter::once(&item), None), Error::Http(_));
+        assert_err!(it_mgr.transaction(iter::once(&item), None), Error::Conflict(_));
+        assert_err!(it_mgr.batch_deps(iter::once(&item), iter::once(&item), None), Error::Conflict(_));
 
         it_mgr.batch(iter::once(&item), None)?;
     }
@@ -664,7 +664,7 @@ fn item_batch_stoken() -> Result<()> {
         let bad_etag = col.etag_owned();
 
         let fetch_options = FetchOptions::new().stoken(bad_etag.as_deref());
-        assert_err!(it_mgr.batch(iter::once(&item), Some(&fetch_options)), Error::Http(_));
+        assert_err!(it_mgr.batch(iter::once(&item), Some(&fetch_options)), Error::Conflict(_));
 
         let fetch_options = FetchOptions::new().stoken(stoken);
         it_mgr.batch(iter::once(&item), Some(&fetch_options))?;
