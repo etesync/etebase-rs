@@ -87,15 +87,15 @@ fn init_test(user: &TestUser) -> Result<Account> {
 
 fn verify_collection(col: &Collection, meta: &CollectionMetadata, content: &[u8]) -> Result<()> {
     col.verify()?;
-    assert_eq!(&col.decrypt_meta()?, meta);
-    assert_eq!(col.decrypt_content()?, content);
+    assert_eq!(&col.meta()?, meta);
+    assert_eq!(col.content()?, content);
     Ok(())
 }
 
 fn verify_item(item: &Item, meta: &ItemMetadata, content: &[u8]) -> Result<()> {
     item.verify()?;
-    assert_eq!(&item.decrypt_meta()?, meta);
-    assert_eq!(item.decrypt_content()?, content);
+    assert_eq!(&item.meta()?, meta);
+    assert_eq!(item.content()?, content);
     Ok(())
 }
 
@@ -294,11 +294,11 @@ fn collection_as_item() -> Result<()> {
         let fetch_options = FetchOptions::new().with_collection(true);
         let items = it_mgr.list(Some(&fetch_options))?;
         assert_eq!(items.data().len(), 1);
-        let meta = col.item()?.decrypt_meta()?;
+        let meta = col.item()?.meta()?;
         let first_item = items.data().first().unwrap();
         verify_item(&first_item, &meta, col_content)?;
         // Also verify the collection metadata is good
-        assert_eq!(&first_item.decrypt_meta_generic::<CollectionMetadata>()?, &col_meta);
+        assert_eq!(&first_item.meta_generic::<CollectionMetadata>()?, &col_meta);
     }
 
     let meta = ItemMetadata::new().clone();
@@ -342,11 +342,11 @@ fn collection_as_item() -> Result<()> {
     {
         let updates = it_mgr.fetch_updates(vec![&col_item_old, &item].into_iter(), None)?;
         assert_eq!(updates.data().len(), 1);
-        let meta = col.item()?.decrypt_meta()?;
+        let meta = col.item()?.meta()?;
         let first_item = updates.data().first().unwrap();
         verify_item(&first_item, &meta, col_content2)?;
         // Also verify the collection metadata is good
-        assert_eq!(&first_item.decrypt_meta_generic::<CollectionMetadata>()?, &col_meta);
+        assert_eq!(&first_item.meta_generic::<CollectionMetadata>()?, &col_meta);
     }
 
     etebase.logout()
@@ -587,7 +587,7 @@ fn item_transactions() -> Result<()> {
 
         // Verify it hasn't changed after the transaction above failed
         let item2_fetch = it_mgr.fetch(item2.uid(), None)?;
-        assert_ne!(item2_fetch.decrypt_meta()?, item2.decrypt_meta()?);
+        assert_ne!(item2_fetch.meta()?, item2.meta()?);
     }
 
     {
@@ -800,7 +800,7 @@ fn item_revisions() -> Result<()> {
         for i in 0..5 {
             let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
             let rev = &revisions.data()[4 - i];
-            assert_eq!(&rev.decrypt_meta()?, &meta);
+            assert_eq!(&rev.meta()?, &meta);
         }
 
         // Iterate through revisions
@@ -1306,7 +1306,7 @@ fn cache_collections_and_items() -> Result<()> {
         let loaded_item = it_mgr.cache_load(&saved_item)?;
         assert_eq!(item.uid(), loaded_item.uid());
         assert_eq!(item.etag_owned(), loaded_item.etag_owned());
-        assert_eq!(item.decrypt_meta()?, loaded_item.decrypt_meta()?);
+        assert_eq!(item.meta()?, loaded_item.meta()?);
         verify_item(&loaded_item, &meta, content)?;
     }
 
@@ -1316,13 +1316,13 @@ fn cache_collections_and_items() -> Result<()> {
         let loaded_col = col_mgr.cache_load(&saved_col)?;
         assert_eq!(col.uid(), loaded_col.uid());
         assert_eq!(col.etag_owned(), loaded_col.etag_owned());
-        assert_eq!(col.decrypt_meta()?, loaded_col.decrypt_meta()?);
+        assert_eq!(col.meta()?, loaded_col.meta()?);
 
         let saved_item = it_mgr.cache_save(&item)?;
         let loaded_item = it_mgr.cache_load(&saved_item)?;
         assert_eq!(item.uid(), loaded_item.uid());
         assert_eq!(item.etag_owned(), loaded_item.etag_owned());
-        assert_eq!(item.decrypt_meta()?, loaded_item.decrypt_meta()?);
+        assert_eq!(item.meta()?, loaded_item.meta()?);
     }
 
     etebase.logout()

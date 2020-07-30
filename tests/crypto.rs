@@ -46,7 +46,7 @@ fn crypto_manager() {
     let clear_text = b"This Is Some Test Cleartext.";
     let (tag, cipher) = crypto_manager.encrypt_detached(clear_text, None).unwrap();
     let tag: &[u8; 16] = &tag[..].try_into().unwrap();
-    let decrypted = crypto_manager.decrypt_detached(&cipher, tag, None).unwrap();
+    let decrypted = crypto_manager.detached(&cipher, tag, None).unwrap();
     assert_eq!(clear_text, &decrypted[..]);
 
     crypto_manager.verify(&cipher, tag, None).unwrap();

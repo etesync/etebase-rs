@@ -679,12 +679,12 @@ impl Collection {
         self.col.set_meta(&self.cm, &meta)
     }
 
-    pub fn decrypt_meta(&self) -> Result<CollectionMetadata> {
-        self.decrypt_meta_generic::<CollectionMetadata>()
+    pub fn meta(&self) -> Result<CollectionMetadata> {
+        self.meta_generic::<CollectionMetadata>()
     }
 
-    pub fn decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
-        let decrypted = self.col.decrypt_meta(&self.cm)?;
+    pub fn meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
+        let decrypted = self.col.meta(&self.cm)?;
         T::from_msgpack(&decrypted)
     }
 
@@ -692,16 +692,16 @@ impl Collection {
         self.col.set_meta(&self.cm, &meta)
     }
 
-    pub fn decrypt_meta_raw(&self) -> Result<Vec<u8>> {
-        self.col.decrypt_meta(&self.cm)
+    pub fn meta_raw(&self) -> Result<Vec<u8>> {
+        self.col.meta(&self.cm)
     }
 
     pub fn set_content(&mut self, content: &[u8]) -> Result<()> {
         self.col.set_content(&self.cm, content)
     }
 
-    pub fn decrypt_content(&self) -> Result<Vec<u8>> {
-        self.col.decrypt_content(&self.cm)
+    pub fn content(&self) -> Result<Vec<u8>> {
+        self.col.content(&self.cm)
     }
 
     pub fn delete(&mut self) -> Result<()> {
@@ -754,12 +754,12 @@ impl Item {
         self.item.set_meta(&self.cm, &meta)
     }
 
-    pub fn decrypt_meta(&self) -> Result<ItemMetadata> {
-        self.decrypt_meta_generic::<ItemMetadata>()
+    pub fn meta(&self) -> Result<ItemMetadata> {
+        self.meta_generic::<ItemMetadata>()
     }
 
-    pub fn decrypt_meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
-        let decrypted = self.item.decrypt_meta(&self.cm)?;
+    pub fn meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
+        let decrypted = self.item.meta(&self.cm)?;
         T::from_msgpack(&decrypted)
     }
 
@@ -767,16 +767,16 @@ impl Item {
         self.item.set_meta(&self.cm, &meta)
     }
 
-    pub fn decrypt_meta_raw(&self) -> Result<Vec<u8>> {
-        self.item.decrypt_meta(&self.cm)
+    pub fn meta_raw(&self) -> Result<Vec<u8>> {
+        self.item.meta(&self.cm)
     }
 
     pub fn set_content(&mut self, content: &[u8]) -> Result<()> {
         self.item.set_content(&self.cm, content)
     }
 
-    pub fn decrypt_content(&self) -> Result<Vec<u8>> {
-        self.item.decrypt_content(&self.cm)
+    pub fn content(&self) -> Result<Vec<u8>> {
+        self.item.content(&self.cm)
     }
 
     pub fn delete(&mut self) -> Result<()> {

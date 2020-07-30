@@ -380,10 +380,10 @@ impl EncryptedCollection {
         self.item.set_meta(&item_crypto_manager, &meta)
     }
 
-    pub fn decrypt_meta(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
+    pub fn meta(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
         let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
-        self.item.decrypt_meta(&item_crypto_manager)
+        self.item.meta(&item_crypto_manager)
     }
 
     pub fn set_content(&mut self, crypto_manager: &CollectionCryptoManager, content: &[u8]) -> Result<()> {
@@ -391,10 +391,10 @@ impl EncryptedCollection {
         self.item.set_content(&item_crypto_manager, content)
     }
 
-    pub fn decrypt_content(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
+    pub fn content(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
         let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
-        self.item.decrypt_content(&item_crypto_manager)
+        self.item.content(&item_crypto_manager)
     }
 
     pub fn delete(&mut self, crypto_manager: &CollectionCryptoManager) -> Result<()> {
@@ -519,15 +519,15 @@ impl EncryptedRevision {
         Ok(())
     }
 
-    pub fn decrypt_meta(&self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<Vec<u8>> {
+    pub fn meta(&self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<Vec<u8>> {
         let mac = from_base64(&self.uid)?;
         let ad_hash = self.calculate_hash(crypto_manager, additional_data)?;
 
-        buffer_unpad(&crypto_manager.0.decrypt_detached(&self.meta, try_into!(&mac[..])?, Some(&ad_hash))?)
+        buffer_unpad(&crypto_manager.0.detached(&self.meta, try_into!(&mac[..])?, Some(&ad_hash))?)
     }
 
     pub fn set_content(&mut self, crypto_manager: &ItemCryptoManager, additional_data: &[u8], content: &[u8]) -> Result<()> {
-        let meta = self.decrypt_meta(crypto_manager, additional_data)?;
+        let meta = self.meta(crypto_manager, additional_data)?;
 
         let mut chunks: Vec<ChunkArrayItem> = vec![];
 
@@ -616,9 +616,9 @@ impl EncryptedRevision {
         Ok(())
     }
 
-    pub fn decrypt_content(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
+    pub fn content(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         let mut indices = None;
-        let decrypt_item = |(i, item): (usize, &ChunkArrayItem)| -> Result<Vec<u8>> {
+        let item = |(i, item): (usize, &ChunkArrayItem)| -> Result<Vec<u8>> {
             let hash_str = &item.0;
             let buf = &item.1;
             let mut buf = match buf {
@@ -646,7 +646,7 @@ impl EncryptedRevision {
         let decrypted_chunks: Result<Vec<_>> = self.chunks
             .iter()
             .enumerate()
-            .map(decrypt_item)
+            .map(item)
             .collect();
         let decrypted_chunks = decrypted_chunks?;
 
@@ -670,7 +670,7 @@ impl EncryptedRevision {
     }
 
     pub fn delete(&mut self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<()> {
-        let meta = self.decrypt_meta(crypto_manager, additional_data)?;
+        let meta = self.meta(crypto_manager, additional_data)?;
 
         self.deleted = true;
 
@@ -777,9 +777,9 @@ impl EncryptedItem {
         Ok(())
     }
 
-    pub fn decrypt_meta(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
+    pub fn meta(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
-        self.content.decrypt_meta(crypto_manager, self.additional_mac_data())
+        self.content.meta(crypto_manager, self.additional_mac_data())
     }
 
     pub fn set_content(&mut self, crypto_manager: &ItemCryptoManager, content: &[u8]) -> Result<()> {
@@ -795,9 +795,9 @@ impl EncryptedItem {
         Ok(())
     }
 
-    pub fn decrypt_content(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
+    pub fn content(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
-        self.content.decrypt_content(crypto_manager)
+        self.content.content(crypto_manager)
     }
 
     pub fn delete(&mut self, crypto_manager: &ItemCryptoManager) -> Result<()> {
