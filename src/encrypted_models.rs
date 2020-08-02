@@ -89,8 +89,11 @@ pub struct CollectionMetadata {
     #[serde(rename = "type")]
     type_: String,
     name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     color: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     mtime: Option<i64>,
     // FIXME: missing extra
 }
@@ -167,8 +170,11 @@ impl MsgPackSerilization for CollectionMetadata {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ItemMetadata {
     #[serde(rename = "type")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     type_: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     mtime: Option<i64>,
     // FIXME: missing extra
 }
