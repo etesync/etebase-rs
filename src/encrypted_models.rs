@@ -86,6 +86,7 @@ impl ItemCryptoManager {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct CollectionMetadata {
+    #[serde(rename = "type")]
     type_: String,
     name: String,
     description: Option<String>,
@@ -165,6 +166,7 @@ impl MsgPackSerilization for CollectionMetadata {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ItemMetadata {
+    #[serde(rename = "type")]
     type_: Option<String>,
     name: Option<String>,
     mtime: Option<i64>,
