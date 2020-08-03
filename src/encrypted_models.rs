@@ -595,7 +595,8 @@ impl EncryptedRevision {
                 .collect();
 
             // Encode the indice list in the first chunk:
-            chunks[0].1 = match &chunks[0].1 {
+            let last_index = chunks.len() - 1;
+            chunks[last_index].1 = match &chunks[last_index].1 {
                 Some(buf) => Some(rmp_serde::to_vec_named(&(indices, buf))?),
                 None => None,
             }
@@ -626,6 +627,7 @@ impl EncryptedRevision {
 
     pub fn content(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         let mut indices = None;
+        let last_index = self.chunks.len() - 1;
         let item = |(i, item): (usize, &ChunkArrayItem)| -> Result<Vec<u8>> {
             let hash_str = &item.0;
             let buf = &item.1;
@@ -635,10 +637,10 @@ impl EncryptedRevision {
             };
 
             // If we have the header, remove it before calculating the mac
-            if i == 0 {
-                let first_chunk: (Vec<usize>, Vec<u8>) = rmp_serde::from_read_ref(&buf)?;
-                indices = Some(first_chunk.0);
-                buf = first_chunk.1;
+            if i == last_index {
+                let header_chunk: (Vec<usize>, Vec<u8>) = rmp_serde::from_read_ref(&buf)?;
+                indices = Some(header_chunk.0);
+                buf = header_chunk.1;
             }
 
             let hash = from_base64(&hash_str)?;
