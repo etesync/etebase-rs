@@ -633,7 +633,7 @@ impl EncryptedRevision {
             let buf = &item.1;
             let mut buf = match buf {
                 Some(buf) => buffer_unpad(&crypto_manager.0.decrypt(&buf, None)?)?,
-                None => return Err(Error::Generic("Got chunk without data".to_owned())),
+                None => return Err(Error::MissingContent("Got chunk without data")),
             };
 
             // If we have the header, remove it before calculating the mac
