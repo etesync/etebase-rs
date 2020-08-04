@@ -309,11 +309,17 @@ impl<'a> Authenticator<'a> {
     }
 }
 
+#[derive(Clone)]
+pub enum PrefetchOption {
+    Auto,
+    Medium,
+}
+
 pub struct FetchOptions<'a> {
     limit: Option<usize>,
     stoken: Option<&'a str>,
     iterator: Option<&'a str>,
-    prefetch: Option<bool>,
+    prefetch: Option<&'a PrefetchOption>,
     with_collection: Option<bool>,
 }
 
@@ -333,7 +339,7 @@ impl<'a> FetchOptions<'a> {
         self
     }
 
-    pub fn prefetch(mut self, prefetch: bool) -> Self {
+    pub fn prefetch(mut self, prefetch: &'a PrefetchOption) -> Self {
         self.prefetch = Some(prefetch);
         self
     }
@@ -367,7 +373,11 @@ pub fn apply_fetch_options(url: Url, options: Option<&FetchOptions>) -> Url {
             query.append_pair("limit", &limit.to_string());
         }
         if let Some(prefetch) = options.prefetch {
-            query.append_pair("prefetch", &prefetch.to_string());
+            let prefetch = match prefetch {
+                PrefetchOption::Auto => "auto",
+                PrefetchOption::Medium => "medium",
+            };
+            query.append_pair("prefetch", prefetch);
         }
         if let Some(with_collection) = options.with_collection {
             query.append_pair("withCollection", &with_collection.to_string());

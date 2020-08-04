@@ -25,6 +25,7 @@ pub use online_managers::{
     User,
     UserProfile,
     CollectionMember,
+    PrefetchOption,
     FetchOptions,
     CollectionListResponse,
     ItemListResponse,

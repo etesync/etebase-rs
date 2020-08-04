@@ -8,6 +8,8 @@ use etebase::{
     Item,
     ItemMetadata,
 
+    PrefetchOption,
+
     CollectionAccessLevel,
     SignedInvitation,
     CollectionMember,
@@ -156,11 +158,16 @@ foreign_class!(class ItemListResponse {
     fn ItemListResponse::done(&self) -> bool; alias getDone;
 });
 
+foreign_enum!(enum PrefetchOption {
+    Auto = PrefetchOption::Auto,
+    Medium = PrefetchOption::Medium,
+});
+
 foreign_class!(class FetchOptions {
     self_type FetchOptions;
     constructor FetchOptions::new() -> FetchOptions;
     fn FetchOptions::limit(&mut self, limit: usize);
-    fn FetchOptions::prefetch(&mut self, prefetch: bool);
+    fn FetchOptions::prefetch(&mut self, prefetch: PrefetchOption);
     fn FetchOptions::with_collection(&mut self, with_collection: bool);
     fn FetchOptions::iterator(&mut self, iterator: Option<&str>);
     fn FetchOptions::stoken(&mut self, stoken: Option<&str>);

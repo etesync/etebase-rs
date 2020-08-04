@@ -109,7 +109,7 @@ pub struct FetchOptions {
     limit: Option<usize>,
     stoken: Option<String>,
     iterator: Option<String>,
-    prefetch: Option<bool>,
+    prefetch: Option<etebase::PrefetchOption>,
     with_collection: Option<bool>,
 }
 
@@ -128,7 +128,7 @@ impl FetchOptions {
         self.limit = Some(limit);
     }
 
-    pub fn prefetch(&mut self, prefetch: bool) {
+    pub fn prefetch(&mut self, prefetch: etebase::PrefetchOption) {
         self.prefetch = Some(prefetch);
     }
 
@@ -149,7 +149,7 @@ impl FetchOptions {
         if let Some(limit) = self.limit {
             ret = ret.limit(limit);
         }
-        if let Some(prefetch) = self.prefetch {
+        if let Some(prefetch) = &self.prefetch {
             ret = ret.prefetch(prefetch);
         }
         if let Some(with_collection) = self.with_collection {

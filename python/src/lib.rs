@@ -6,7 +6,7 @@ mod fixes {
         limit: Option<usize>,
         stoken: Option<String>,
         iterator: Option<String>,
-        prefetch: Option<bool>,
+        prefetch: Option<etebase::PrefetchOption>,
         with_collection: Option<bool>,
     }
 
@@ -25,7 +25,7 @@ mod fixes {
             self.limit = Some(limit);
         }
 
-        pub fn prefetch(&mut self, prefetch: bool) {
+        pub fn prefetch(&mut self, prefetch: etebase::PrefetchOption) {
             self.prefetch = Some(prefetch);
         }
 
@@ -46,7 +46,7 @@ mod fixes {
             if let Some(limit) = self.limit {
                 ret = ret.limit(limit);
             }
-            if let Some(prefetch) = self.prefetch {
+            if let Some(prefetch) = &self.prefetch {
                 ret = ret.prefetch(prefetch);
             }
             if let Some(with_collection) = self.with_collection {
