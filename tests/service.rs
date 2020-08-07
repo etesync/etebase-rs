@@ -1155,7 +1155,7 @@ fn chunking_large_data() -> Result<()> {
     // Get the first chunks and init uid_set
     {
         let chunks = chunk_uids(&item);
-        assert_eq!(chunks.len(), 7);
+        assert_eq!(chunks.len(), 8);
         for chunk in chunks {
             uid_set.insert(chunk);
         }
@@ -1178,7 +1178,7 @@ fn chunking_large_data() -> Result<()> {
     // Verify how much has changed
     {
         let chunks = chunk_uids(&item);
-        assert_eq!(chunks.len(), 7);
+        assert_eq!(chunks.len(), 8);
 
         let mut reused = 0;
         for chunk in chunks {

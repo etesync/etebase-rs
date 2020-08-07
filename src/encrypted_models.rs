@@ -594,11 +594,12 @@ impl EncryptedRevision {
                 })
                 .collect();
 
-            // Encode the indice list in the first chunk:
-            let last_index = chunks.len() - 1;
-            chunks[last_index].1 = match &chunks[last_index].1 {
-                Some(buf) => Some(rmp_serde::to_vec_named(&(indices, buf))?),
-                None => None,
+            // If we have more than one chunk we need to encode the mapping header in the last chunk
+            if indices.len() > 1 {
+                // We encode it in an array so we can extend it later on if needed
+                let buf = rmp_serde::to_vec_named(&(indices, ))?;
+                let hash = to_base64(&crypto_manager.0.calculate_mac(&buf)?)?;
+                chunks.push(ChunkArrayItem(hash, Some(buf)));
             }
         }
 
@@ -627,21 +628,13 @@ impl EncryptedRevision {
 
     pub fn content(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         let mut indices = None;
-        let last_index = self.chunks.len() - 1;
-        let item = |(i, item): (usize, &ChunkArrayItem)| -> Result<Vec<u8>> {
+        let item = |item: &ChunkArrayItem| -> Result<Vec<u8>> {
             let hash_str = &item.0;
             let buf = &item.1;
-            let mut buf = match buf {
+            let buf = match buf {
                 Some(buf) => buffer_unpad(&crypto_manager.0.decrypt(&buf, None)?)?,
                 None => return Err(Error::MissingContent("Got chunk without data")),
             };
-
-            // If we have the header, remove it before calculating the mac
-            if i == last_index {
-                let header_chunk: (Vec<usize>, Vec<u8>) = rmp_serde::from_read_ref(&buf)?;
-                indices = Some(header_chunk.0);
-                buf = header_chunk.1;
-            }
 
             let hash = from_base64(&hash_str)?;
             let calculated_mac = crypto_manager.0.calculate_mac(&buf)?;
@@ -655,10 +648,16 @@ impl EncryptedRevision {
 
         let decrypted_chunks: Result<Vec<_>> = self.chunks
             .iter()
-            .enumerate()
             .map(item)
             .collect();
-        let decrypted_chunks = decrypted_chunks?;
+        let mut decrypted_chunks = decrypted_chunks?;
+
+        // If we have more than one chunk we have the mapping header in the last chunk
+        if self.chunks.len() > 1 {
+            let buf = decrypted_chunks.pop().unwrap();
+            let header_chunk: (Vec<usize>, ) = rmp_serde::from_read_ref(&buf)?;
+            indices = Some(header_chunk.0);
+        }
 
         match indices {
             Some(indices) => {
