@@ -411,30 +411,24 @@ impl CollectionManager {
 
     pub fn upload(&self, collection: &Collection, options: Option<&FetchOptions>) -> Result<()> {
         let col = &collection.col;
-        match col.etag_owned() {
-            Some(_) => {
-                let item_manager_online = ItemManagerOnline::new(Arc::clone(&self.client), &col);
-                item_manager_online.batch(vec![col.item()].into_iter(), std::iter::empty(), options)?;
-            },
-            None => {
-                self.collection_manager_online.create(&col, options)?;
-            },
-        };
+        if col._is_new() {
+            self.collection_manager_online.create(&col, options)?;
+        } else {
+            let item_manager_online = ItemManagerOnline::new(Arc::clone(&self.client), &col);
+            item_manager_online.batch(vec![col.item()].into_iter(), std::iter::empty(), options)?;
+        }
 
         Ok(())
     }
 
     pub fn transaction(&self, collection: &Collection, options: Option<&FetchOptions>) -> Result<()> {
         let col = &collection.col;
-        match col.etag_owned() {
-            Some(_) => {
-                let item_manager_online = ItemManagerOnline::new(Arc::clone(&self.client), &col);
-                item_manager_online.transaction(vec![col.item()].into_iter(), std::iter::empty(), options)?;
-            },
-            None => {
-                self.collection_manager_online.create(&col, options)?;
-            },
-        };
+        if col._is_new() {
+            self.collection_manager_online.create(&col, options)?;
+        } else {
+            let item_manager_online = ItemManagerOnline::new(Arc::clone(&self.client), &col);
+            item_manager_online.transaction(vec![col.item()].into_iter(), std::iter::empty(), options)?;
+        }
 
         Ok(())
     }
@@ -716,8 +710,8 @@ impl Collection {
         self.col.uid()
     }
 
-    pub fn etag_owned(&self) -> Option<String> {
-        self.col.etag_owned()
+    pub fn etag(&self) -> &str {
+        self.col.etag()
     }
 
     pub fn stoken(&self) -> Option<&str> {
@@ -795,8 +789,8 @@ impl Item {
         self.item.uid()
     }
 
-    pub fn etag_owned(&self) -> Option<String> {
-        self.item.etag_owned()
+    pub fn etag(&self) -> &str {
+        self.item.etag()
     }
 }
 

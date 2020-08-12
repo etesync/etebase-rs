@@ -430,6 +430,10 @@ mod Collection_ {
         this.stoken().map(str::to_string)
     }
 
+    pub fn etag(this: &Collection) -> String {
+        this.etag().to_owned()
+    }
+
     pub fn item(this: &Collection) -> Result<Item, Error> {
         Ok(Item::new(this.item()?))
     }
@@ -453,7 +457,7 @@ foreign_class!(class Collection {
     fn Collection::delete(&mut self) -> Result<(), Error>;
     fn Collection::is_deleted(&self) -> bool;
     fn Collection_::uid(&self) -> String; alias get_uid;
-    fn Collection::etag_owned(&self) -> Option<String>; alias get_etag;
+    fn Collection_::etag(&self) -> String; alias get_etag;
     fn Collection_::stoken(&self) -> Option<String>; alias get_stoken;
     fn Collection_::get_access_level(&self) -> String;
     fn Collection_::item(&self) -> Result<Item, Error>; alias get_item;
@@ -515,8 +519,8 @@ impl Item {
         self.inner.lock().unwrap().is_deleted()
     }
 
-    pub fn etag(&self) -> Option<String> {
-        self.inner.lock().unwrap().etag_owned()
+    pub fn etag(&self) -> String {
+        self.inner.lock().unwrap().etag().to_owned()
     }
 }
 
@@ -536,7 +540,7 @@ foreign_class!(
         fn Item::delete(&mut self) -> Result<(), Error>;
         fn Item::is_deleted(&self) -> bool;
         fn Item::uid(&self) -> String; alias get_uid;
-        fn Item::etag(&self) -> Option<String>; alias get_etag;
+        fn Item::etag(&self) -> String; alias get_etag;
     }
 );
 

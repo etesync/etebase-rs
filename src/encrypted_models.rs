@@ -418,8 +418,12 @@ impl EncryptedCollection {
         self.item.uid()
     }
 
-    pub fn etag_owned(&self) -> Option<String> {
-        self.item.etag_owned()
+    pub fn etag(&self) -> &str {
+        self.item.etag()
+    }
+
+    pub fn _is_new(&self) -> bool {
+        self.item.etag.borrow().is_none()
     }
 
     pub fn stoken(&self) -> Option<&str> {
@@ -834,7 +838,11 @@ impl EncryptedItem {
         &self.uid
     }
 
-    pub fn etag_owned(&self) -> Option<String> {
+    pub fn etag(&self) -> &str {
+        &self.content.uid
+    }
+
+    pub(crate) fn last_etag(&self) -> Option<String> {
         self.etag.borrow().to_owned()
     }
 

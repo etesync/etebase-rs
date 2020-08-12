@@ -341,7 +341,7 @@ foreign_class!(class Collection {
     fn Collection::delete(&mut self) -> Result<()>; alias markDeleted;
     fn Collection::is_deleted(&self) -> bool; alias isDeleted;
     fn Collection::uid(&self) -> &str; alias getUid;
-    fn Collection::etag_owned(&self) -> Option<String>; alias getEtag;
+    fn Collection::etag(&self) -> &str; alias getEtag;
     fn Collection::stoken(&self) -> Option<&str>; alias getStoken;
     fn Collection::item(&self) -> Result<Item>; alias asItem;
 
@@ -368,7 +368,7 @@ foreign_class!(class Item {
     fn Item::delete(&mut self) -> Result<()>; alias markDeleted;
     fn Item::is_deleted(&self) -> bool; alias isDeleted;
     fn Item::uid(&self) -> &str; alias getUid;
-    fn Item::etag_owned(&self) -> Option<String>; alias getEtag;
+    fn Item::etag(&self) -> &str; alias getEtag;
 });
 
 foreign_class!(class UserProfile {

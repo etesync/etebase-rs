@@ -597,9 +597,9 @@ fn item_transactions() -> Result<()> {
 
         let new_col = col_mgr.fetch(col.uid(), None)?;
         let stoken = new_col.stoken();
-        let bad_etag = col.etag_owned();
+        let bad_etag = col.etag();
 
-        let fetch_options = FetchOptions::new().stoken(bad_etag.as_deref());
+        let fetch_options = FetchOptions::new().stoken(Some(bad_etag));
         assert_err!(it_mgr.transaction(iter::once(&item), Some(&fetch_options)), Error::Conflict(_));
 
         let fetch_options = FetchOptions::new().stoken(stoken);
@@ -661,9 +661,9 @@ fn item_batch_stoken() -> Result<()> {
 
         let new_col = col_mgr.fetch(col.uid(), None)?;
         let stoken = new_col.stoken();
-        let bad_etag = col.etag_owned();
+        let bad_etag = col.etag();
 
-        let fetch_options = FetchOptions::new().stoken(bad_etag.as_deref());
+        let fetch_options = FetchOptions::new().stoken(Some(bad_etag));
         assert_err!(it_mgr.batch(iter::once(&item), Some(&fetch_options)), Error::Conflict(_));
 
         let fetch_options = FetchOptions::new().stoken(stoken);
@@ -785,14 +785,14 @@ fn item_revisions() -> Result<()> {
     }
 
     {
-        let etag = item.etag_owned();
-        let fetch_options = FetchOptions::new().iterator(etag.as_deref());
+        let etag = item.etag();
+        let fetch_options = FetchOptions::new().iterator(Some(etag));
         let revisions = it_mgr.item_revisions(&item, Some(&fetch_options))?;
         assert_eq!(revisions.data().len(), 5);
         assert!(revisions.done());
 
-        let etag = item.etag_owned();
-        let fetch_options = FetchOptions::new().iterator(etag.as_deref()).limit(5);
+        let etag = item.etag();
+        let fetch_options = FetchOptions::new().iterator(Some(etag)).limit(5);
         let revisions = it_mgr.item_revisions(&item, Some(&fetch_options))?;
         assert_eq!(revisions.data().len(), 5);
         assert!(revisions.done());
@@ -1303,13 +1303,13 @@ fn cache_collections_and_items() -> Result<()> {
         let saved_col = col_mgr.cache_save_with_content(&col)?;
         let loaded_col = col_mgr.cache_load(&saved_col)?;
         assert_eq!(col.uid(), loaded_col.uid());
-        assert_eq!(col.etag_owned(), loaded_col.etag_owned());
+        assert_eq!(col.etag(), loaded_col.etag());
         verify_collection(&loaded_col, &col_meta, col_content)?;
 
         let saved_item = it_mgr.cache_save_with_content(&item)?;
         let loaded_item = it_mgr.cache_load(&saved_item)?;
         assert_eq!(item.uid(), loaded_item.uid());
-        assert_eq!(item.etag_owned(), loaded_item.etag_owned());
+        assert_eq!(item.etag(), loaded_item.etag());
         assert_eq!(item.meta()?, loaded_item.meta()?);
         verify_item(&loaded_item, &meta, content)?;
     }
@@ -1319,13 +1319,13 @@ fn cache_collections_and_items() -> Result<()> {
         let saved_col = col_mgr.cache_save(&col)?;
         let loaded_col = col_mgr.cache_load(&saved_col)?;
         assert_eq!(col.uid(), loaded_col.uid());
-        assert_eq!(col.etag_owned(), loaded_col.etag_owned());
+        assert_eq!(col.etag(), loaded_col.etag());
         assert_eq!(col.meta()?, loaded_col.meta()?);
 
         let saved_item = it_mgr.cache_save(&item)?;
         let loaded_item = it_mgr.cache_load(&saved_item)?;
         assert_eq!(item.uid(), loaded_item.uid());
-        assert_eq!(item.etag_owned(), loaded_item.etag_owned());
+        assert_eq!(item.etag(), loaded_item.etag());
         assert_eq!(item.meta()?, loaded_item.meta()?);
     }
 
