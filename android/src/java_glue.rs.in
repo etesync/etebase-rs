@@ -344,6 +344,10 @@ foreign_class!(class Collection {
     fn Collection::etag_owned(&self) -> Option<String>; alias getEtag;
     fn Collection::stoken(&self) -> Option<&str>; alias getStoken;
     fn Collection::item(&self) -> Result<Item>; alias asItem;
+
+    fn getAccessLevel(&self) -> String {
+        String::from(this.access_level())
+    }
 });
 
 pub fn item_verify(item: &Item) -> bool {
