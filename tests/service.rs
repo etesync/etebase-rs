@@ -1056,6 +1056,7 @@ fn collection_access_level() -> Result<()> {
     invite_mgr2.accept(invitations.data().first().unwrap())?;
 
     let col2 = col_mgr2.fetch(col.uid(), None)?;
+    assert_eq!(col2.access_level(), &CollectionAccessLevel::ReadWrite);
 
     let it_mgr2 = col_mgr2.item_manager(&col2)?;
 
@@ -1076,6 +1077,9 @@ fn collection_access_level() -> Result<()> {
     }
 
     member_mgr.modify_access_level(USER2.username, &CollectionAccessLevel::ReadOnly)?;
+
+    let col2 = col_mgr2.fetch(col.uid(), None)?;
+    assert_eq!(col2.access_level(), &CollectionAccessLevel::ReadOnly);
 
     // Item creation: fail
     {

@@ -426,6 +426,10 @@ impl EncryptedCollection {
         self.stoken.as_deref()
     }
 
+    pub fn access_level(&self) -> &CollectionAccessLevel {
+        &self.access_level
+    }
+
     pub fn item(&self) -> &EncryptedItem {
         &self.item
     }

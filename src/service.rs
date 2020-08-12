@@ -724,6 +724,10 @@ impl Collection {
         self.col.stoken()
     }
 
+    pub fn access_level(&self) -> &CollectionAccessLevel {
+        self.col.access_level()
+    }
+
     pub fn item(&self) -> Result<Item> {
         let encrypted_item = self.col.item();
         let crypto_manager = encrypted_item.crypto_manager(&self.cm)?;
