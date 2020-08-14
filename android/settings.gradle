@@ -1,2 +1,0 @@
-include ':client'
-rootProject.name = "Etebase Library"
