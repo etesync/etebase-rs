@@ -387,6 +387,10 @@ impl CollectionManager {
 
     pub fn create<T: MsgPackSerilization>(&self, meta: &T, content: &[u8]) -> Result<Collection> {
         let meta = meta.to_msgpack()?;
+        self.create_raw(&meta, content)
+    }
+
+    pub fn create_raw(&self, meta: &[u8], content: &[u8]) -> Result<Collection> {
         let encrypted_collection = EncryptedCollection::new(&self.account_crypto_manager, &meta, content)?;
         Collection::new(encrypted_collection.crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
     }
@@ -471,6 +475,10 @@ impl ItemManager {
 
     pub fn create<T: MsgPackSerilization>(&self, meta: &T, content: &[u8]) -> Result<Item> {
         let meta = meta.to_msgpack()?;
+        self.create_raw(&meta, content)
+    }
+
+    pub fn create_raw(&self, meta: &[u8], content: &[u8]) -> Result<Item> {
         let encrypted_item = EncryptedItem::new(&self.collection_crypto_manager, &meta, content)?;
         Item::new(encrypted_item.crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
     }
