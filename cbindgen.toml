@@ -4,16 +4,7 @@ language = "C"
 # default: doesn't emit an include guard
 include_guard = "ETESYNC_H"
 
-header = """
-#if defined ( __cplusplus )
-extern "C" {
-#endif
-"""
-trailer = """
-#if defined ( __cplusplus )
-}
-#endif
-"""
+cpp_compat = true
 
 # An optional string of text to output between major sections of the generated
 # file as a warning against manual editing
