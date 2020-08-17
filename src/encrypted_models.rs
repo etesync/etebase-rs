@@ -648,7 +648,7 @@ impl EncryptedRevision {
             let calculated_mac = crypto_manager.0.calculate_mac(&buf)?;
 
             if !memcmp(&hash, &calculated_mac) {
-                return Err(Error::Integrity(format!("Got a wrong mac for chunk {}", hash_str)));
+                return Err(Error::Encryption("Got a wrong mac for chunk"));
             }
 
             Ok(buf)
