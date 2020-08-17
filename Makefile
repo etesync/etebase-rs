@@ -33,7 +33,7 @@ build-debug: pkgconfig
 
 build: build-$(MODE)
 
-install: build pkgconfig
+install:
 	install -Dm644 $(PKGCONFIG_FILE) -t $(DST_PKGCONFIG_DIR)
 	install -Dm644 $(HEADER_FILE) -t $(DST_INCLUDE_DIR)
 	install -Dm755 $(LIBRARY_FILE) -t $(DST_LIBRARY_DIR)
