@@ -1,3 +1,5 @@
+use serde::Deserialize;
+
 use crate::error::{
     Error,
     Result,
@@ -57,12 +59,22 @@ impl Response {
         if self.status >= 200 && self.status <300 {
             return Ok(())
         }
+
+        #[derive(Deserialize)]
+        struct ErrorResponse<'a> {
+            pub code: Option<&'a str>,
+            pub detail: Option<&'a str>,
+        }
+
+        let content: ErrorResponse = rmp_serde::from_read_ref(self.bytes())
+            .unwrap_or(ErrorResponse { code: None, detail: None });
+
         Err(match self.status {
-            // FIXME: Use the actual content for the message
-            401 => Error::Unauthorized("Unauthorized".to_string()),
-            403 => Error::PermissionDenied("PermissionDenied".to_string()),
-            409 => Error::Conflict("Conflict".to_string()),
-            status => Error::Http(format!("HTTP error. Status: {}", status)),
+            // FIXME: Use the detail too
+            401 => Error::Unauthorized(content.detail.unwrap_or("Unauthorized").to_string()),
+            403 => Error::PermissionDenied(content.detail.unwrap_or("PermissionDenied").to_string()),
+            409 => Error::Conflict(content.detail.unwrap_or("Conflict").to_string()),
+            status => Error::Http(format!("HTTP error {}! Code: '{}'. Detail: '{}'", status, content.code.unwrap_or("null"), content.detail.unwrap_or("null"))),
         })
     }
 
