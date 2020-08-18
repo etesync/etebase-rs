@@ -1227,7 +1227,7 @@ fn login_and_password_change() -> Result<()> {
 
     etebase2.logout()?;
 
-    assert_err!(Account::login(client.clone(), USER2.username, "BadPassword"), Error::Http(_));
+    assert_err!(Account::login(client.clone(), USER2.username, "BadPassword"), Error::Unauthorized(_));
 
     let mut etebase2 = Account::login(client.clone(), USER2.username, another_password)?;
 
