@@ -1200,8 +1200,11 @@ fn chunking_large_data() -> Result<()> {
 #[test]
 #[ignore]
 fn login_and_password_change() -> Result<()> {
+    // Reset both users
     let etebase = init_test(&USER)?;
     etebase.logout()?;
+    let etebase2 = init_test(&USER2)?;
+    etebase2.logout()?;
 
     let another_password = "AnotherPassword";
     let client = Client::new(CLIENT_NAME, &test_url())?;
