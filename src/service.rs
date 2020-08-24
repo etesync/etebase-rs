@@ -229,9 +229,9 @@ impl Account {
         Ok(())
     }
 
-    pub fn force_api_base(&mut self, api_base: &str) -> Result<()> {
+    pub fn force_server_url(&mut self, api_base: &str) -> Result<()> {
         let mut client = (*self.client).clone();
-        client.set_api_base(api_base)?;
+        client.set_server_url(api_base)?;
         self.client = Arc::new(client);
 
         Ok(())
@@ -329,7 +329,7 @@ impl Account {
         let account_data: AccountData = rmp_serde::from_read_ref(&decrypted)?;
 
         client.set_token(account_data.auth_token);
-        client.set_api_base(account_data.server_url)?;
+        client.set_server_url(account_data.server_url)?;
 
         let main_key = crypto_manager.0.decrypt(account_data.key, None)?;
 

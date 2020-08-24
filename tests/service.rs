@@ -79,7 +79,7 @@ fn init_test(user: &TestUser) -> Result<Account> {
     let session_key = from_base64(sessionStorageKey)?;
 
     let mut ret = Account::restore(client, user.storedSession, Some(&session_key))?;
-    ret.force_api_base(&test_url())?;
+    ret.force_server_url(&test_url())?;
     ret.fetch_token()?;
 
     Ok(ret)

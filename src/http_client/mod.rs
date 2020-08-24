@@ -54,7 +54,7 @@ impl Client {
         self.auth_token.as_deref()
     }
 
-    pub fn set_api_base(&mut self, server_url: &str) -> Result<()> {
+    pub fn set_server_url(&mut self, server_url: &str) -> Result<()> {
         self.api_base = Url::parse(server_url)?;
 
         Ok(())
