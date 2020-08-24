@@ -19,6 +19,7 @@ pub enum Error {
     Unauthorized(String),
     Conflict(String),
     PermissionDenied(String),
+    NotFound(String),
 
     Connection(String),
     TemporaryServerError(String),
@@ -38,6 +39,7 @@ impl fmt::Display for Error {
             Error::Base64(s) => s.fmt(f),
             Error::Encryption(s) => s.fmt(f),
             Error::PermissionDenied(s) => s.fmt(f),
+            Error::NotFound(s) => s.fmt(f),
             Error::Unauthorized(s) => s.fmt(f),
             Error::Conflict(s) => s.fmt(f),
 
