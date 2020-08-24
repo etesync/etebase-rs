@@ -10,19 +10,19 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     Generic(String),
     UrlParse(String),
-    MsgPackEncode(String),
-    MsgPackDecode(String),
+    MsgPack(String),
     ProgrammingError(&'static str),
     MissingContent(&'static str),
     Padding(&'static str),
     Base64(&'static str),
-    TryInto(&'static str),
     Encryption(&'static str),
     Unauthorized(String),
     Conflict(String),
     PermissionDenied(String),
 
     Connection(String),
+    TemporaryServerError(String),
+    ServerError(String),
     Http(String),
 }
 
@@ -31,19 +31,19 @@ impl fmt::Display for Error {
         match self {
             Error::Generic(s) => s.fmt(f),
             Error::UrlParse(s) => s.fmt(f),
-            Error::MsgPackEncode(s) => s.fmt(f),
-            Error::MsgPackDecode(s) => s.fmt(f),
+            Error::MsgPack(s) => s.fmt(f),
             Error::ProgrammingError(s) => s.fmt(f),
             Error::MissingContent(s) => s.fmt(f),
             Error::Padding(s) => s.fmt(f),
             Error::Base64(s) => s.fmt(f),
-            Error::TryInto(s) => s.fmt(f),
             Error::Encryption(s) => s.fmt(f),
             Error::PermissionDenied(s) => s.fmt(f),
             Error::Unauthorized(s) => s.fmt(f),
             Error::Conflict(s) => s.fmt(f),
 
             Error::Connection(s) => s.fmt(f),
+            Error::TemporaryServerError(s) => s.fmt(f),
+            Error::ServerError(s) => s.fmt(f),
             Error::Http(s) => s.fmt(f),
         }
     }
@@ -93,12 +93,12 @@ impl From<block_padding::UnpadError> for Error {
 
 impl From<rmp_serde::encode::Error> for Error {
     fn from(err: rmp_serde::encode::Error) -> Error {
-        Error::MsgPackEncode(err.to_string())
+        Error::MsgPack(err.to_string())
     }
 }
 
 impl From<rmp_serde::decode::Error> for Error {
     fn from(err: rmp_serde::decode::Error) -> Error {
-        Error::MsgPackDecode(err.to_string())
+        Error::MsgPack(err.to_string())
     }
 }

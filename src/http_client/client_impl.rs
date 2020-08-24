@@ -74,6 +74,8 @@ impl Response {
             401 => Error::Unauthorized(content.detail.unwrap_or("Unauthorized").to_string()),
             403 => Error::PermissionDenied(content.detail.unwrap_or("PermissionDenied").to_string()),
             409 => Error::Conflict(content.detail.unwrap_or("Conflict").to_string()),
+            502 ..= 504 => Error::TemporaryServerError(content.detail.unwrap_or("Temporary server error").to_string()),
+            500 ..= 599 => Error::ServerError(content.detail.unwrap_or("Server error").to_string()),
             status => Error::Http(format!("HTTP error {}! Code: '{}'. Detail: '{}'", status, content.code.unwrap_or("null"), content.detail.unwrap_or("null"))),
         })
     }

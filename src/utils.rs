@@ -13,7 +13,7 @@ use super::error::{
 #[macro_export]
 macro_rules! try_into {
     ($x:expr) => {
-        ($x).try_into().or(Err(Error::TryInto("Try into failed")))
+        ($x).try_into().or(Err(Error::ProgrammingError("Try into failed")))
     }
 }
 
