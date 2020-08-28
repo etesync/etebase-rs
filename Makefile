@@ -9,11 +9,13 @@ BUILDDIR = ./target
 
 DST_LIBRARY_DIR = "$(DESTDIR)$(PREFIX)/lib"
 DST_PKGCONFIG_DIR = "$(DST_LIBRARY_DIR)/pkgconfig"
+DST_CMAKECONFIG_DIR = "$(DST_LIBRARY_DIR)/cmake/EteSync"
 DST_INCLUDE_DIR = "$(DESTDIR)$(PREFIX)/include/$(PKGNAME)"
 
 LIBRARY_FILE = "$(BUILDDIR)/$(MODE)/lib$(PKGNAME).so"
 HEADER_FILE = "$(BUILDDIR)/$(PKGNAME).h"
 PKGCONFIG_FILE = "$(BUILDDIR)/$(PKGNAME).pc"
+CMAKECONFIG_FILE = "EteSyncConfig.cmake"
 
 .PHONY: default all clean
 
@@ -35,6 +37,7 @@ build: build-$(MODE)
 
 install:
 	install -Dm644 $(PKGCONFIG_FILE) -t $(DST_PKGCONFIG_DIR)
+	install -Dm644 $(CMAKECONFIG_FILE) -t $(DST_CMAKECONFIG_DIR)
 	install -Dm644 $(HEADER_FILE) -t $(DST_INCLUDE_DIR)
 	install -Dm755 $(LIBRARY_FILE) -t $(DST_LIBRARY_DIR)
 
