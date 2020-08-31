@@ -122,6 +122,11 @@ pub struct Account {
 }
 
 impl Account {
+    pub fn is_etebase_server(client: &Client) -> Result<bool> {
+        let authenticator = Authenticator::new(&client);
+        authenticator.is_etebase_server()
+    }
+
     pub fn signup(mut client: Client, user: &User, password: &str) -> Result<Self> {
         super::init()?;
 

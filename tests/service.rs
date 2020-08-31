@@ -100,6 +100,21 @@ fn verify_item(item: &Item, meta: &ItemMetadata, content: &[u8]) -> Result<()> {
 }
 
 #[test]
+fn is_etebase_server() -> Result<()> {
+    let client = Client::new(CLIENT_NAME, &test_url())?;
+    assert!(Account::is_etebase_server(&client)?);
+    /*
+    let test_url = format!("{}/a", test_url());
+    let client = Client::new(CLIENT_NAME, &test_url)?;
+    assert!(!Account::is_etebase_server(&client)?);
+    */
+    let client = Client::new(CLIENT_NAME, "http://doesnotexist")?;
+    assert!(Account::is_etebase_server(&client).is_err());
+
+    Ok(())
+}
+
+#[test]
 fn simple_collection_handling() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;

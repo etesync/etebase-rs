@@ -228,6 +228,17 @@ impl<'a> Authenticator<'a> {
         }
     }
 
+    pub fn is_etebase_server(&self) -> Result<bool> {
+        let url = self.api_base.join("is_etebase/")?;
+        let res = self.client.get(url.as_str())?;
+        if res.status() == 404 {
+            return Ok(false);
+        }
+        res.error_for_status()?;
+
+        Ok(true)
+    }
+
     pub fn get_login_challenge(&self, username: &str) -> Result<LoginChallange> {
         #[derive(Serialize)]
         struct Body<'a> {
