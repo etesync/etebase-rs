@@ -1,9 +1,0 @@
-prefix=@prefix@
-libdir=${prefix}/lib
-includedir=${prefix}/include
-
-Name: EteSync-rs
-Description: A C and Rust client library for EteSync
-Version: 0.1.0
-Libs: -L${libdir} -letesync
-Cflags: -I${includedir}/etesync
