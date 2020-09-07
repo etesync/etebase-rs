@@ -869,7 +869,7 @@ fn collection_invitations() -> Result<()> {
     // Off-band verification:
     assert_eq!(pretty_fingerprint(&user2_profile.pubkey()), pretty_fingerprint(user2_pubkey));
 
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
 
     let invitations = invite_mgr.list_outgoing(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -887,7 +887,7 @@ fn collection_invitations() -> Result<()> {
     }
 
     // Invite and then disinvite
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -902,7 +902,7 @@ fn collection_invitations() -> Result<()> {
     }
 
     // Invite again, this time accept
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -940,7 +940,7 @@ fn collection_invitations() -> Result<()> {
     }
 
     // Add again
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -1000,7 +1000,7 @@ fn iterating_invitations() -> Result<()> {
         let content = b"";
         let col = col_mgr.create(&meta, content).unwrap();
         col_mgr.upload(&col, None)?;
-        invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
+        invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
     }
 
     // Check incoming
@@ -1065,13 +1065,13 @@ fn collection_access_level() -> Result<()> {
     let member_mgr = col_mgr.member_manager(&col)?;
     let user2_profile = invite_mgr.fetch_user_profile(USER2.username)?;
 
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), &CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     invite_mgr2.accept(invitations.data().first().unwrap())?;
 
     let col2 = col_mgr2.fetch(col.uid(), None)?;
-    assert_eq!(col2.access_level(), &CollectionAccessLevel::ReadWrite);
+    assert_eq!(col2.access_level(), CollectionAccessLevel::ReadWrite);
 
     let it_mgr2 = col_mgr2.item_manager(&col2)?;
 
@@ -1081,7 +1081,7 @@ fn collection_access_level() -> Result<()> {
         assert_eq!(members.data().len(), 2);
         for member in members.data() {
             if member.username() == USER2.username {
-                assert_eq!(member.access_level(), &CollectionAccessLevel::ReadWrite);
+                assert_eq!(member.access_level(), CollectionAccessLevel::ReadWrite);
             }
         }
 
@@ -1091,10 +1091,10 @@ fn collection_access_level() -> Result<()> {
         it_mgr2.batch(iter::once(&item), None)?;
     }
 
-    member_mgr.modify_access_level(USER2.username, &CollectionAccessLevel::ReadOnly)?;
+    member_mgr.modify_access_level(USER2.username, CollectionAccessLevel::ReadOnly)?;
 
     let col2 = col_mgr2.fetch(col.uid(), None)?;
-    assert_eq!(col2.access_level(), &CollectionAccessLevel::ReadOnly);
+    assert_eq!(col2.access_level(), CollectionAccessLevel::ReadOnly);
 
     // Item creation: fail
     {
@@ -1102,7 +1102,7 @@ fn collection_access_level() -> Result<()> {
         assert_eq!(members.data().len(), 2);
         for member in members.data() {
             if member.username() == USER2.username {
-                assert_eq!(member.access_level(), &CollectionAccessLevel::ReadOnly);
+                assert_eq!(member.access_level(), CollectionAccessLevel::ReadOnly);
             }
         }
 
@@ -1112,7 +1112,7 @@ fn collection_access_level() -> Result<()> {
         assert_err!(it_mgr2.batch(iter::once(&item), None), Error::PermissionDenied(_));
     }
 
-    member_mgr.modify_access_level(USER2.username, &CollectionAccessLevel::Admin)?;
+    member_mgr.modify_access_level(USER2.username, CollectionAccessLevel::Admin)?;
 
     // Item creation: success
     {
@@ -1120,7 +1120,7 @@ fn collection_access_level() -> Result<()> {
         assert_eq!(members.data().len(), 2);
         for member in members.data() {
             if member.username() == USER2.username {
-                assert_eq!(member.access_level(), &CollectionAccessLevel::Admin);
+                assert_eq!(member.access_level(), CollectionAccessLevel::Admin);
             }
         }
 

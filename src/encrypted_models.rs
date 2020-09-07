@@ -259,8 +259,8 @@ impl SignedInvitation {
         &self.collection
     }
 
-    pub fn access_level(&self) -> &CollectionAccessLevel {
-        &self.access_level
+    pub fn access_level(&self) -> CollectionAccessLevel {
+        self.access_level
     }
 
     pub fn from_pubkey(&self) -> &[u8] {
@@ -279,7 +279,7 @@ impl SignedInvitation {
     }
 }
 
-#[derive(Serialize_repr, Deserialize_repr, Clone, PartialEq, Debug)]
+#[derive(Serialize_repr, Deserialize_repr, Clone, Copy, PartialEq, Debug)]
 #[repr(u32)]
 pub enum CollectionAccessLevel {
     ReadOnly,
@@ -393,15 +393,15 @@ impl EncryptedCollection {
         self.stoken.as_deref()
     }
 
-    pub fn access_level(&self) -> &CollectionAccessLevel {
-        &self.access_level
+    pub fn access_level(&self) -> CollectionAccessLevel {
+        self.access_level
     }
 
     pub fn item(&self) -> &EncryptedItem {
         &self.item
     }
 
-    pub fn create_invitation(&self, account_crypto_manager: &AccountCryptoManager, identity_crypto_manager: &BoxCryptoManager, username: &str, pubkey: &[u8], access_level: &CollectionAccessLevel) -> Result<SignedInvitation> {
+    pub fn create_invitation(&self, account_crypto_manager: &AccountCryptoManager, identity_crypto_manager: &BoxCryptoManager, username: &str, pubkey: &[u8], access_level: CollectionAccessLevel) -> Result<SignedInvitation> {
         let uid = to_base64(&randombytes(32))?;
         let encryption_key = account_crypto_manager.0.decrypt(&self.collection_key, None)?;
         let signed_encryption_key = identity_crypto_manager.encrypt(&encryption_key, try_into!(pubkey)?)?;

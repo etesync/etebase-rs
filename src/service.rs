@@ -619,7 +619,7 @@ impl CollectionInvitationManager {
         self.invitation_manager_online.fetch_user_profile(username)
     }
 
-    pub fn invite(&self, collection: &Collection, username: &str, pubkey: &[u8], access_level: &CollectionAccessLevel) -> Result<()> {
+    pub fn invite(&self, collection: &Collection, username: &str, pubkey: &[u8], access_level: CollectionAccessLevel) -> Result<()> {
         let invitation = collection.col.create_invitation(&self.account_crypto_manager, &self.identity_crypto_manager, username, pubkey, access_level)?;
         self.invitation_manager_online.invite(&invitation)
     }
@@ -657,7 +657,7 @@ impl CollectionMemberManager {
         self.member_manager_online.leave()
     }
 
-    pub fn modify_access_level(&self, username: &str, access_level: &CollectionAccessLevel) -> Result<()> {
+    pub fn modify_access_level(&self, username: &str, access_level: CollectionAccessLevel) -> Result<()> {
         self.member_manager_online.modify_access_level(username, access_level)
     }
 }
@@ -731,7 +731,7 @@ impl Collection {
         self.col.stoken()
     }
 
-    pub fn access_level(&self) -> &CollectionAccessLevel {
+    pub fn access_level(&self) -> CollectionAccessLevel {
         self.col.access_level()
     }
 

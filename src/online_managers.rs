@@ -635,8 +635,8 @@ impl CollectionMember {
         &self.username
     }
 
-    pub fn access_level(&self) -> &CollectionAccessLevel {
-        &self.access_level
+    pub fn access_level(&self) -> CollectionAccessLevel {
+        self.access_level
     }
 }
 
@@ -784,13 +784,13 @@ impl CollectionMemberManagerOnline {
         Ok(())
     }
 
-    pub fn modify_access_level(&self, username: &str, access_level: &CollectionAccessLevel) -> Result<()> {
+    pub fn modify_access_level(&self, username: &str, access_level: CollectionAccessLevel) -> Result<()> {
         let url = self.api_base.join(&format!("{}/", username))?;
 
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
-        struct Body<'a> {
-            access_level: &'a CollectionAccessLevel,
+        struct Body {
+            access_level: CollectionAccessLevel,
         }
 
         let body_struct = Body {
