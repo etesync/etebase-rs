@@ -19,6 +19,7 @@ sodiumoxide = "^0.2.6"
 url = "^2.1.1"
 serde = { version = "^1.0.105", features = ["derive"] }
 serde_bytes = "^0.11.5"
+serde_repr = "^0.1.5"
 rmp-serde = "^0.14.3"
 reqwest = { version = "^0.10.4", features = ["blocking"], optional = true }
 

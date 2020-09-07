@@ -9,6 +9,7 @@ use std::convert::TryInto;
 use std::collections::HashMap;
 
 use serde::{Serialize, Deserialize};
+use serde_repr::{Serialize_repr, Deserialize_repr};
 
 use super::{
     try_into,
@@ -278,50 +279,12 @@ impl SignedInvitation {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(from = "String", into = "String")]
+#[derive(Serialize_repr, Deserialize_repr, Clone, PartialEq, Debug)]
+#[repr(u32)]
 pub enum CollectionAccessLevel {
-    #[serde(rename = "adm")]
-    Admin,
-    #[serde(rename = "rw")]
-    ReadWrite,
-    #[serde(rename = "ro")]
     ReadOnly,
-    Unknown(String),
-}
-
-impl From<&str> for CollectionAccessLevel {
-    fn from(input: &str) -> Self {
-        Self::from(input.to_owned())
-    }
-}
-
-impl From<String> for CollectionAccessLevel {
-    fn from(input: String) -> Self {
-        match &input[..] {
-            "adm" => CollectionAccessLevel::Admin,
-            "rw" => CollectionAccessLevel::ReadWrite,
-            "ro" => CollectionAccessLevel::ReadOnly,
-            unknown  => CollectionAccessLevel::Unknown(unknown.to_owned()),
-        }
-    }
-}
-
-impl From<CollectionAccessLevel> for String {
-    fn from(input: CollectionAccessLevel) -> Self {
-        Self::from(&input)
-    }
-}
-
-impl From<&CollectionAccessLevel> for String {
-    fn from(input: &CollectionAccessLevel) -> Self {
-        match input {
-            CollectionAccessLevel::Admin => "adm".to_owned(),
-            CollectionAccessLevel::ReadWrite => "rw".to_owned(),
-            CollectionAccessLevel::ReadOnly => "ro".to_owned(),
-            CollectionAccessLevel::Unknown(string) => string.to_owned(),
-        }
-    }
+    Admin,
+    ReadWrite,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
