@@ -270,27 +270,36 @@ impl CryptoMac {
     }
 }
 
+fn get_encoded_chunk(content: &[u8], suffix: &str) -> String {
+  let num = (((content[0] as u32) << 16) +
+    ((content[1] as u32) << 8) +
+    (content[2] as u32)) % 100000;
+  return format!("{:0>5}{}", num, suffix);
+}
+
 pub fn pretty_fingerprint(content: &[u8]) -> String {
     let delimiter = "   ";
     let fingerprint = generichash_quick(content, None).unwrap();
 
-    /* A 5 digit number can be stored in 16 bits, so a 256bit pubkey needs 16 5 digit numbers. */
-    let parts = (0..16).into_iter().map(|i| {
-        let i = i * 2;
-        let left = fingerprint[i] as u16;
-        let right = fingerprint[i + 1] as u16;
-        let num = (left << 8) + right;
-        let suffix = if i == 30 {
-            ""
-        } else if (i + 2) % 8 == 0 {
+    /* We use 3 bytes each time to generate a 5 digit number - this means 10 pairs for bytes 0-29
+     * We then use bytes 29-31 for another number, and then the 3 most significant bits of each first byte for the last.
+     */
+    let mut last_num: u32 = 0;
+    let parts = (0..10).into_iter().map(|i| {
+        let suffix = if i % 4 == 3 {
             "\n"
         } else {
             delimiter
         };
-        let part = format!("{:0>5}{}", num, suffix);
 
-        part
+        last_num = (last_num << 3) | ((fingerprint[i] as u32) & 0xE0) >> 5;
+        get_encoded_chunk(&fingerprint[i * 3..], suffix)
     });
 
+    let last_num = (0..10).into_iter().fold(0, |accum, i| (accum << 3) | ((fingerprint[i] as u32) & 0xE0) >> 5) % 100000;
+    let last_num = format!("{:0>5}", last_num);
+    let parts = parts
+        .chain(std::iter::once(get_encoded_chunk(&fingerprint[29..], delimiter)))
+        .chain(std::iter::once(last_num));
     parts.collect::<String>()
 }

@@ -105,5 +105,5 @@ fn pretty_fingerprint() {
     let pubkey = from_base64(USER.pubkey).unwrap();
 
     let fingerprint = crypto::pretty_fingerprint(&pubkey);
-    assert_eq!(fingerprint, "17756   37089   25897   42924\n06835   62184   63746   54689\n32947   01272   14138   19749\n00577   54359   44439   58177");
+    assert_eq!(fingerprint, "45680   71497   88570   93128\n19189   84243   25687   20837\n47924   46071   54113   18789");
 }
