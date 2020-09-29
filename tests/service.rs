@@ -876,6 +876,10 @@ fn collection_invitations() -> Result<()> {
 
     let invitations = invite_mgr2.list_incoming(None)?;
     assert_eq!(invitations.data().len(), 1);
+    {
+        let invitation = invitations.data().first().unwrap();
+        assert_eq!(invitation.from_username().unwrap(), USER.username);
+    }
 
     invite_mgr2.reject(invitations.data().first().unwrap())?;
 

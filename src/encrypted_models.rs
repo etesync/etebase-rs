@@ -234,13 +234,15 @@ impl MsgPackSerilization for ItemMetadata {
 pub struct SignedInvitation {
     uid: StringBase64,
     version: u8,
-    username: StringBase64,
+    username: String,
 
     collection: String,
     access_level: CollectionAccessLevel,
 
     #[serde(with = "serde_bytes")]
     signed_encryption_key: Vec<u8>,
+
+    from_username: Option<String>,
 
     #[serde(with = "serde_bytes", skip_serializing)]
     from_pubkey: Option<Vec<u8>>,
@@ -261,6 +263,10 @@ impl SignedInvitation {
 
     pub fn access_level(&self) -> CollectionAccessLevel {
         self.access_level
+    }
+
+    pub fn from_username(&self) -> Option<&str> {
+        self.from_username.as_deref()
     }
 
     pub fn from_pubkey(&self) -> &[u8] {
@@ -413,6 +419,7 @@ impl EncryptedCollection {
             access_level: access_level.to_owned(),
 
             signed_encryption_key,
+            from_username: None,
             from_pubkey: Some(identity_crypto_manager.pubkey().to_owned()),
         })
     }
