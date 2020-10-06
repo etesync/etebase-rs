@@ -22,6 +22,7 @@ serde_bytes = "^0.11.5"
 serde_repr = "^0.1.5"
 rmp-serde = "^0.14.3"
 reqwest = { version = "^0.10.4", features = ["blocking"], optional = true }
+remove_dir_all = "^0.6.0"
 
 [features]
 default = ["networking"]

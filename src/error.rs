@@ -81,6 +81,12 @@ impl From<std::ffi::NulError> for Error {
     }
 }
 
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::UrlParse(err.to_string())
+    }
+}
+
 impl From<block_padding::PadError> for Error {
     fn from(_err: block_padding::PadError) -> Error {
         Error::Padding("Failed padding")

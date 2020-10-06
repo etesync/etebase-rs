@@ -7,6 +7,7 @@ mod http_client;
 mod online_managers;
 mod encrypted_models;
 mod service;
+pub mod fs_cache;
 pub mod utils;
 pub mod error;
 
