@@ -71,6 +71,7 @@ impl Response {
 
         Err(match self.status {
             // FIXME: Use the detail too
+            300 ..= 399 => Error::NotFound("Got a redirect - should never happen".to_string()),
             401 => Error::Unauthorized(content.detail.unwrap_or("Unauthorized").to_string()),
             403 => Error::PermissionDenied(content.detail.unwrap_or("PermissionDenied").to_string()),
             404 => Error::NotFound(content.detail.unwrap_or("NotFound").to_string()),
