@@ -3,6 +3,7 @@ use reqwest::{
         Client as ReqwestClient,
         RequestBuilder,
     },
+    redirect::Policy,
     header,
 };
 
@@ -40,6 +41,7 @@ impl Client {
     pub fn new(client_name: &str) -> Result<Self> {
         let req_client = ReqwestClient::builder()
             .user_agent(format!("{} {}", client_name, APP_USER_AGENT))
+            .redirect(Policy::none())
             .build()?;
 
         Ok(Self{
