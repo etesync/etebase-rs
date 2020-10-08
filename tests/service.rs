@@ -103,13 +103,17 @@ fn verify_item(item: &Item, meta: &ItemMetadata, content: &[u8]) -> Result<()> {
 fn is_etebase_server() -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
     assert!(Account::is_etebase_server(&client)?);
-    /*
-    let test_url = format!("{}/a", test_url());
+
+    let test_url = format!("{}/api/", test_url());
     let client = Client::new(CLIENT_NAME, &test_url)?;
     assert!(!Account::is_etebase_server(&client)?);
-    */
+
     let client = Client::new(CLIENT_NAME, "http://doesnotexist")?;
     assert!(Account::is_etebase_server(&client).is_err());
+
+    // Verify we also fail correctly for login
+    let client = Client::new(CLIENT_NAME, &test_url)?;
+    assert_err!(Account::login(client.clone(), USER2.username, USER2.password), Error::NotFound(_));
 
     Ok(())
 }
