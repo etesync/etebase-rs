@@ -119,6 +119,18 @@ fn is_etebase_server() -> Result<()> {
 }
 
 #[test]
+fn get_dashboard_url() -> Result<()> {
+    let etebase = init_test(&USER)?;
+
+    match etebase.fetch_dashboard_url() {
+        Ok(url) => assert!(url.len() > 0),
+        err => assert_err!(err, Error::Http(_)),
+    };
+
+    etebase.logout()
+}
+
+#[test]
 fn simple_collection_handling() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;

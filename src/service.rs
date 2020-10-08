@@ -295,6 +295,12 @@ impl Account {
         Ok(())
     }
 
+    pub fn fetch_dashboard_url(&self) -> Result<String> {
+        let authenticator = Authenticator::new(&self.client);
+
+        authenticator.fetch_dashboard_url()
+    }
+
     pub fn logout(&self) -> Result<()> {
         let authenticator = Authenticator::new(&self.client);
 

@@ -318,6 +318,22 @@ impl<'a> Authenticator<'a> {
 
         Ok(())
     }
+
+    pub fn fetch_dashboard_url(&self) -> Result<String> {
+        #[derive(Deserialize)]
+        struct Ret {
+            pub url: String,
+        }
+
+        let url = self.api_base.join("dashboard_url/")?;
+        let res = self.client.post(url.as_str(), vec![])?;
+        res.error_for_status()?;
+        let res = res.bytes();
+
+        let ret: Ret = rmp_serde::from_read_ref(&res)?;
+
+        Ok(ret.url)
+    }
 }
 
 #[derive(Clone)]
