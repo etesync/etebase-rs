@@ -166,7 +166,18 @@ impl Account {
         super::init()?;
 
         let authenticator = Authenticator::new(&client);
-        let login_challenge = authenticator.get_login_challenge(username)?;
+        let login_challenge = match authenticator.get_login_challenge(username) {
+            Err(Error::Unauthorized(s)) => {
+                // FIXME: fragile, we should have a proper error value or actually use codes
+                if s == "User not properly init" {
+                    let user = User::new(username, "init@localhost");
+                    return Self::signup(client, &user, password);
+                } else {
+                    return Err(Error::Unauthorized(s));
+                }
+            },
+            rest => rest?,
+        };
 
         let version = login_challenge.version;
 
