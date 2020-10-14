@@ -263,9 +263,10 @@ pub struct EncryptedCollection {
     access_level: CollectionAccessLevel,
     #[serde(with = "serde_bytes")]
     collection_key: Vec<u8>,
-    stoken: Option<String>,
+    // FIXME: remove the option "collection-type-migration" is done
     #[serde(with = "serde_bytes")]
-    collection_type: Vec<u8>,
+    collection_type: Option<Vec<u8>>,
+    stoken: Option<String>,
 }
 
 impl EncryptedCollection {
@@ -273,14 +274,14 @@ impl EncryptedCollection {
         let version = CURRENT_VERSION;
         let collection_type = parent_crypto_manager.collection_type_to_uid(collection_type)?;
         let collection_key = parent_crypto_manager.0.encrypt(&randombytes(SYMMETRIC_KEY_SIZE), Some(&collection_type))?;
-        let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, version, &collection_key, &collection_type)?;
+        let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, version, &collection_key, Some(&collection_type))?;
         let item = EncryptedItem::new(&crypto_manager, &meta, content)?;
 
         Ok(Self {
             item,
             access_level: CollectionAccessLevel::Admin,
             collection_key,
-            collection_type,
+            collection_type: Some(collection_type),
 
             stoken: None,
         })
@@ -288,7 +289,32 @@ impl EncryptedCollection {
 
     pub fn cache_load(cached: &[u8]) -> Result<Self> {
         let cached: CachedContent = rmp_serde::from_read_ref(cached)?;
-        Ok(rmp_serde::from_read_ref(&cached.data)?)
+        let ret: std::result::Result<Self, _> = rmp_serde::from_read_ref(&cached.data);
+        // FIXME: remove this whole match once "collection-type-migration" is done
+        Ok(match ret {
+            Ok(ret) => ret,
+            Err(_) => {
+                #[derive(Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct EncryptedCollectionLegacy {
+                    item: EncryptedItem,
+                    access_level: CollectionAccessLevel,
+                    #[serde(with = "serde_bytes")]
+                    collection_key: Vec<u8>,
+                    stoken: Option<String>,
+                }
+
+                let ret: EncryptedCollectionLegacy = rmp_serde::from_read_ref(&cached.data)?;
+
+                Self {
+                    item: ret.item,
+                    access_level: ret.access_level,
+                    collection_key: ret.collection_key,
+                    stoken: ret.stoken,
+                    collection_type: None,
+                }
+            }
+        })
     }
 
     // FIXME: Actually make it not save content
@@ -375,7 +401,14 @@ impl EncryptedCollection {
     }
 
     pub fn collection_type(&self, account_crypto_manager: &AccountCryptoManager) -> Result<String> {
-        account_crypto_manager.collection_type_from_uid(&self.collection_type)
+        match &self.collection_type {
+            Some(collection_type) => account_crypto_manager.collection_type_from_uid(collection_type),
+            None => {
+                let crypto_manager = self.crypto_manager(account_crypto_manager)?;
+                let meta_raw = self.meta(&crypto_manager)?;
+                Ok(ItemMetadata::from_msgpack(&meta_raw)?.item_type().unwrap_or("BAD TYPE").to_owned())
+            },
+        }
     }
 
     pub fn create_invitation(&self, account_crypto_manager: &AccountCryptoManager, identity_crypto_manager: &BoxCryptoManager, username: &str, pubkey: &[u8], access_level: CollectionAccessLevel) -> Result<SignedInvitation> {
@@ -401,22 +434,22 @@ impl EncryptedCollection {
         })
     }
 
-    fn collection_key_static(account_crypto_manager: &AccountCryptoManager, encryption_key: &[u8], collection_type: &[u8]) -> Result<Vec<u8>> {
-        account_crypto_manager.0.decrypt(encryption_key, Some(collection_type))
+    fn collection_key_static(account_crypto_manager: &AccountCryptoManager, encryption_key: &[u8], collection_type: Option<&[u8]>) -> Result<Vec<u8>> {
+        account_crypto_manager.0.decrypt(encryption_key, collection_type)
     }
 
     fn collection_key(&self, account_crypto_manager: &AccountCryptoManager) -> Result<Vec<u8>> {
-        Self::collection_key_static(account_crypto_manager, &self.collection_key, &self.collection_type)
+        Self::collection_key_static(account_crypto_manager, &self.collection_key, self.collection_type.as_deref())
     }
 
-    fn crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8], collection_type: &[u8]) -> Result<CollectionCryptoManager> {
+    fn crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8], collection_type: Option<&[u8]>) -> Result<CollectionCryptoManager> {
         let encryption_key = Self::collection_key_static(parent_crypto_manager, encryption_key, collection_type)?;
 
         CollectionCryptoManager::new(try_into!(&encryption_key[..])?, version)
     }
 
     pub fn crypto_manager(&self, parent_crypto_manager: &AccountCryptoManager) -> Result<CollectionCryptoManager> {
-        Self::crypto_manager_static(parent_crypto_manager, self.item.version, &self.collection_key, &self.collection_type)
+        Self::crypto_manager_static(parent_crypto_manager, self.item.version, &self.collection_key, self.collection_type.as_deref())
     }
 }
 
