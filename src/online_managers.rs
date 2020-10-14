@@ -709,7 +709,7 @@ impl CollectionInvitationManagerOnline {
         Ok(serialized)
     }
 
-    pub fn accept(&self, invitation: &SignedInvitation, encryption_key: &[u8]) -> Result<()> {
+    pub fn accept(&self, invitation: &SignedInvitation, collection_type: &[u8], encryption_key: &[u8]) -> Result<()> {
         let url = self.api_base.join(&format!("incoming/{}/accept/", invitation.uid()))?;
 
         #[derive(Serialize)]
@@ -717,10 +717,13 @@ impl CollectionInvitationManagerOnline {
         struct Body<'a> {
             #[serde(with = "serde_bytes")]
             encryption_key: &'a [u8],
+            #[serde(with = "serde_bytes")]
+            collection_type: &'a [u8],
         }
 
         let body_struct = Body {
             encryption_key,
+            collection_type,
         };
         let body = rmp_serde::to_vec_named(&body_struct)?;
 

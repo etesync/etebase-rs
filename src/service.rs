@@ -22,6 +22,7 @@ use super::{
         Result,
     },
     utils::{
+        buffer_unpad,
         from_base64,
         to_base64,
         StrBase64,
@@ -37,6 +38,7 @@ use super::{
         EncryptedCollection,
         EncryptedItem,
         SignedInvitation,
+        SignedInvitationContent,
         ItemMetadata,
     },
     http_client::Client,
@@ -633,9 +635,11 @@ impl CollectionInvitationManager {
     }
 
     pub fn accept(&self, invitation: &SignedInvitation) -> Result<()> {
-        let decrypted_encryption_key = invitation.decrypted_encryption_key(&self.identity_crypto_manager)?;
-        let encryption_key = self.account_crypto_manager.0.encrypt(&decrypted_encryption_key, None)?;
-        self.invitation_manager_online.accept(invitation, &encryption_key)
+        let raw_content = buffer_unpad(&invitation.decrypted_encryption_key(&self.identity_crypto_manager)?)?;
+        let content: SignedInvitationContent = rmp_serde::from_read_ref(&raw_content)?;
+        let collection_type_uid = self.account_crypto_manager.collection_type_to_uid(&content.collection_type)?;
+        let encryption_key = &self.account_crypto_manager.0.encrypt(&content.encryption_key, Some(&collection_type_uid))?;
+        self.invitation_manager_online.accept(invitation, &collection_type_uid, &encryption_key)
     }
 
     pub fn reject(&self, invitation: &SignedInvitation) -> Result<()> {

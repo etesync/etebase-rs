@@ -183,6 +183,14 @@ impl MsgPackSerilization for ItemMetadata {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SignedInvitationContent {
+    #[serde(with = "serde_bytes")]
+    pub encryption_key: Vec<u8>,
+    pub collection_type: String,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SignedInvitation {
@@ -373,7 +381,13 @@ impl EncryptedCollection {
     pub fn create_invitation(&self, account_crypto_manager: &AccountCryptoManager, identity_crypto_manager: &BoxCryptoManager, username: &str, pubkey: &[u8], access_level: CollectionAccessLevel) -> Result<SignedInvitation> {
         let uid = to_base64(&randombytes(32))?;
         let encryption_key = self.collection_key(account_crypto_manager)?;
-        let signed_encryption_key = identity_crypto_manager.encrypt(&encryption_key, try_into!(pubkey)?)?;
+        let collection_type = self.collection_type(account_crypto_manager)?;
+        let content = SignedInvitationContent {
+            encryption_key,
+            collection_type,
+        };
+        let raw_content = rmp_serde::to_vec_named(&content)?;
+        let signed_encryption_key = identity_crypto_manager.encrypt(&buffer_pad_small(&raw_content)?, try_into!(pubkey)?)?;
         Ok(SignedInvitation {
             uid,
             version: CURRENT_VERSION,
