@@ -86,89 +86,6 @@ impl ItemCryptoManager {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct CollectionMetadata {
-    #[serde(rename = "type")]
-    type_: String,
-    name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    mtime: Option<i64>,
-    // FIXME: missing extra
-}
-
-impl CollectionMetadata {
-    pub fn new(type_: &str, name: &str) -> Self {
-        Self {
-            type_: type_.to_string(),
-            name: name.to_string(),
-            description: None,
-            color: None,
-            mtime: None,
-        }
-    }
-
-    pub fn set_collection_type(&mut self, type_: &str) -> &mut Self {
-        self.type_ = type_.to_string();
-        self
-    }
-
-    pub fn collection_type(&self) -> &str {
-        &self.type_
-    }
-
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
-        self.name = name.to_string();
-        self
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn set_description(&mut self, description: Option<&str>) -> &mut Self {
-        self.description = description.and_then(|x| Some(x.to_string()));
-        self
-    }
-
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
-    }
-
-    pub fn set_color(&mut self, color: Option<&str>) -> &mut Self {
-        self.color = color.and_then(|x| Some(x.to_string()));
-        self
-    }
-
-    pub fn color(&self) -> Option<&str> {
-        self.color.as_deref()
-    }
-
-    pub fn set_mtime(&mut self, mtime: Option<i64>) -> &mut Self {
-        self.mtime = mtime;
-        self
-    }
-
-    pub fn mtime(&self) -> Option<i64> {
-        self.mtime
-    }
-}
-
-impl MsgPackSerilization for CollectionMetadata {
-    type Output = CollectionMetadata;
-
-    fn to_msgpack(&self) -> Result<Vec<u8>> {
-        Ok(rmp_serde::to_vec_named(self)?)
-    }
-
-    fn from_msgpack(data: &[u8]) -> Result<Self::Output> {
-        Ok(rmp_serde::from_read_ref(data)?)
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ItemMetadata {
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -177,7 +94,11 @@ pub struct ItemMetadata {
     name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     mtime: Option<i64>,
-    // FIXME: missing extra
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    color: Option<String>,
 }
 
 impl ItemMetadata {
@@ -186,6 +107,9 @@ impl ItemMetadata {
             type_: None,
             name: None,
             mtime: None,
+
+            color: None,
+            description: None,
         }
     }
 
@@ -214,6 +138,24 @@ impl ItemMetadata {
 
     pub fn mtime(&self) -> Option<i64> {
         self.mtime
+    }
+
+    pub fn set_description(&mut self, description: Option<&str>) -> &mut Self {
+        self.description = description.and_then(|x| Some(x.to_string()));
+        self
+    }
+
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    pub fn set_color(&mut self, color: Option<&str>) -> &mut Self {
+        self.color = color.and_then(|x| Some(x.to_string()));
+        self
+    }
+
+    pub fn color(&self) -> Option<&str> {
+        self.color.as_deref()
     }
 }
 

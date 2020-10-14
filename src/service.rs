@@ -36,7 +36,6 @@ use super::{
         EncryptedCollection,
         EncryptedItem,
         SignedInvitation,
-        CollectionMetadata,
         ItemMetadata,
     },
     http_client::Client,
@@ -703,8 +702,8 @@ impl Collection {
         self.col.set_meta(&self.cm, &meta)
     }
 
-    pub fn meta(&self) -> Result<CollectionMetadata> {
-        self.meta_generic::<CollectionMetadata>()
+    pub fn meta(&self) -> Result<ItemMetadata> {
+        self.meta_generic::<ItemMetadata>()
     }
 
     pub fn meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
