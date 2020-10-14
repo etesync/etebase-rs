@@ -88,10 +88,10 @@ fn simple_cache_handling() -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
     let etebase = init_test_local(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let meta = ItemMetadata::new().set_item_type(Some("type")).set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
     let content = b"SomeContent";
 
-    let col = col_mgr.create(&meta, content)?;
+    let col = col_mgr.create("some.coltype", &meta, content)?;
 
     let temp_dir = TempDir::new()?;
     let fs_cache = FileSystemCache::new(temp_dir.path(), USER.username)?;

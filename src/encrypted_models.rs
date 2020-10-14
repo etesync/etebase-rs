@@ -28,6 +28,8 @@ use super::{
         buffer_pad_small,
         buffer_pad,
         buffer_unpad,
+        buffer_pad_fixed,
+        buffer_unpad_fixed,
         shuffle,
         memcmp,
         randombytes,
@@ -52,12 +54,22 @@ pub struct CachedContent {
 pub struct AccountCryptoManager(pub CryptoManager);
 
 impl AccountCryptoManager {
+    const COLTYPE_PAD_SIZE: usize = 32;
+
     pub fn new(key: &[u8; 32], version: u8) -> Result<Self> {
         let context = b"Acct    ";
 
         Ok(Self {
             0: CryptoManager::new(key, &context, version)?,
         })
+    }
+
+    pub fn collection_type_to_uid(&self, collection_type: &str) -> Result<Vec<u8>> {
+        self.0.deterministic_encrypt(&buffer_pad_fixed(collection_type.as_bytes(), Self::COLTYPE_PAD_SIZE)?, None)
+    }
+
+    pub fn collection_type_from_uid(&self, collection_type_uid: &[u8]) -> Result<String> {
+        buffer_unpad_fixed(&self.0.deterministic_decrypt(collection_type_uid, None)?, Self::COLTYPE_PAD_SIZE).map(|x| String::from_utf8(x).unwrap_or("BAD TYPE".to_owned()))
     }
 }
 
@@ -238,24 +250,29 @@ pub enum CollectionAccessLevel {
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EncryptedCollection {
+    // Order matters because that's how we save to cache
     item: EncryptedItem,
     access_level: CollectionAccessLevel,
     #[serde(with = "serde_bytes")]
     collection_key: Vec<u8>,
     stoken: Option<String>,
+    #[serde(with = "serde_bytes")]
+    collection_type: Vec<u8>,
 }
 
 impl EncryptedCollection {
-    pub fn new(parent_crypto_manager: &AccountCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
+    pub fn new(parent_crypto_manager: &AccountCryptoManager, collection_type: &str, meta: &[u8], content: &[u8]) -> Result<Self> {
         let version = CURRENT_VERSION;
-        let collection_key = parent_crypto_manager.0.encrypt(&randombytes(SYMMETRIC_KEY_SIZE), None)?;
-        let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, version, &collection_key)?;
+        let collection_type = parent_crypto_manager.collection_type_to_uid(collection_type)?;
+        let collection_key = parent_crypto_manager.0.encrypt(&randombytes(SYMMETRIC_KEY_SIZE), Some(&collection_type))?;
+        let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, version, &collection_key, &collection_type)?;
         let item = EncryptedItem::new(&crypto_manager, &meta, content)?;
 
         Ok(Self {
             item,
             access_level: CollectionAccessLevel::Admin,
             collection_key,
+            collection_type,
 
             stoken: None,
         })
@@ -349,6 +366,10 @@ impl EncryptedCollection {
         &self.item
     }
 
+    pub fn collection_type(&self, account_crypto_manager: &AccountCryptoManager) -> Result<String> {
+        account_crypto_manager.collection_type_from_uid(&self.collection_type)
+    }
+
     pub fn create_invitation(&self, account_crypto_manager: &AccountCryptoManager, identity_crypto_manager: &BoxCryptoManager, username: &str, pubkey: &[u8], access_level: CollectionAccessLevel) -> Result<SignedInvitation> {
         let uid = to_base64(&randombytes(32))?;
         let encryption_key = self.collection_key(account_crypto_manager)?;
@@ -366,22 +387,22 @@ impl EncryptedCollection {
         })
     }
 
-    fn collection_key_static(account_crypto_manager: &AccountCryptoManager, encryption_key: &[u8]) -> Result<Vec<u8>> {
-        account_crypto_manager.0.decrypt(encryption_key, None)
+    fn collection_key_static(account_crypto_manager: &AccountCryptoManager, encryption_key: &[u8], collection_type: &[u8]) -> Result<Vec<u8>> {
+        account_crypto_manager.0.decrypt(encryption_key, Some(collection_type))
     }
 
     fn collection_key(&self, account_crypto_manager: &AccountCryptoManager) -> Result<Vec<u8>> {
-        Self::collection_key_static(account_crypto_manager, &self.collection_key)
+        Self::collection_key_static(account_crypto_manager, &self.collection_key, &self.collection_type)
     }
 
-    fn crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8]) -> Result<CollectionCryptoManager> {
-        let encryption_key = Self::collection_key_static(parent_crypto_manager, encryption_key)?;
+    fn crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8], collection_type: &[u8]) -> Result<CollectionCryptoManager> {
+        let encryption_key = Self::collection_key_static(parent_crypto_manager, encryption_key, collection_type)?;
 
         CollectionCryptoManager::new(try_into!(&encryption_key[..])?, version)
     }
 
     pub fn crypto_manager(&self, parent_crypto_manager: &AccountCryptoManager) -> Result<CollectionCryptoManager> {
-        Self::crypto_manager_static(parent_crypto_manager, self.item.version, &self.collection_key)
+        Self::crypto_manager_static(parent_crypto_manager, self.item.version, &self.collection_key, &self.collection_type)
     }
 }
 
