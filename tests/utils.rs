@@ -5,6 +5,8 @@ use etebase::test_helpers::utils::{
     get_padding,
     test_buffer_pad,
     test_buffer_unpad,
+    test_buffer_pad_fixed,
+    test_buffer_unpad_fixed,
 };
 
 
@@ -34,4 +36,18 @@ fn pad_unpad() {
     let padded = test_buffer_pad(&buf).unwrap();
     let unpadded = test_buffer_unpad(&padded[..]).unwrap();
     assert_eq!(unpadded, &buf[..]);
+}
+
+
+#[test]
+fn pad_unpad_fixed() {
+    etebase::init().unwrap();
+
+    let blocksize = 32;
+    for i in 0..(blocksize * 2) {
+        let buf = vec![60; i];
+        let padded = test_buffer_pad_fixed(&buf, blocksize).unwrap();
+        let unpadded = test_buffer_unpad_fixed(&padded[..], blocksize).unwrap();
+        assert_eq!(unpadded, &buf[..]);
+    }
 }

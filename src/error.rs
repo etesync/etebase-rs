@@ -87,18 +87,6 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl From<block_padding::PadError> for Error {
-    fn from(_err: block_padding::PadError) -> Error {
-        Error::Padding("Failed padding")
-    }
-}
-
-impl From<block_padding::UnpadError> for Error {
-    fn from(_err: block_padding::UnpadError) -> Error {
-        Error::Padding("Failed unpadding")
-    }
-}
-
 impl From<rmp_serde::encode::Error> for Error {
     fn from(err: rmp_serde::encode::Error) -> Error {
         Error::MsgPack(err.to_string())
