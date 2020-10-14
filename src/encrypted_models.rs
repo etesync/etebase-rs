@@ -351,7 +351,7 @@ impl EncryptedCollection {
 
     pub fn create_invitation(&self, account_crypto_manager: &AccountCryptoManager, identity_crypto_manager: &BoxCryptoManager, username: &str, pubkey: &[u8], access_level: CollectionAccessLevel) -> Result<SignedInvitation> {
         let uid = to_base64(&randombytes(32))?;
-        let encryption_key = account_crypto_manager.0.decrypt(&self.collection_key, None)?;
+        let encryption_key = self.collection_key(account_crypto_manager)?;
         let signed_encryption_key = identity_crypto_manager.encrypt(&encryption_key, try_into!(pubkey)?)?;
         Ok(SignedInvitation {
             uid,
@@ -366,8 +366,16 @@ impl EncryptedCollection {
         })
     }
 
+    fn collection_key_static(account_crypto_manager: &AccountCryptoManager, encryption_key: &[u8]) -> Result<Vec<u8>> {
+        account_crypto_manager.0.decrypt(encryption_key, None)
+    }
+
+    fn collection_key(&self, account_crypto_manager: &AccountCryptoManager) -> Result<Vec<u8>> {
+        Self::collection_key_static(account_crypto_manager, &self.collection_key)
+    }
+
     fn crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8]) -> Result<CollectionCryptoManager> {
-        let encryption_key = parent_crypto_manager.0.decrypt(encryption_key, None)?;
+        let encryption_key = Self::collection_key_static(parent_crypto_manager, encryption_key)?;
 
         CollectionCryptoManager::new(try_into!(&encryption_key[..])?, version)
     }
