@@ -25,7 +25,7 @@ use super::{
         Result,
     },
     utils::{
-        buffer_pad_meta,
+        buffer_pad_small,
         buffer_pad,
         buffer_unpad,
         shuffle,
@@ -446,7 +446,7 @@ impl EncryptedRevision {
     pub fn set_meta(&mut self, crypto_manager: &ItemCryptoManager, additional_data: &[u8], meta: &[u8]) -> Result<()> {
         let ad_hash = self.calculate_hash(crypto_manager, additional_data)?;
 
-        let msg = buffer_pad_meta(meta)?;
+        let msg = buffer_pad_small(meta)?;
         let enc_content = crypto_manager.0.encrypt_detached(&msg, Some(&ad_hash))?;
 
         self.uid = to_base64(&enc_content.0)?;

@@ -89,7 +89,7 @@ pub fn get_padding(length: u32) -> u32 {
 }
 
 // FIXME: we should properly pad the meta and probably change these functions
-pub(crate) fn buffer_pad_meta(buf: &[u8]) -> Result<Vec<u8>> {
+pub(crate) fn buffer_pad_small(buf: &[u8]) -> Result<Vec<u8>> {
     let len = buf.len();
     let padding = len + 1;
     let mut ret = vec![0; padding];
