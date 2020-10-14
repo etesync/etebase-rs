@@ -101,7 +101,7 @@ impl CryptoManager {
         Ok((tag[..].to_owned(), ret))
     }
 
-    pub fn detached(&self, cipher: &[u8], tag: &[u8; aead::TAGBYTES], additional_data: Option<&[u8]>) -> Result<Vec<u8>> {
+    pub fn decrypt_detached(&self, cipher: &[u8], tag: &[u8; aead::TAGBYTES], additional_data: Option<&[u8]>) -> Result<Vec<u8>> {
         let key = aead::Key(self.cipher_key);
         let tag = aead::Tag(*tag);
         let nonce = &cipher[..aead::NONCEBYTES];

@@ -459,7 +459,7 @@ impl EncryptedRevision {
         let mac = from_base64(&self.uid)?;
         let ad_hash = self.calculate_hash(crypto_manager, additional_data)?;
 
-        buffer_unpad(&crypto_manager.0.detached(&self.meta, try_into!(&mac[..])?, Some(&ad_hash))?)
+        buffer_unpad(&crypto_manager.0.decrypt_detached(&self.meta, try_into!(&mac[..])?, Some(&ad_hash))?)
     }
 
     pub fn set_content(&mut self, crypto_manager: &ItemCryptoManager, additional_data: &[u8], content: &[u8]) -> Result<()> {
