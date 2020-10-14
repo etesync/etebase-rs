@@ -7,6 +7,7 @@ use std::sync::Arc;
 use url::Url;
 
 use serde::{Serialize, Deserialize};
+use serde_bytes::Bytes;
 
 use super::error::Result;
 use super::http_client::Client;
@@ -446,9 +447,26 @@ impl CollectionManagerOnline {
         Ok(serialized)
     }
 
-    pub fn list(&self, options: Option<&FetchOptions>) -> Result<CollectionListResponse<EncryptedCollection>> {
-        let url = apply_fetch_options(self.api_base.clone(), options);
-        let res = self.client.get(url.as_str())?;
+    pub fn list_multi<'a, I>(&self, collection_types: I, options: Option<&FetchOptions>) -> Result<CollectionListResponse<EncryptedCollection>>
+        where I: Iterator<Item = &'a [u8]>
+        {
+
+        let url = apply_fetch_options(self.api_base.join("list_multi/")?, options);
+
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Body<'b> {
+            collection_types: Vec<&'b Bytes>,
+        }
+
+        let collection_types: Vec<&Bytes> = collection_types.map(|x| Bytes::new(x)).collect();
+
+        let body_struct = Body {
+            collection_types,
+        };
+        let body = rmp_serde::to_vec_named(&body_struct)?;
+
+        let res = self.client.post(url.as_str(), body)?;
         res.error_for_status()?;
         let res = res.bytes();
 

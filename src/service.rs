@@ -5,6 +5,7 @@ extern crate rmp_serde;
 
 use std::sync::Arc;
 use std::convert::TryInto;
+use std::iter;
 
 use serde::{Serialize, Deserialize};
 
@@ -421,8 +422,18 @@ impl CollectionManager {
         Collection::new(self.account_crypto_manager.clone(), encrypted_collection.crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
     }
 
-    pub fn list(&self, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>> {
-        let response = self.collection_manager_online.list(options)?;
+    pub fn list(&self, collection_type: &str, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>> {
+        self.list_multi(iter::once(collection_type), options)
+    }
+
+    pub fn list_multi<'a, I>(&self, collection_types: I, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>>
+        where I: Iterator<Item = &'a str>
+        {
+
+        // FIXME: we can avoid this extra allocation
+        let collection_type_uids: Vec<Vec<u8>> = collection_types.map(|x| self.account_crypto_manager.collection_type_to_uid(x).unwrap()).collect();
+        let collection_type_uids = collection_type_uids.iter().map(|x| &x[..]);
+        let response = self.collection_manager_online.list_multi(collection_type_uids, options)?;
 
         let data: Result<Vec<Collection>> = response.data.into_iter().map(|x| Collection::new(self.account_crypto_manager.clone(), x.crypto_manager(&self.account_crypto_manager)?, x)).collect();
 

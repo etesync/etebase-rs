@@ -190,19 +190,19 @@ fn simple_collection_sync() -> Result<()> {
     let mut col = col_mgr.create("some.coltype", &meta, content)?;
     verify_collection(&col, &meta, content)?;
 
-    let collections = col_mgr.list(None)?;
+    let collections = col_mgr.list("some.coltype", None)?;
     assert_eq!(collections.data().len(), 0);
 
     col_mgr.upload(&col, None)?;
 
-    let collections = col_mgr.list(None)?;
+    let collections = col_mgr.list("some.coltype", None)?;
     assert_eq!(collections.data().len(), 1);
     verify_collection(&collections.data().first().unwrap(), &meta, content)?;
 
     let mut col_old = col_mgr.fetch(col.uid(), None)?;
     {
         let fetch_options = FetchOptions::new().stoken(col_old.stoken());
-        let collections = col_mgr.list(Some(&fetch_options))?;
+        let collections = col_mgr.list("some.coltype", Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 0);
     }
 
@@ -211,12 +211,12 @@ fn simple_collection_sync() -> Result<()> {
 
     col_mgr.upload(&col, None)?;
 
-    let collections = col_mgr.list(None)?;
+    let collections = col_mgr.list("some.coltype", None)?;
     assert_eq!(collections.data().len(), 1);
 
     {
         let fetch_options = FetchOptions::new().stoken(col_old.stoken());
-        let collections = col_mgr.list(Some(&fetch_options))?;
+        let collections = col_mgr.list("some.coltype", Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 1);
     }
 
@@ -233,9 +233,44 @@ fn simple_collection_sync() -> Result<()> {
     let content2 = b"Content2";
     col.set_content(content2)?;
 
-    let collections = col_mgr.list(None)?;
+    let collections = col_mgr.list("some.coltype", None)?;
     assert_eq!(collections.data().len(), 1);
     verify_collection(&col, &meta2, content2)?;
+
+    etebase.logout()
+}
+
+#[test]
+fn collection_types() -> Result<()> {
+    let etebase = init_test(&USER)?;
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_content = b"SomeContent";
+
+    let col = col_mgr.create("some.coltype", &col_meta, col_content)?;
+
+    {
+        let collections = col_mgr.list("some.coltype", None)?;
+        assert_eq!(collections.data().len(), 0);
+    }
+
+    col_mgr.upload(&col, None)?;
+
+    {
+        let collections = col_mgr.list("some.coltype", None)?;
+        assert_eq!(collections.data().len(), 1);
+
+        let collections = col_mgr.list("bad.coltype", None)?;
+        assert_eq!(collections.data().len(), 0);
+    }
+
+    {
+        let collections = col_mgr.list_multi(vec!["bad.coltype", "some.coltype", "anotherbad"].into_iter(), None)?;
+        assert_eq!(collections.data().len(), 1);
+
+        let collections = col_mgr.list_multi(vec!["bad.coltype", "anotherbad"].into_iter(), None)?;
+        assert_eq!(collections.data().len(), 0);
+    }
 
     etebase.logout()
 }
@@ -354,7 +389,7 @@ fn collection_as_item() -> Result<()> {
     it_mgr.batch([col.item()?].iter(), None)?;
 
     {
-        let collections = col_mgr.list(None)?;
+        let collections = col_mgr.list("some.coltype", None)?;
         assert_eq!(collections.data().len(), 1);
         verify_collection(&collections.data().first().unwrap(), &col_meta, col_content2)?;
     }
@@ -365,7 +400,7 @@ fn collection_as_item() -> Result<()> {
     it_mgr.transaction([col.item()?].iter(), None)?;
 
     {
-        let collections = col_mgr.list(None)?;
+        let collections = col_mgr.list("some.coltype", None)?;
         assert_eq!(collections.data().len(), 1);
         verify_collection(&collections.data().first().unwrap(), &col_meta, col_content2)?;
     }
@@ -423,7 +458,7 @@ fn collection_and_item_deletion() -> Result<()> {
 
     {
         let fetch_options = FetchOptions::new().stoken(col.stoken());
-        let collections = col_mgr.list(Some(&fetch_options))?;
+        let collections = col_mgr.list("some.coltype", Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 1);
 
         let first_col = collections.data().first().unwrap();
@@ -522,11 +557,11 @@ fn list_response_correctness() -> Result<()> {
     }
 
     {
-        let collections = col_mgr.list(None)?;
+        let collections = col_mgr.list("some.coltype", None)?;
         assert_eq!(collections.data().len(), 5);
         assert!(collections.done());
         let fetch_options = FetchOptions::new().limit(5);
-        let collections = col_mgr.list(Some(&fetch_options))?;
+        let collections = col_mgr.list("some.coltype", Some(&fetch_options))?;
         assert!(collections.done());
         assert!(collections.done());
     }
@@ -534,7 +569,7 @@ fn list_response_correctness() -> Result<()> {
     let mut stoken = None;
     for i in 0..3 {
         let fetch_options = FetchOptions::new().limit(2).stoken(stoken.as_deref());
-        let collections = col_mgr.list(Some(&fetch_options))?;
+        let collections = col_mgr.list("some.coltype", Some(&fetch_options))?;
         assert_eq!(collections.done(), i == 2);
         stoken = collections.stoken().map(str::to_string);
     }
@@ -900,7 +935,7 @@ fn collection_invitations() -> Result<()> {
     invite_mgr2.reject(invitations.data().first().unwrap())?;
 
     {
-        let collections = col_mgr2.list(None)?;
+        let collections = col_mgr2.list("some.coltype", None)?;
         assert_eq!(collections.data().len(), 0);
         let invitations = invite_mgr2.list_incoming(None)?;
         assert_eq!(invitations.data().len(), 0);
@@ -915,7 +950,7 @@ fn collection_invitations() -> Result<()> {
     invite_mgr.disinvite(invitations.data().first().unwrap())?;
 
     {
-        let collections = col_mgr2.list(None)?;
+        let collections = col_mgr2.list("some.coltype", None)?;
         assert_eq!(collections.data().len(), 0);
         let invitations = invite_mgr2.list_incoming(None)?;
         assert_eq!(invitations.data().len(), 0);
@@ -937,7 +972,7 @@ fn collection_invitations() -> Result<()> {
     invite_mgr2.accept(invitation)?;
 
     {
-        let collections = col_mgr2.list(None)?;
+        let collections = col_mgr2.list("some.coltype", None)?;
         assert_eq!(collections.data().len(), 1);
         // Verify we can decrypt it and it's what we expect
         let col2 = collections.data().first().unwrap();
@@ -954,7 +989,7 @@ fn collection_invitations() -> Result<()> {
 
     {
         let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
-        let collections = col_mgr2.list(Some(&fetch_options))?;
+        let collections = col_mgr2.list("some.coltype", Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 0);
         assert_eq!(collections.removed_memberships().unwrap().len(), 1);
     }
@@ -972,7 +1007,7 @@ fn collection_invitations() -> Result<()> {
         assert_ne!(stoken.as_deref(), new_col.stoken());
 
         let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
-        let collections = col_mgr2.list(Some(&fetch_options))?;
+        let collections = col_mgr2.list("some.coltype", Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 1);
         let first_col = collections.data().first().unwrap();
         assert_eq!(first_col.uid(), col.uid());
@@ -988,14 +1023,14 @@ fn collection_invitations() -> Result<()> {
         member_mgr.remove(USER2.username)?;
 
         let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
-        let collections = col_mgr2.list(Some(&fetch_options))?;
+        let collections = col_mgr2.list("some.coltype", Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 0);
         assert_eq!(collections.removed_memberships().unwrap().len(), 1);
 
         let stoken = new_col.stoken();
 
         let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
-        let collections = col_mgr2.list(Some(&fetch_options))?;
+        let collections = col_mgr2.list("some.coltype", Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 0);
         assert_eq!(collections.removed_memberships().unwrap().len(), 1);
     }
@@ -1256,7 +1291,7 @@ fn login_and_password_change() -> Result<()> {
 
     {
         // Verify we can still access the data
-        let collections = col_mgr2.list(None)?;
+        let collections = col_mgr2.list("some.coltype", None)?;
         verify_collection(collections.data().first().unwrap(), &col_meta, col_content)?;
     }
 
@@ -1270,7 +1305,7 @@ fn login_and_password_change() -> Result<()> {
 
     {
         // Verify we can still access the data
-        let collections = col_mgr2.list(None)?;
+        let collections = col_mgr2.list("some.coltype", None)?;
         verify_collection(collections.data().first().unwrap(), &col_meta, col_content)?;
     }
 
@@ -1298,7 +1333,7 @@ fn session_save_and_restore() -> Result<()> {
         let etebase2 = Account::restore(client.clone(), &saved, None)?;
 
         let col_mgr2 = etebase2.collection_manager()?;
-        let collections = col_mgr2.list(None)?;
+        let collections = col_mgr2.list("some.coltype", None)?;
         verify_collection(collections.data().first().unwrap(), &col_meta, col_content)?;
     }
 
@@ -1310,7 +1345,7 @@ fn session_save_and_restore() -> Result<()> {
         let etebase2 = Account::restore(client.clone(), &saved, Some(&key))?;
 
         let col_mgr2 = etebase2.collection_manager()?;
-        let collections = col_mgr2.list(None)?;
+        let collections = col_mgr2.list("some.coltype", None)?;
         verify_collection(collections.data().first().unwrap(), &col_meta, col_content)?;
     }
 

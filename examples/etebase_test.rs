@@ -51,7 +51,7 @@ fn main() -> Result<()> {
             print_item(&item);
         }
     } else {
-        let collections = col_mgr.list(None)?;
+        let collections = col_mgr.list("some.coltype", None)?;
         for col in collections.data() {
             print_collection(&col);
         }
