@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
-use sodiumoxide::base64;
+mod sodium_padding;
 
-use block_padding::{Iso7816, Padding};
+use sodiumoxide::base64;
 
 use super::error::{
     Error,
@@ -89,38 +89,50 @@ pub fn get_padding(length: u32) -> u32 {
 }
 
 // FIXME: we should properly pad the meta and probably change these functions
-pub(crate) fn buffer_pad_meta(buf: &[u8]) -> Result<Vec<u8>> {
+pub(crate) fn buffer_pad_small(buf: &[u8]) -> Result<Vec<u8>> {
     let len = buf.len();
     let padding = len + 1;
-    let mut ret = vec![0; padding];
-    ret[..len].copy_from_slice(buf);
 
-    Iso7816::pad_block(&mut ret[..], len)?;
-
-    Ok(ret)
+    buffer_pad_fixed(buf, padding)
 }
 
 pub(crate) fn buffer_pad(buf: &[u8]) -> Result<Vec<u8>> {
     let len = buf.len();
     let padding = get_padding(len as u32) as usize;
-    let mut ret = vec![0; padding];
-    ret[..len].copy_from_slice(buf);
 
-    Iso7816::pad_block(&mut ret[..], len)?;
-
-    Ok(ret)
+    buffer_pad_fixed(buf, padding)
 }
 
 pub(crate) fn buffer_unpad(buf: &[u8]) -> Result<Vec<u8>> {
     let len = buf.len();
-    let mut buf = buf.to_vec();
 
+    // We pass the buffer's length as the block size because due to padme there's always some variable-sized padding.
+    buffer_unpad_fixed(buf, len)
+}
+
+pub(crate) fn buffer_pad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>> {
+    let len = buf.len();
+    let missing = blocksize - (len % blocksize);
+    let padding = len + missing;
+    let mut ret = vec![0; padding];
+    ret[..len].copy_from_slice(buf);
+
+    sodium_padding::pad(&mut ret[..], len, blocksize).map_err(|_| Error::Padding("Failed padding"))?;
+
+    Ok(ret)
+}
+
+pub(crate) fn buffer_unpad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>> {
+    let len = buf.len();
     if len == 0 {
         return Ok(vec![0; 0]);
     }
 
-    // We pass the buffer's length as the block size because due to padme there's always some variable-sized padding.
-    Ok(Iso7816::unpad(&mut buf[..])?.to_vec())
+    let mut buf = buf.to_vec();
+
+    let new_len = sodium_padding::unpad(&mut buf[..], len, blocksize).map_err(|_| Error::Padding("Failed unpadding"))?;
+    buf.truncate(new_len);
+    Ok(buf)
 }
 
 pub trait MsgPackSerilization {

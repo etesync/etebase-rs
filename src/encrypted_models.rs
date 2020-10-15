@@ -25,9 +25,11 @@ use super::{
         Result,
     },
     utils::{
-        buffer_pad_meta,
+        buffer_pad_small,
         buffer_pad,
         buffer_unpad,
+        buffer_pad_fixed,
+        buffer_unpad_fixed,
         shuffle,
         memcmp,
         randombytes,
@@ -52,12 +54,22 @@ pub struct CachedContent {
 pub struct AccountCryptoManager(pub CryptoManager);
 
 impl AccountCryptoManager {
+    const COLTYPE_PAD_SIZE: usize = 32;
+
     pub fn new(key: &[u8; 32], version: u8) -> Result<Self> {
         let context = b"Acct    ";
 
         Ok(Self {
             0: CryptoManager::new(key, &context, version)?,
         })
+    }
+
+    pub fn collection_type_to_uid(&self, collection_type: &str) -> Result<Vec<u8>> {
+        self.0.deterministic_encrypt(&buffer_pad_fixed(collection_type.as_bytes(), Self::COLTYPE_PAD_SIZE)?, None)
+    }
+
+    pub fn collection_type_from_uid(&self, collection_type_uid: &[u8]) -> Result<String> {
+        buffer_unpad_fixed(&self.0.deterministic_decrypt(collection_type_uid, None)?, Self::COLTYPE_PAD_SIZE).map(|x| String::from_utf8(x).unwrap_or("BAD TYPE".to_owned()))
     }
 }
 
@@ -86,89 +98,6 @@ impl ItemCryptoManager {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct CollectionMetadata {
-    #[serde(rename = "type")]
-    type_: String,
-    name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    mtime: Option<i64>,
-    // FIXME: missing extra
-}
-
-impl CollectionMetadata {
-    pub fn new(type_: &str, name: &str) -> Self {
-        Self {
-            type_: type_.to_string(),
-            name: name.to_string(),
-            description: None,
-            color: None,
-            mtime: None,
-        }
-    }
-
-    pub fn set_collection_type(&mut self, type_: &str) -> &mut Self {
-        self.type_ = type_.to_string();
-        self
-    }
-
-    pub fn collection_type(&self) -> &str {
-        &self.type_
-    }
-
-    pub fn set_name(&mut self, name: &str) -> &mut Self {
-        self.name = name.to_string();
-        self
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn set_description(&mut self, description: Option<&str>) -> &mut Self {
-        self.description = description.and_then(|x| Some(x.to_string()));
-        self
-    }
-
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
-    }
-
-    pub fn set_color(&mut self, color: Option<&str>) -> &mut Self {
-        self.color = color.and_then(|x| Some(x.to_string()));
-        self
-    }
-
-    pub fn color(&self) -> Option<&str> {
-        self.color.as_deref()
-    }
-
-    pub fn set_mtime(&mut self, mtime: Option<i64>) -> &mut Self {
-        self.mtime = mtime;
-        self
-    }
-
-    pub fn mtime(&self) -> Option<i64> {
-        self.mtime
-    }
-}
-
-impl MsgPackSerilization for CollectionMetadata {
-    type Output = CollectionMetadata;
-
-    fn to_msgpack(&self) -> Result<Vec<u8>> {
-        Ok(rmp_serde::to_vec_named(self)?)
-    }
-
-    fn from_msgpack(data: &[u8]) -> Result<Self::Output> {
-        Ok(rmp_serde::from_read_ref(data)?)
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ItemMetadata {
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -177,7 +106,11 @@ pub struct ItemMetadata {
     name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     mtime: Option<i64>,
-    // FIXME: missing extra
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    color: Option<String>,
 }
 
 impl ItemMetadata {
@@ -186,6 +119,9 @@ impl ItemMetadata {
             type_: None,
             name: None,
             mtime: None,
+
+            color: None,
+            description: None,
         }
     }
 
@@ -215,6 +151,24 @@ impl ItemMetadata {
     pub fn mtime(&self) -> Option<i64> {
         self.mtime
     }
+
+    pub fn set_description(&mut self, description: Option<&str>) -> &mut Self {
+        self.description = description.and_then(|x| Some(x.to_string()));
+        self
+    }
+
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    pub fn set_color(&mut self, color: Option<&str>) -> &mut Self {
+        self.color = color.and_then(|x| Some(x.to_string()));
+        self
+    }
+
+    pub fn color(&self) -> Option<&str> {
+        self.color.as_deref()
+    }
 }
 
 impl MsgPackSerilization for ItemMetadata {
@@ -227,6 +181,14 @@ impl MsgPackSerilization for ItemMetadata {
     fn from_msgpack(data: &[u8]) -> Result<Self::Output> {
         Ok(rmp_serde::from_read_ref(data)?)
     }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SignedInvitationContent {
+    #[serde(with = "serde_bytes")]
+    pub encryption_key: Vec<u8>,
+    pub collection_type: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -296,24 +258,30 @@ pub enum CollectionAccessLevel {
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EncryptedCollection {
+    // Order matters because that's how we save to cache
     item: EncryptedItem,
     access_level: CollectionAccessLevel,
     #[serde(with = "serde_bytes")]
     collection_key: Vec<u8>,
+    // FIXME: remove the option "collection-type-migration" is done
+    #[serde(with = "serde_bytes")]
+    collection_type: Option<Vec<u8>>,
     stoken: Option<String>,
 }
 
 impl EncryptedCollection {
-    pub fn new(parent_crypto_manager: &AccountCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
+    pub fn new(parent_crypto_manager: &AccountCryptoManager, collection_type: &str, meta: &[u8], content: &[u8]) -> Result<Self> {
         let version = CURRENT_VERSION;
-        let collection_key = parent_crypto_manager.0.encrypt(&randombytes(SYMMETRIC_KEY_SIZE), None)?;
-        let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, version, &collection_key)?;
+        let collection_type = parent_crypto_manager.collection_type_to_uid(collection_type)?;
+        let collection_key = parent_crypto_manager.0.encrypt(&randombytes(SYMMETRIC_KEY_SIZE), Some(&collection_type))?;
+        let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, version, &collection_key, Some(&collection_type))?;
         let item = EncryptedItem::new(&crypto_manager, &meta, content)?;
 
         Ok(Self {
             item,
             access_level: CollectionAccessLevel::Admin,
             collection_key,
+            collection_type: Some(collection_type),
 
             stoken: None,
         })
@@ -321,7 +289,32 @@ impl EncryptedCollection {
 
     pub fn cache_load(cached: &[u8]) -> Result<Self> {
         let cached: CachedContent = rmp_serde::from_read_ref(cached)?;
-        Ok(rmp_serde::from_read_ref(&cached.data)?)
+        let ret: std::result::Result<Self, _> = rmp_serde::from_read_ref(&cached.data);
+        // FIXME: remove this whole match once "collection-type-migration" is done
+        Ok(match ret {
+            Ok(ret) => ret,
+            Err(_) => {
+                #[derive(Deserialize)]
+                #[serde(rename_all = "camelCase")]
+                struct EncryptedCollectionLegacy {
+                    item: EncryptedItem,
+                    access_level: CollectionAccessLevel,
+                    #[serde(with = "serde_bytes")]
+                    collection_key: Vec<u8>,
+                    stoken: Option<String>,
+                }
+
+                let ret: EncryptedCollectionLegacy = rmp_serde::from_read_ref(&cached.data)?;
+
+                Self {
+                    item: ret.item,
+                    access_level: ret.access_level,
+                    collection_key: ret.collection_key,
+                    stoken: ret.stoken,
+                    collection_type: None,
+                }
+            }
+        })
     }
 
     // FIXME: Actually make it not save content
@@ -407,10 +400,27 @@ impl EncryptedCollection {
         &self.item
     }
 
+    pub fn collection_type(&self, account_crypto_manager: &AccountCryptoManager) -> Result<String> {
+        match &self.collection_type {
+            Some(collection_type) => account_crypto_manager.collection_type_from_uid(collection_type),
+            None => {
+                let crypto_manager = self.crypto_manager(account_crypto_manager)?;
+                let meta_raw = self.meta(&crypto_manager)?;
+                Ok(ItemMetadata::from_msgpack(&meta_raw)?.item_type().unwrap_or("BAD TYPE").to_owned())
+            },
+        }
+    }
+
     pub fn create_invitation(&self, account_crypto_manager: &AccountCryptoManager, identity_crypto_manager: &BoxCryptoManager, username: &str, pubkey: &[u8], access_level: CollectionAccessLevel) -> Result<SignedInvitation> {
         let uid = to_base64(&randombytes(32))?;
-        let encryption_key = account_crypto_manager.0.decrypt(&self.collection_key, None)?;
-        let signed_encryption_key = identity_crypto_manager.encrypt(&encryption_key, try_into!(pubkey)?)?;
+        let encryption_key = self.collection_key(account_crypto_manager)?;
+        let collection_type = self.collection_type(account_crypto_manager)?;
+        let content = SignedInvitationContent {
+            encryption_key,
+            collection_type,
+        };
+        let raw_content = rmp_serde::to_vec_named(&content)?;
+        let signed_encryption_key = identity_crypto_manager.encrypt(&buffer_pad_small(&raw_content)?, try_into!(pubkey)?)?;
         Ok(SignedInvitation {
             uid,
             version: CURRENT_VERSION,
@@ -424,14 +434,22 @@ impl EncryptedCollection {
         })
     }
 
-    fn crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8]) -> Result<CollectionCryptoManager> {
-        let encryption_key = parent_crypto_manager.0.decrypt(encryption_key, None)?;
+    fn collection_key_static(account_crypto_manager: &AccountCryptoManager, encryption_key: &[u8], collection_type: Option<&[u8]>) -> Result<Vec<u8>> {
+        account_crypto_manager.0.decrypt(encryption_key, collection_type)
+    }
+
+    fn collection_key(&self, account_crypto_manager: &AccountCryptoManager) -> Result<Vec<u8>> {
+        Self::collection_key_static(account_crypto_manager, &self.collection_key, self.collection_type.as_deref())
+    }
+
+    fn crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8], collection_type: Option<&[u8]>) -> Result<CollectionCryptoManager> {
+        let encryption_key = Self::collection_key_static(parent_crypto_manager, encryption_key, collection_type)?;
 
         CollectionCryptoManager::new(try_into!(&encryption_key[..])?, version)
     }
 
     pub fn crypto_manager(&self, parent_crypto_manager: &AccountCryptoManager) -> Result<CollectionCryptoManager> {
-        Self::crypto_manager_static(parent_crypto_manager, self.item.version, &self.collection_key)
+        Self::crypto_manager_static(parent_crypto_manager, self.item.version, &self.collection_key, self.collection_type.as_deref())
     }
 }
 
@@ -496,7 +514,7 @@ impl EncryptedRevision {
     pub fn set_meta(&mut self, crypto_manager: &ItemCryptoManager, additional_data: &[u8], meta: &[u8]) -> Result<()> {
         let ad_hash = self.calculate_hash(crypto_manager, additional_data)?;
 
-        let msg = buffer_pad_meta(meta)?;
+        let msg = buffer_pad_small(meta)?;
         let enc_content = crypto_manager.0.encrypt_detached(&msg, Some(&ad_hash))?;
 
         self.uid = to_base64(&enc_content.0)?;
@@ -509,7 +527,7 @@ impl EncryptedRevision {
         let mac = from_base64(&self.uid)?;
         let ad_hash = self.calculate_hash(crypto_manager, additional_data)?;
 
-        buffer_unpad(&crypto_manager.0.detached(&self.meta, try_into!(&mac[..])?, Some(&ad_hash))?)
+        buffer_unpad(&crypto_manager.0.decrypt_detached(&self.meta, try_into!(&mac[..])?, Some(&ad_hash))?)
     }
 
     pub fn set_content(&mut self, crypto_manager: &ItemCryptoManager, additional_data: &[u8], content: &[u8]) -> Result<()> {

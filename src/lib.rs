@@ -37,7 +37,6 @@ pub use online_managers::{
 
 pub use encrypted_models::{
     CollectionAccessLevel,
-    CollectionMetadata,
     ItemMetadata,
     SignedInvitation,
 };
@@ -71,6 +70,14 @@ pub mod test_helpers {
 
         pub fn test_buffer_unpad(buf: &[u8]) -> Result<Vec<u8>> {
             buffer_unpad(buf)
+        }
+
+        pub fn test_buffer_pad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>> {
+            buffer_pad_fixed(buf, blocksize)
+        }
+
+        pub fn test_buffer_unpad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>> {
+            buffer_unpad_fixed(buf, blocksize)
         }
     }
     pub use super::online_managers::{

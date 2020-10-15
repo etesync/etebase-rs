@@ -5,6 +5,7 @@ extern crate rmp_serde;
 
 use std::sync::Arc;
 use std::convert::TryInto;
+use std::iter;
 
 use serde::{Serialize, Deserialize};
 
@@ -21,6 +22,7 @@ use super::{
         Result,
     },
     utils::{
+        buffer_unpad,
         from_base64,
         to_base64,
         StrBase64,
@@ -36,7 +38,7 @@ use super::{
         EncryptedCollection,
         EncryptedItem,
         SignedInvitation,
-        CollectionMetadata,
+        SignedInvitationContent,
         ItemMetadata,
     },
     http_client::Client,
@@ -407,25 +409,35 @@ impl CollectionManager {
         })
     }
 
-    pub fn create<T: MsgPackSerilization>(&self, meta: &T, content: &[u8]) -> Result<Collection> {
+    pub fn create<T: MsgPackSerilization>(&self, collection_type: &str, meta: &T, content: &[u8]) -> Result<Collection> {
         let meta = meta.to_msgpack()?;
-        self.create_raw(&meta, content)
+        self.create_raw(collection_type, &meta, content)
     }
 
-    pub fn create_raw(&self, meta: &[u8], content: &[u8]) -> Result<Collection> {
-        let encrypted_collection = EncryptedCollection::new(&self.account_crypto_manager, &meta, content)?;
-        Collection::new(encrypted_collection.crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
+    pub fn create_raw(&self, collection_type: &str, meta: &[u8], content: &[u8]) -> Result<Collection> {
+        let encrypted_collection = EncryptedCollection::new(&self.account_crypto_manager, collection_type, &meta, content)?;
+        Collection::new(self.account_crypto_manager.clone(), encrypted_collection.crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
     }
 
     pub fn fetch(&self, col_uid: &StrBase64, options: Option<&FetchOptions>) -> Result<Collection> {
         let encrypted_collection = self.collection_manager_online.fetch(&col_uid, options)?;
-        Collection::new(encrypted_collection.crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
+        Collection::new(self.account_crypto_manager.clone(), encrypted_collection.crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
     }
 
-    pub fn list(&self, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>> {
-        let response = self.collection_manager_online.list(options)?;
+    pub fn list(&self, collection_type: &str, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>> {
+        self.list_multi(iter::once(collection_type), options)
+    }
 
-        let data: Result<Vec<Collection>> = response.data.into_iter().map(|x| Collection::new(x.crypto_manager(&self.account_crypto_manager)?, x)).collect();
+    pub fn list_multi<'a, I>(&self, collection_types: I, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>>
+        where I: Iterator<Item = &'a str>
+        {
+
+        // FIXME: we can avoid this extra allocation
+        let collection_type_uids: Vec<Vec<u8>> = collection_types.map(|x| self.account_crypto_manager.collection_type_to_uid(x).unwrap()).collect();
+        let collection_type_uids = collection_type_uids.iter().map(|x| &x[..]);
+        let response = self.collection_manager_online.list_multi(collection_type_uids, options)?;
+
+        let data: Result<Vec<Collection>> = response.data.into_iter().map(|x| Collection::new(self.account_crypto_manager.clone(), x.crypto_manager(&self.account_crypto_manager)?, x)).collect();
 
         Ok(CollectionListResponse {
             data: data?,
@@ -461,7 +473,7 @@ impl CollectionManager {
 
     pub fn cache_load(&self, cached: &[u8]) -> Result<Collection> {
         let col = EncryptedCollection::cache_load(cached)?;
-        Collection::new(col.crypto_manager(&self.account_crypto_manager)?, col)
+        Collection::new(self.account_crypto_manager.clone(), col.crypto_manager(&self.account_crypto_manager)?, col)
     }
 
     pub fn cache_save(&self, collection: &Collection) -> Result<Vec<u8>> {
@@ -623,9 +635,11 @@ impl CollectionInvitationManager {
     }
 
     pub fn accept(&self, invitation: &SignedInvitation) -> Result<()> {
-        let decrypted_encryption_key = invitation.decrypted_encryption_key(&self.identity_crypto_manager)?;
-        let encryption_key = self.account_crypto_manager.0.encrypt(&decrypted_encryption_key, None)?;
-        self.invitation_manager_online.accept(invitation, &encryption_key)
+        let raw_content = buffer_unpad(&invitation.decrypted_encryption_key(&self.identity_crypto_manager)?)?;
+        let content: SignedInvitationContent = rmp_serde::from_read_ref(&raw_content)?;
+        let collection_type_uid = self.account_crypto_manager.collection_type_to_uid(&content.collection_type)?;
+        let encryption_key = &self.account_crypto_manager.0.encrypt(&content.encryption_key, Some(&collection_type_uid))?;
+        self.invitation_manager_online.accept(invitation, &collection_type_uid, &encryption_key)
     }
 
     pub fn reject(&self, invitation: &SignedInvitation) -> Result<()> {
@@ -684,13 +698,15 @@ impl CollectionMemberManager {
 pub struct Collection {
     col: EncryptedCollection,
     cm: Arc<CollectionCryptoManager>,
+    account_crypto_manager: Arc<AccountCryptoManager>,
 }
 
 impl Collection {
-    fn new(crypto_manager: CollectionCryptoManager, encrypted_collection: EncryptedCollection) -> Result<Self> {
+    fn new(account_crypto_manager: Arc<AccountCryptoManager>, crypto_manager: CollectionCryptoManager, encrypted_collection: EncryptedCollection) -> Result<Self> {
         Ok(Self {
             col: encrypted_collection,
             cm: Arc::new(crypto_manager),
+            account_crypto_manager,
         })
     }
 
@@ -703,8 +719,8 @@ impl Collection {
         self.col.set_meta(&self.cm, &meta)
     }
 
-    pub fn meta(&self) -> Result<CollectionMetadata> {
-        self.meta_generic::<CollectionMetadata>()
+    pub fn meta(&self) -> Result<ItemMetadata> {
+        self.meta_generic::<ItemMetadata>()
     }
 
     pub fn meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
@@ -756,6 +772,10 @@ impl Collection {
         let encrypted_item = self.col.item();
         let crypto_manager = encrypted_item.crypto_manager(&self.cm)?;
         Item::new(crypto_manager, encrypted_item.clone())
+    }
+
+    pub fn collection_type(&self) -> Result<String> {
+        self.col.collection_type(&self.account_crypto_manager)
     }
 }
 

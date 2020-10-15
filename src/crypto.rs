@@ -50,6 +50,7 @@ pub struct CryptoManager {
     mac_key: [u8; 32],
     pub asym_key_seed: [u8; 32],
     sub_derivation_key: [u8; 32],
+    deterministic_encryption_key: [u8; 32],
 }
 
 impl CryptoManager {
@@ -59,11 +60,13 @@ impl CryptoManager {
         let mut mac_key = [0; 32];
         let mut asym_key_seed = [0; 32];
         let mut sub_derivation_key = [0; 32];
+        let mut deterministic_encryption_key = [0; 32];
 
         to_enc_error!(kdf::derive_from_key(&mut cipher_key, 1, *context, &key), "Failed deriving key")?;
         to_enc_error!(kdf::derive_from_key(&mut mac_key, 2, *context, &key), "Failed deriving key")?;
         to_enc_error!(kdf::derive_from_key(&mut asym_key_seed, 3, *context, &key), "Failed deriving key")?;
         to_enc_error!(kdf::derive_from_key(&mut sub_derivation_key, 4, *context, &key), "Failed deriving key")?;
+        to_enc_error!(kdf::derive_from_key(&mut deterministic_encryption_key, 5, *context, &key), "Failed deriving key")?;
 
         Ok(Self {
             version,
@@ -71,6 +74,7 @@ impl CryptoManager {
             mac_key,
             asym_key_seed,
             sub_derivation_key,
+            deterministic_encryption_key,
         })
     }
 
@@ -101,7 +105,7 @@ impl CryptoManager {
         Ok((tag[..].to_owned(), ret))
     }
 
-    pub fn detached(&self, cipher: &[u8], tag: &[u8; aead::TAGBYTES], additional_data: Option<&[u8]>) -> Result<Vec<u8>> {
+    pub fn decrypt_detached(&self, cipher: &[u8], tag: &[u8; aead::TAGBYTES], additional_data: Option<&[u8]>) -> Result<Vec<u8>> {
         let key = aead::Key(self.cipher_key);
         let tag = aead::Tag(*tag);
         let nonce = &cipher[..aead::NONCEBYTES];
@@ -123,6 +127,25 @@ impl CryptoManager {
         to_enc_error!(aead::open_detached(&mut decrypted[..], additional_data, &tag, &aead::Nonce(*nonce), &key), "decryption failed")?;
 
         Ok(true)
+    }
+
+    pub fn deterministic_encrypt(&self, msg: &[u8], additional_data: Option<&[u8]>) -> Result<Vec<u8>> {
+        let key = aead::Key(self.deterministic_encryption_key);
+        let mac = self.calculate_mac(msg)?;
+        let nonce = &mac[..aead::NONCEBYTES];
+        let nonce: &[u8; aead::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
+        let encrypted = aead::seal(msg, additional_data, &aead::Nonce(*nonce), &key);
+        let ret = [nonce.as_ref(), &encrypted].concat();
+
+        Ok(ret)
+    }
+
+    pub fn deterministic_decrypt(&self, cipher: &[u8], additional_data: Option<&[u8]>) -> Result<Vec<u8>> {
+        let key = aead::Key(self.deterministic_encryption_key);
+        let nonce = &cipher[..aead::NONCEBYTES];
+        let nonce: &[u8; aead::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
+        let cipher = &cipher[aead::NONCEBYTES..];
+        Ok(to_enc_error!(aead::open(cipher, additional_data, &aead::Nonce(*nonce), &key), "decryption failed")?)
     }
 
     pub fn derive_subkey(&self, salt: &[u8]) -> Result<Vec<u8>> {
