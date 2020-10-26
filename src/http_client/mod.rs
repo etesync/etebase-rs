@@ -27,11 +27,19 @@ pub struct Client {
 }
 
 impl Client {
+    fn normalize_url(server_url: &str) -> Result<Url> {
+        let mut ret = Url::parse(server_url)?;
+        if !ret.path().ends_with("/") {
+            ret.path_segments_mut().unwrap().push("");
+        }
+        Ok(ret)
+    }
+
     #[cfg(feature = "networking")]
     pub fn new(client_name: &str, server_url: &str) -> Result<Self> {
         let imp = ReqwestImpl::new(client_name)?;
         Ok(Self {
-            api_base: Url::parse(server_url)?,
+            api_base: Self::normalize_url(server_url)?,
             auth_token: None,
             imp: Arc::new(imp),
         })
@@ -40,7 +48,7 @@ impl Client {
     #[cfg(not(feature = "networking"))]
     pub fn new_with_impl(server_url: &str, imp: Box<dyn ClientImplementation>) -> Result<Self> {
         Ok(Self {
-            api_base: Url::parse(server_url)?,
+            api_base: Self::normalize_url(server_url)?,
             auth_token: None,
             imp: Arc::new(imp),
         })
@@ -55,7 +63,7 @@ impl Client {
     }
 
     pub fn set_server_url(&mut self, server_url: &str) -> Result<()> {
-        self.api_base = Url::parse(server_url)?;
+        self.api_base = Self::normalize_url(server_url)?;
 
         Ok(())
     }
