@@ -47,6 +47,7 @@ use super::{
         User,
         UserProfile,
         LoginResponseUser,
+        LoginChallange,
         LoginBodyResponse,
         CollectionManagerOnline,
         ItemManagerOnline,
@@ -129,14 +130,32 @@ impl Account {
         authenticator.is_etebase_server()
     }
 
-    pub fn signup(mut client: Client, user: &User, password: &str) -> Result<Self> {
+    pub fn signup(client: Client, user: &User, password: &str) -> Result<Self> {
         super::init()?;
 
+        let salt = randombytes(32);
+        let main_key = derive_key(&salt, &password)?;
+
+        Self::signup_common(client, user, main_key, salt)
+    }
+
+    pub fn signup_key(client: Client, user: &User, main_key: &[u8]) -> Result<Self> {
+        super::init()?;
+
+        if main_key.len() < SYMMETRIC_KEY_SIZE {
+            return Err(Error::ProgrammingError("Key should be at least 32 bytes long."));
+        }
+
+        let salt = randombytes(32);
+        let main_key = main_key.to_vec();
+
+        Self::signup_common(client, user, main_key, salt)
+    }
+
+    fn signup_common(mut client: Client, user: &User, main_key: Vec<u8>, salt: Vec<u8>) -> Result<Self> {
         let authenticator = Authenticator::new(&client);
         let version = super::CURRENT_VERSION;
-        let salt = randombytes(32);
 
-        let main_key = derive_key(&salt, &password)?;
         let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
         let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
@@ -164,7 +183,7 @@ impl Account {
         Ok(ret)
     }
 
-    pub fn login(mut client: Client, username: &str, password: &str) -> Result<Self> {
+    pub fn login(client: Client, username: &str, password: &str) -> Result<Self> {
         super::init()?;
 
         let authenticator = Authenticator::new(&client);
@@ -181,9 +200,43 @@ impl Account {
             rest => rest?,
         };
 
+        let main_key = derive_key(&login_challenge.salt, &password)?;
+
+        Self::login_common(client, username, main_key, login_challenge)
+    }
+
+    pub fn login_key(client: Client, username: &str, main_key: &[u8]) -> Result<Self> {
+        super::init()?;
+
+        if main_key.len() < SYMMETRIC_KEY_SIZE {
+            return Err(Error::ProgrammingError("Key should be at least 32 bytes long."));
+        }
+
+        let authenticator = Authenticator::new(&client);
+        let login_challenge = match authenticator.get_login_challenge(username) {
+            Err(Error::Unauthorized(s)) => {
+                // FIXME: fragile, we should have a proper error value or actually use codes
+                if s == "User not properly init" {
+                    let user = User::new(username, "init@localhost");
+                    return Self::signup_key(client, &user, main_key);
+                } else {
+                    return Err(Error::Unauthorized(s));
+                }
+            },
+            rest => rest?,
+        };
+
+        let main_key = main_key.to_vec();
+
+        Self::login_common(client, username, main_key, login_challenge)
+    }
+
+    fn login_common(mut client: Client, username: &str, main_key: Vec<u8>, login_challenge: LoginChallange) -> Result<Self> {
+        let authenticator = Authenticator::new(&client);
+
         let version = login_challenge.version;
 
-        let main_key = derive_key(&login_challenge.salt, &password)?;
+        let main_key = main_key.to_vec();
         let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
         let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 

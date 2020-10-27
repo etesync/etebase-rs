@@ -39,6 +39,7 @@ use etebase::{
     Item,
     ItemMetadata,
     FetchOptions,
+    User,
     pretty_fingerprint,
     test_helpers::{
         test_reset,
@@ -1277,6 +1278,62 @@ fn chunking_large_data() -> Result<()> {
 
         assert_eq!(reused, 5);
     }
+
+    etebase.logout()
+}
+
+#[test]
+fn login_and_password_change_with_key() -> Result<()> {
+    // Reset user
+    let etebase = init_test(&USER)?;
+
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col = col_mgr.create("some.coltype", &col_meta, b"")?;
+    col_mgr.upload(&col, None)?;
+
+    etebase.logout()?;
+
+    let client = Client::new(CLIENT_NAME, &test_url())?;
+    let main_key = from_base64(USER.key)?;
+    let etebase = Account::login_key(client, USER.username, &main_key)?;
+
+    let col_mgr = etebase.collection_manager()?;
+    let col2 = col_mgr.fetch(col.uid(), None)?;
+    verify_collection(&col2, &col_meta, b"")?;
+
+    etebase.logout()
+}
+
+#[test]
+#[ignore]
+fn signup_with_key() -> Result<()> {
+    // FIXME: Doesn't work at the moment, because we can't signup with the same user. We need reset
+    // to support wiping.
+
+    // Reset user manually because we want to signup
+    etebase::init()?;
+    user_reset(&USER)?;
+
+    let main_key = from_base64(USER.key)?;
+
+    let client = Client::new(CLIENT_NAME, &test_url())?;
+    let user = User::new(USER.username, USER.email);
+    let etebase = Account::signup_key(client, &user, &main_key)?;
+
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col = col_mgr.create("some.coltype", &col_meta, b"")?;
+    col_mgr.upload(&col, None)?;
+
+    etebase.logout()?;
+
+    let client = Client::new(CLIENT_NAME, &test_url())?;
+    let etebase = Account::login_key(client, USER.username, &main_key)?;
+
+    let col_mgr = etebase.collection_manager()?;
+    let col2 = col_mgr.fetch(col.uid(), None)?;
+    verify_collection(&col2, &col_meta, b"")?;
 
     etebase.logout()
 }
