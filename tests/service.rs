@@ -324,6 +324,8 @@ fn simple_item_sync() -> Result<()> {
     let col_old = col_mgr.fetch(col.uid(), None)?;
 
     it_mgr.batch(iter::once(&item), None)?;
+    // Adding the same item twice should work
+    it_mgr.batch(iter::once(&item), None)?;
 
     {
         let items = it_mgr.list(None)?;
