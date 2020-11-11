@@ -34,12 +34,18 @@ pub fn test_reset(client: &Client, body_struct: SignupBody) -> Result<()> {
     Ok(())
 }
 
+
+/// A collection for which the user lost access
+///
+/// Deleted collections are marked using [crate::Collection::is_deleted]. However, when we just lose access
+/// to a collection and it hasn't been deleted, we get this object.
 #[derive(Deserialize, Clone)]
 pub struct RemovedCollection {
     uid: StringBase64,
 }
 
 impl RemovedCollection {
+    /// The uid of the removed collection
     pub fn uid(&self) -> &StrBase64 {
         &self.uid
     }
@@ -171,6 +177,7 @@ pub struct LoginResponse {
     pub user: LoginResponseUser,
 }
 
+/// A user object
 #[derive(Serialize, Deserialize)]
 pub struct User {
     username: String,
@@ -178,6 +185,11 @@ pub struct User {
 }
 
 impl User {
+    /// Return a new user instance
+    ///
+    /// # Arguments:
+    /// * `username` - the user's username
+    /// * `email` - the user's email
     pub fn new(username: &str, email: &str) -> Self {
         Self {
             username: username.to_owned(),
@@ -185,25 +197,36 @@ impl User {
         }
     }
 
+    /// Set the username
+    ///
+    /// # Arguments:
+    /// * `username` - the user's username
     pub fn set_username(&mut self, username: &str) -> &mut Self {
         self.username = username.to_owned();
         self
     }
 
+    /// Get the username
     pub fn username(&self) -> &str {
         &self.username
     }
 
+    /// Set the email address
+    ///
+    /// # Arguments:
+    /// * `email` - the user's email address
     pub fn set_email(&mut self, email: &str) -> &mut Self {
         self.email = email.to_owned();
         self
     }
 
+    /// Get the email address
     pub fn email(&self) -> &str {
         &self.email
     }
 }
 
+/// A user's public profile
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UserProfile {
     #[serde(with = "serde_bytes")]
@@ -211,6 +234,10 @@ pub struct UserProfile {
 }
 
 impl UserProfile {
+    /// The user's identity public key
+    ///
+    /// This is used for identifying the user and safely sending them data (such as
+    /// [invitations](SignedInvitation)).
     pub fn pubkey(&self) -> &[u8] {
         &self.pubkey
     }
@@ -337,12 +364,16 @@ impl<'a> Authenticator<'a> {
     }
 }
 
+/// Dictates how much data to prefetch when passed to [FetchOptions]
 #[derive(Clone)]
 pub enum PrefetchOption {
+    /// Automatically decide based on the size of the data fetched
     Auto,
+    /// Attempt to fetch a more lightweight (medium) amount of data
     Medium,
 }
 
+/// Configuration options for data fetching
 pub struct FetchOptions<'a> {
     limit: Option<usize>,
     stoken: Option<&'a str>,
@@ -362,26 +393,31 @@ impl<'a> FetchOptions<'a> {
         }
     }
 
+    /// Limit the amount of items returned
     pub fn limit(mut self, limit: usize) -> Self {
         self.limit = Some(limit);
         self
     }
 
+    /// How much data to prefetech
     pub fn prefetch(mut self, prefetch: &'a PrefetchOption) -> Self {
         self.prefetch = Some(prefetch);
         self
     }
 
+    /// Used by [crate::managers::ItemManager] functions to toggle fetching the collection's item
     pub fn with_collection(mut self, with_collection: bool) -> Self {
         self.with_collection = Some(with_collection);
         self
     }
 
+    /// The current iterator to start from (when iterating lists)
     pub fn iterator(mut self, iterator: Option<&'a str>) -> Self {
         self.iterator = iterator;
         self
     }
 
+    /// The sync token to fetch with
     pub fn stoken(mut self, stoken: Option<&'a str>) -> Self {
         self.stoken = stoken;
         self
