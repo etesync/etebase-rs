@@ -20,14 +20,29 @@ macro_rules! try_into {
 pub type StrBase64 = str;
 pub type StringBase64 = String;
 
+/// The size of a symmetric encryption key
 pub const SYMMETRIC_KEY_SIZE: usize = 32; // sodium.crypto_aead_xchacha20poly1305_ietf_KEYBYTES;
+/// The size of a symmetric encryption tag
 pub const SYMMETRIC_TAG_SIZE: usize = 16; // sodium.crypto_aead_xchacha20poly1305_ietf_ABYTES;
+/// The size of a symmetric encryption nonce
 pub const SYMMETRIC_NONCE_SIZE: usize = 24; // sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
 
+/// Return a buffer filled with cryptographically random bytes
+///
+/// # Arguments:
+/// * `size` - the size of the returned buffer (in bytes)
 pub fn randombytes(size: usize) -> Vec<u8> {
     sodiumoxide::randombytes::randombytes(size)
 }
 
+/// Return a buffer filled with deterministically cryptographically random bytes
+///
+/// This function is similar to [randombytes] but always returns the same data for the same seed.
+/// Useful for testing purposes.
+///
+/// # Arguments:
+/// * `seed` - the seed to generate the random data from
+/// * `size` - the size of the returned buffer (in bytes)
 pub fn randombytes_deterministic(size: usize, seed: &[u8; 32]) -> Vec<u8> {
     // Not exactly like the sodium randombytes_deterministic but close enough
     let nonce = sodiumoxide::crypto::stream::xchacha20::Nonce(*b"LibsodiumDRG\0\0\0\0\0\0\0\0\0\0\0\0");
@@ -36,10 +51,21 @@ pub fn randombytes_deterministic(size: usize, seed: &[u8; 32]) -> Vec<u8> {
     sodiumoxide::crypto::stream::xchacha20::stream(size, &nonce, &key)
 }
 
+/// A constant-time comparison function
+///
+/// Use this when comparing secret data in order to prevent side-channel attacks.
+///
+/// # Arguments:
+/// * `x` - the first buffer
+/// * `y` - the second buffer
 pub fn memcmp(x: &[u8], y: &[u8]) -> bool {
     sodiumoxide::utils::memcmp(x, y)
 }
 
+/// Convert a Base64 URL encoded string to a buffer
+///
+/// # Arguments:
+/// * `string` - the Base64 URL encoded string
 pub fn from_base64(string: &StrBase64) -> Result<Vec<u8>> {
     match base64::decode(string, base64::Variant::UrlSafeNoPadding) {
         Ok(bytes) => Ok(bytes),
@@ -47,9 +73,14 @@ pub fn from_base64(string: &StrBase64) -> Result<Vec<u8>> {
     }
 }
 
+/// Convert a buffer to a Base64 URL encoded string
+///
+/// # Arguments:
+/// * `bytes` - the buffer to convert
 pub fn to_base64(bytes: &[u8]) -> Result<StringBase64> {
     Ok(base64::encode(bytes, base64::Variant::UrlSafeNoPadding))
 }
+
 // Fisher–Yates shuffle - an unbiased shuffler
 // The returend indices of where item is now.
 // So if the first item moved to position 3: ret[0] = 3
@@ -70,6 +101,14 @@ pub(crate) fn shuffle<T>(a: &mut Vec<T>) -> Vec<usize> {
     ret
 }
 
+/// Return the recommended padding length for a buffer of specific length
+///
+/// Padding data before encrypting it is important for preventing fingerprint analysis attacks.
+/// This function aims to return the optimal balance between space efficiently and fingerprint
+/// resistance. The returned values may change between versions.
+///
+/// # Arguments:
+/// * `length` - the length of the buffer to pad
 pub fn get_padding(length: u32) -> u32 {
     // Use the padme padding scheme for efficiently
     // https://www.petsymposium.org/2019/files/papers/issue4/popets-2019-0056.pdf
@@ -135,9 +174,17 @@ pub(crate) fn buffer_unpad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>
     Ok(buf)
 }
 
+/// A trait for serializing and deserializing to MsgPack
 pub trait MsgPackSerilization {
+    /// The type of the struct implementing this trait
     type Output;
 
+    /// Convert self to a msgpack encoded buffer
     fn to_msgpack(&self) -> Result<Vec<u8>>;
+
+    /// Create the struct from a MsgPack encoded buffer
+    ///
+    /// # Arguments:
+    /// * `data` - the MsgPack buffer
     fn from_msgpack(data: &[u8]) -> Result<Self::Output>;
 }
