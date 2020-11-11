@@ -56,6 +56,7 @@ pub mod managers {
     };
 }
 
+#[doc(hidden)]
 pub mod test_helpers {
     pub mod crypto {
         pub use super::super::crypto::*;
