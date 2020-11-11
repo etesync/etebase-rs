@@ -4,26 +4,44 @@
 use std::error;
 use std::fmt;
 
+/// A short-hand version of a [std::result::Result] that always returns an Etebase [Error].
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// The error type returned from the Etebase API
 #[derive(Debug, Clone)]
 pub enum Error {
+    /// A generic error
     Generic(String),
+    /// An error with parsing the a URL (e.g. from the server URL)
     UrlParse(String),
+    /// An error related to msgpack serialization and de-serialization
     MsgPack(String),
+    /// A programming error that indicates the developers are using the API wrong
     ProgrammingError(&'static str),
+    /// An attempt to fetch the content of an item that doesn't have the content yet
     MissingContent(&'static str),
+    /// An issue with the padding of the encrypted content
     Padding(&'static str),
+    /// An issue with the Base64 decoding
     Base64(&'static str),
+    /// An issue with the encryption
     Encryption(&'static str),
+    /// An authorization issue from the server
     Unauthorized(String),
+    /// A conflict issue returned from the server, e.g. if a transaction failed
     Conflict(String),
+    /// The operation was not allowed due to permissions
     PermissionDenied(String),
+    /// The requested resource was not found
     NotFound(String),
 
+    /// There was an issue with the connection (e.g. DNS lookup)
     Connection(String),
+    /// There was an temporary server error (e.g. maintenance, or gateway issues)
     TemporaryServerError(String),
+    /// There was a server error when processing the request (usually a bug in the server)
     ServerError(String),
+    /// A generic error with the server request
     Http(String),
 }
 
