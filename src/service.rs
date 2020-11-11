@@ -663,6 +663,7 @@ impl ItemManager {
     }
 }
 
+/// An manager for managing user invitations to collections
 pub struct CollectionInvitationManager {
     account_crypto_manager: Arc<AccountCryptoManager>,
     identity_crypto_manager: BoxCryptoManager,
@@ -679,14 +680,26 @@ impl CollectionInvitationManager {
         })
     }
 
+    /// List the incoming collection invitations for the account
+    ///
+    /// # Arguments:
+    /// * `options` - the [FetchOptions] to fetch with
     pub fn list_incoming(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<SignedInvitation>> {
         self.invitation_manager_online.list_incoming(options)
     }
 
+    /// List the outgoing collection invitations for the account
+    ///
+    /// # Arguments:
+    /// * `options` - the [FetchOptions] to fetch with
     pub fn list_outgoing(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<SignedInvitation>> {
         self.invitation_manager_online.list_outgoing(options)
     }
 
+    /// Accept an invitation
+    ///
+    /// # Arguments:
+    /// * `invitation` - the invitation to accept
     pub fn accept(&self, invitation: &SignedInvitation) -> Result<()> {
         let raw_content = buffer_unpad(&invitation.decrypted_encryption_key(&self.identity_crypto_manager)?)?;
         let content: SignedInvitationContent = rmp_serde::from_read_ref(&raw_content)?;
@@ -695,10 +708,18 @@ impl CollectionInvitationManager {
         self.invitation_manager_online.accept(invitation, &collection_type_uid, &encryption_key)
     }
 
+    /// Reject an invitation
+    ///
+    /// # Arguments:
+    /// * `invitation` - the invitation to reject
     pub fn reject(&self, invitation: &SignedInvitation) -> Result<()> {
         self.invitation_manager_online.reject(invitation)
     }
 
+    /// Fetch and return a user's profile
+    ///
+    /// # Arguments:
+    /// * `username` - the username of the user to fetch
     pub fn fetch_user_profile(&self, username: &str) -> Result<UserProfile> {
         self.invitation_manager_online.fetch_user_profile(username)
     }
@@ -708,10 +729,18 @@ impl CollectionInvitationManager {
         self.invitation_manager_online.invite(&invitation)
     }
 
+    /// Cancel an invitation (disinvite)
+    ///
+    /// # Arguments:
+    /// * `invitation` - the invitation to cancel
     pub fn disinvite(&self, invitation: &SignedInvitation) -> Result<()> {
         self.invitation_manager_online.disinvite(invitation)
     }
 
+    /// Our identity's public key
+    ///
+    /// This is the key users see when we send invitations.
+    /// Can be pretty printed with [crate::pretty_fingerprint].
     pub fn pubkey(&self) -> &[u8] {
         self.identity_crypto_manager.pubkey()
     }

@@ -191,6 +191,7 @@ pub(crate) struct SignedInvitationContent {
     pub collection_type: String,
 }
 
+/// A signed invitation to join a collection
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SignedInvitation {
@@ -211,26 +212,32 @@ pub struct SignedInvitation {
 }
 
 impl SignedInvitation {
+    /// The uid of the collection
     pub fn uid(&self) -> &str {
         &self.uid
     }
 
+    /// The username this invitation is for
     pub fn username(&self) -> &str {
         &self.username
     }
 
+    /// The collection uid of the [crate::Collection] this invitation is for
     pub fn collection(&self) -> &str {
         &self.collection
     }
 
+    /// The access level offered in this invitation
     pub fn access_level(&self) -> CollectionAccessLevel {
         self.access_level
     }
 
+    /// The username this invitation is form
     pub fn from_username(&self) -> Option<&str> {
         self.from_username.as_deref()
     }
 
+    /// The public key of the inviting user
     pub fn from_pubkey(&self) -> &[u8] {
         match self.from_pubkey.as_deref() {
             Some(from_pubkey) => from_pubkey,
@@ -247,11 +254,15 @@ impl SignedInvitation {
     }
 }
 
+/// The access level to a collection
 #[derive(Serialize_repr, Deserialize_repr, Clone, Copy, PartialEq, Debug)]
 #[repr(u32)]
 pub enum CollectionAccessLevel {
+    /// Read only access
     ReadOnly,
+    /// Admin access
     Admin,
+    /// Read and write access
     ReadWrite,
 }
 

@@ -300,6 +300,17 @@ fn get_encoded_chunk(content: &[u8], suffix: &str) -> String {
   return format!("{:0>5}{}", num, suffix);
 }
 
+/// Return a pretty formatted fingerprint of the content
+///
+/// For example:
+/// ```
+/// 45680   71497   88570   93128
+/// 19189   84243   25687   20837
+/// 47924   46071   54113   18789
+/// ```
+///
+/// # Arguments:
+/// * `content` - the content to create a fingerprint for
 pub fn pretty_fingerprint(content: &[u8]) -> String {
     let delimiter = "   ";
     let fingerprint = generichash_quick(content, None).unwrap();
