@@ -95,8 +95,6 @@ pub mod test_helpers {
 pub const CURRENT_VERSION: u8 = 1;
 pub const DEFAULT_SERVER_URL: &str = "https://api.etebase.com/";
 
-pub use error::Error;
-
 pub fn init() -> error::Result<()> {
     crypto::init()
 }
