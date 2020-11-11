@@ -9,6 +9,8 @@ In addition to exposing a Rust API, this library forms the basis of other Etebas
 
 ![GitHub tag](https://img.shields.io/github/tag/etesync/etesync-rs.svg)
 [![Build Status](https://travis-ci.com/etesync/etebase-rs.svg?branch=master)](https://travis-ci.com/etesync/etebase-rs)
+[![Crates.io](https://img.shields.io/crates/v/etebase)](https://crates.io/crates/etebase)
+[![docs.rs](https://docs.rs/etebase/badge.svg)](https://docs.rs/etebase/)
 [![Chat on freenode](https://img.shields.io/badge/irc.freenode.net-%23EteSync-blue.svg)](https://webchat.freenode.net/?channels=#etesync)
 
 
