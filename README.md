@@ -28,13 +28,3 @@ $ cargo test -- --test-threads 1
 ```
 
 Please note that the tests run against the local server so we need to run them single threaded to make sure they don't clash.
-
-# Testing the C API
-
-There are tests for the C API which can be run like this:
-```
-$ cd c_tests
-$ make check
-```
-
-There is also a basic example Etebase client that resides in `example.c`. There are compilation instructions at the top of it, so just follow them for more information.
