@@ -746,6 +746,8 @@ impl CollectionInvitationManager {
     }
 }
 
+
+/// An manager for managing the members of a collection
 pub struct CollectionMemberManager {
     member_manager_online: CollectionMemberManagerOnline,
 }
@@ -758,18 +760,32 @@ impl CollectionMemberManager {
         })
     }
 
+    /// List the members of a collection
+    ///
+    /// # Arguments:
+    /// * `options` - the [FetchOptions] to fetch with
     pub fn list(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<CollectionMember>> {
         self.member_manager_online.list(options)
     }
 
+    /// Remove a member from the collection
+    ///
+    /// # Arguments:
+    /// * `username` - the member's username
     pub fn remove(&self, username: &str) -> Result<()> {
         self.member_manager_online.remove(username)
     }
 
+    /// Leave a collection the user is a member of
     pub fn leave(&self) -> Result<()> {
         self.member_manager_online.leave()
     }
 
+    /// Modify the access level of a member
+    ///
+    /// # Arguments:
+    /// * `username` - the member's username
+    /// * `access_level` - the new [CollectionAccessLevel]
     pub fn modify_access_level(&self, username: &str, access_level: CollectionAccessLevel) -> Result<()> {
         self.member_manager_online.modify_access_level(username, access_level)
     }

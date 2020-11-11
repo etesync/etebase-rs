@@ -693,6 +693,9 @@ impl ItemManagerOnline {
         }
 }
 
+/// A member of a collection
+///
+/// Obtained using [CollectionManager::list](crate::managers::CollectionManager::list)
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CollectionMember {
@@ -701,10 +704,12 @@ pub struct CollectionMember {
 }
 
 impl CollectionMember {
+    /// The username of a member
     pub fn username(&self) -> &str {
         &self.username
     }
 
+    /// The access_level of the member
     pub fn access_level(&self) -> CollectionAccessLevel {
         self.access_level
     }
