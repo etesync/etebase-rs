@@ -10,6 +10,7 @@ use super::error::{
     Result,
 };
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! try_into {
     ($x:expr) => {
