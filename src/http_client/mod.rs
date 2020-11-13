@@ -16,6 +16,11 @@ pub use client_impl::{
 #[cfg(feature = "networking")]
 use reqwest_client::Client as ReqwestImpl;
 
+/// The network client to use to interact with the Etebase server
+///
+/// This is in charge of actually connecting to the server and making network requests. Depending
+/// on your configuration this can be overridden and replaced with a completely different
+/// implementation.
 #[derive(Clone)]
 pub struct Client {
     auth_token: Option<String>,
