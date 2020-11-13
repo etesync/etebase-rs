@@ -51,6 +51,7 @@ impl RemovedCollection {
     }
 }
 
+/// The response of fetching a collection list
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CollectionListResponse<T> {
@@ -61,23 +62,29 @@ pub struct CollectionListResponse<T> {
 }
 
 impl<T> CollectionListResponse<T> {
+    /// Sync token for the list response
     pub fn stoken(&self) -> Option<&str> {
         self.stoken.as_deref()
     }
 
+    /// List of collections included in the response
     pub fn data(&self) -> &Vec<T> {
         &self.data
     }
 
+    /// Indicates whether there are no more collections to fetch
     pub fn done(&self) -> bool {
         self.done
     }
+
+    /// The list of collections to which the user lost access
     pub fn removed_memberships(&self) -> Option<&Vec<RemovedCollection>> {
         self.removed_memberships.as_ref()
     }
 
 }
 
+/// The response of fetching an item list
 #[derive(Deserialize)]
 pub struct ItemListResponse<T> {
     pub(crate) data: Vec<T>,
@@ -86,19 +93,23 @@ pub struct ItemListResponse<T> {
 }
 
 impl<T> ItemListResponse<T> {
+    /// Sync token for the list response
     pub fn stoken(&self) -> Option<&str> {
         self.stoken.as_deref()
     }
 
+    /// List of items included in the response
     pub fn data(&self) -> &Vec<T> {
         &self.data
     }
 
+    /// Indicates whether there are no more items to fetch
     pub fn done(&self) -> bool {
         self.done
     }
 }
 
+/// The response of fetching a list
 #[derive(Deserialize)]
 pub struct IteratorListResponse<T> {
     pub(crate) data: Vec<T>,
@@ -107,14 +118,17 @@ pub struct IteratorListResponse<T> {
 }
 
 impl<T> IteratorListResponse<T> {
+    /// Iterator for the list response
     pub fn iterator(&self) -> Option<&str> {
         self.iterator.as_deref()
     }
 
+    /// List of data items included in the response
     pub fn data(&self) -> &Vec<T> {
         &self.data
     }
 
+    /// Indicates whether there is no more data to fetch
     pub fn done(&self) -> bool {
         self.done
     }

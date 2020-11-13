@@ -97,6 +97,7 @@ impl ItemCryptoManager {
     }
 }
 
+/// Metadata of the item
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ItemMetadata {
     #[serde(rename = "type")]
@@ -114,6 +115,7 @@ pub struct ItemMetadata {
 }
 
 impl ItemMetadata {
+    /// Create a new metadata object
     pub fn new() -> Self {
         Self {
             type_: None,
@@ -125,47 +127,74 @@ impl ItemMetadata {
         }
     }
 
+    /// Set the item type
+    ///
+    /// # Arguments:
+    /// * `type` - the type to be set
     pub fn set_item_type(&mut self, type_: Option<&str>) -> &mut Self {
         self.type_ = type_.and_then(|x| Some(x.to_string()));
         self
     }
 
+    /// The item type
     pub fn item_type(&self) -> Option<&str> {
         self.type_.as_deref()
     }
 
+    /// Set the item name
+    ///
+    /// For example, you can set it to "Secret Note" or "todo.txt"
+    ///
+    /// # Arguments:
+    /// * `name` - the name to be set
     pub fn set_name(&mut self, name: Option<&str>) -> &mut Self {
         self.name = name.and_then(|x| Some(x.to_string()));
         self
     }
 
+    /// The item name
     pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
     }
 
+    /// Set the modification time of the item
+    ///
+    /// # Arguments:
+    /// * `mtime` - the modification time in milliseconds since epoch
     pub fn set_mtime(&mut self, mtime: Option<i64>) -> &mut Self {
         self.mtime = mtime;
         self
     }
 
+    /// Modification time of the item
     pub fn mtime(&self) -> Option<i64> {
         self.mtime
     }
 
+    /// Set a description for the item
+    ///
+    /// # Arguments:
+    /// * `description` - the description to be set
     pub fn set_description(&mut self, description: Option<&str>) -> &mut Self {
         self.description = description.and_then(|x| Some(x.to_string()));
         self
     }
 
+    /// The item description
     pub fn description(&self) -> Option<&str> {
         self.description.as_deref()
     }
 
+    /// Set a color for the item
+    ///
+    /// # Arguments:
+    /// * `color` - the color to be set in `#RRGGBB` or `#RRGGBBAA` format
     pub fn set_color(&mut self, color: Option<&str>) -> &mut Self {
         self.color = color.and_then(|x| Some(x.to_string()));
         self
     }
 
+    /// The item color in `#RRGGBB` or `#RRGGBBAA` format
     pub fn color(&self) -> Option<&str> {
         self.color.as_deref()
     }
