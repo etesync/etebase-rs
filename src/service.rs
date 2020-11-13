@@ -1152,6 +1152,9 @@ impl Item {
         self.meta_generic::<ItemMetadata>()
     }
 
+    /// Return the [ItemMetadata] of the collection deserializing using a generic metadata object
+    ///
+    /// The metadata object needs to implement the [MsgPackSerilization] trait.
     pub fn meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
         let decrypted = self.item.meta(&self.cm)?;
         T::from_msgpack(&decrypted)
