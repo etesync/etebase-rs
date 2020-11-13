@@ -152,7 +152,7 @@ impl Account {
 
     /// Signup a new user account with a key and return a handle to it
     ///
-    /// Unlike [signup], this uses a strong key instead of a password
+    /// Unlike [Self::signup], this uses a strong key instead of a password
     ///
     /// # Arguments:
     /// * `client` - the already setup [Client] object
@@ -232,7 +232,7 @@ impl Account {
 
     /// Login a user with a key and return a handle to an [Account] object
     ///
-    /// Unlike [login], this uses a strong key instead of a password
+    /// Unlike [Self::login], this uses a strong key instead of a password
     ///
     /// # Arguments:
     /// * `username` - the user's username. This is not the same as the user's email.
@@ -417,7 +417,7 @@ impl Account {
         authenticator.logout()
     }
 
-    /// Save the account object to a string for restoring it later using [restore]
+    /// Save the account object to a string for restoring it later using [Self::restore]
     ///
     /// # Arguments:
     /// * `encryption_key` - used to encrypt the returned account string to enhance security
@@ -443,12 +443,12 @@ impl Account {
         to_base64(&serialized)
     }
 
-    /// Restore and return the [Account] object from the string obtained using [save]
+    /// Restore and return the [Account] object from the string obtained using [Self::save]
     ///
     /// # Arguments:
     /// * `client` - the already setup [Client] object
     /// * `account_data_stored` - the stored account string
-    /// * `encryption_key` - the same encryption key passed to [save] while saving the account
+    /// * `encryption_key` - the same encryption key passed to [Self::save] while saving the account
     pub fn restore(mut client: Client, account_data_stored: &str, encryption_key: Option<&[u8]>) -> Result<Self> {
         let encryption_key = encryption_key.unwrap_or(&[0; 32]);
         let account_data_stored = from_base64(account_data_stored)?;
@@ -532,7 +532,7 @@ impl CollectionManager {
 
     /// Create a new [Collection] using raw metadata
     ///
-    /// Unlike [create], this receives the metadata as valid [ItemMetadata]-like struct encoded using `msgpack`.
+    /// Unlike [Self::create], this receives the metadata as valid [ItemMetadata]-like struct encoded using `msgpack`.
     /// This can be used to create collections with custom metadata types.
     ///
     /// # Arguments:
@@ -626,7 +626,7 @@ impl CollectionManager {
     /// Load and return a cached [Collection] object from a byte buffer
     ///
     /// # Arguments:
-    /// * `cached` - the byte buffer holding the cached collection obtained using [cache_save]
+    /// * `cached` - the byte buffer holding the cached collection obtained using [Self::cache_save]
     pub fn cache_load(&self, cached: &[u8]) -> Result<Collection> {
         let col = EncryptedCollection::cache_load(cached)?;
         Collection::new(self.account_crypto_manager.clone(), col.crypto_manager(&self.account_crypto_manager)?, col)
@@ -634,7 +634,7 @@ impl CollectionManager {
 
     /// Save the [Collection] object to a byte buffer for caching
     ///
-    /// The collection can later be loaded using [cache_load]
+    /// The collection can later be loaded using [Self::cache_load]
     ///
     /// # Arguments:
     /// * `collection` - the collection object to be cached
@@ -644,7 +644,7 @@ impl CollectionManager {
 
     /// Save the [Collection] object and its content to a byte buffer for caching
     ///
-    /// The collection can later be loaded using [cache_load]
+    /// The collection can later be loaded using [Self::cache_load]
     ///
     /// # Arguments:
     /// * `collection` - the collection object to be cached
@@ -692,7 +692,7 @@ impl ItemManager {
 
     /// Create a new [Item] using raw metadata
     ///
-    /// Unlike [create], this receives the metadata as valid [ItemMetadata]-like struct encoded using `msgpack`.
+    /// Unlike [Self::create], this receives the metadata as valid [ItemMetadata]-like struct encoded using `msgpack`.
     /// This can be used to create items with custom metadata types.
     ///
     /// # Arguments:
@@ -829,7 +829,7 @@ impl ItemManager {
         self.item_manager_online.transaction(items, deps, options)
     }
 
-    /// Load and return a cached [Item] object from a byte buffer obtained using [cache_save]
+    /// Load and return a cached [Item] object from a byte buffer obtained using [Self::cache_save]
     ///
     /// # Arguments:
     /// * `cached` - the byte buffer holding the cached item
@@ -840,7 +840,7 @@ impl ItemManager {
 
     /// Save the [Item] object to a byte buffer for caching
     ///
-    /// The item can later be loaded using [cache_load]
+    /// The item can later be loaded using [Self::cache_load]
     ///
     /// # Arguments:
     /// * `item` - the item object to be cached
@@ -850,7 +850,7 @@ impl ItemManager {
 
     /// Save the [Item] object and its content to a byte buffer for caching
     ///
-    /// The item can later be loaded using [cache_load]
+    /// The item can later be loaded using [Self::cache_load]
     ///
     /// # Arguments:
     /// * `item` - the item object to be cached
@@ -1064,7 +1064,7 @@ impl Collection {
 
     /// Mark the collection as deleted
     ///
-    /// The collection needs to be [uploaded](upload) for this to take effect
+    /// The collection needs to be [uploaded](CollectionManager::upload) for this to take effect
     pub fn delete(&mut self) -> Result<()> {
         self.col.delete(&self.cm)
     }
@@ -1182,7 +1182,7 @@ impl Item {
 
     /// Mark the item as deleted
     ///
-    /// The item needs to be [uploaded](upload) for this to take effect
+    /// The item needs to be [uploaded](ItemManager::batch) for this to take effect
     pub fn delete(&mut self) -> Result<()> {
         self.item.delete(&self.cm)
     }
