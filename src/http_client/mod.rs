@@ -35,6 +35,13 @@ impl Client {
         Ok(ret)
     }
 
+    /// Return a new client object
+    ///
+    /// The client object manages the connection to the Etebase server
+    ///
+    /// # Arguments:
+    /// * `client_name` - a string identifier for the client
+    /// * `server_url` - the Etebase server URL
     #[cfg(feature = "networking")]
     pub fn new(client_name: &str, server_url: &str) -> Result<Self> {
         let imp = ReqwestImpl::new(client_name)?;
