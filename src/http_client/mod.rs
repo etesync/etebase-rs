@@ -61,41 +61,45 @@ impl Client {
         })
     }
 
-    pub fn set_token(&mut self, token: Option<&str>) {
+    pub(crate) fn set_token(&mut self, token: Option<&str>) {
         self.auth_token = token.map(str::to_string)
     }
 
-    pub fn token(&self) -> Option<&str> {
+    pub(crate) fn token(&self) -> Option<&str> {
         self.auth_token.as_deref()
     }
 
+    /// Set the server url associated with this client
     pub fn set_server_url(&mut self, server_url: &str) -> Result<()> {
         self.api_base = Self::normalize_url(server_url)?;
 
         Ok(())
     }
 
-    pub fn api_base(&self) -> &Url {
+    /// Return the server url associated with this client
+    pub fn server_url(&self) -> &Url {
         &self.api_base
     }
 
-    pub fn get(&self, url: &str) -> Result<Response> {
+    pub(crate) fn get(&self, url: &str) -> Result<Response> {
         self.imp.get(url, self.auth_token.as_deref()).as_result()
     }
 
-    pub fn post(&self, url: &str, body: Vec<u8>) -> Result<Response> {
+    pub(crate) fn post(&self, url: &str, body: Vec<u8>) -> Result<Response> {
         self.imp.post(url, self.auth_token.as_deref(), body).as_result()
     }
 
-    pub fn put(&self, url: &str, body: Vec<u8>) -> Result<Response> {
+    /*
+    pub(crate) fn put(&self, url: &str, body: Vec<u8>) -> Result<Response> {
         self.imp.put(url, self.auth_token.as_deref(), body).as_result()
     }
+    */
 
-    pub fn patch(&self, url: &str, body: Vec<u8>) -> Result<Response> {
+    pub(crate) fn patch(&self, url: &str, body: Vec<u8>) -> Result<Response> {
         self.imp.patch(url, self.auth_token.as_deref(), body).as_result()
     }
 
-    pub fn delete(&self, url: &str) -> Result<Response> {
+    pub(crate) fn delete(&self, url: &str) -> Result<Response> {
         self.imp.delete(url, self.auth_token.as_deref()).as_result()
     }
 }

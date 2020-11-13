@@ -276,7 +276,7 @@ impl Account {
         let response_struct = LoginBodyResponse {
             username,
             challenge: &login_challenge.challenge,
-            host: client.api_base().host_str().unwrap_or(client.api_base().as_str()),
+            host: client.server_url().host_str().unwrap_or(client.server_url().as_str()),
             action: "login",
         };
         let response = rmp_serde::to_vec_named(&response_struct)?;
@@ -319,7 +319,7 @@ impl Account {
         let response_struct = LoginBodyResponse {
             username,
             challenge: &login_challenge.challenge,
-            host: &self.client.api_base().host_str().unwrap_or(&self.client.api_base().as_str()),
+            host: &self.client.server_url().host_str().unwrap_or(&self.client.server_url().as_str()),
             action: "login",
         };
         let response = rmp_serde::to_vec_named(&response_struct)?;
@@ -386,7 +386,7 @@ impl Account {
         let response_struct = Body {
             username,
             challenge: &login_challenge.challenge,
-            host: &self.client.api_base().host_str().unwrap_or(&self.client.api_base().as_str()),
+            host: &self.client.server_url().host_str().unwrap_or(&self.client.server_url().as_str()),
             action: "changePassword",
 
             login_pubkey: &login_crypto_manager.pubkey(),
@@ -430,7 +430,7 @@ impl Account {
             version,
             key: &crypto_manager.0.encrypt(&self.main_key, None)?,
             auth_token: self.client.token(),
-            server_url: self.client.api_base().as_str(),
+            server_url: self.client.server_url().as_str(),
         };
         let serialized = rmp_serde::to_vec_named(&account_data)?;
 
