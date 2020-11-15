@@ -660,6 +660,10 @@ impl CollectionManager {
         ItemManager::new(Arc::clone(&self.client), Arc::clone(&collection.cm), collection)
     }
 
+    /// Return the [CollectionMemberManager] for the supplied collection
+    ///
+    /// # Arguments:
+    /// * `collection` - the collection for which the [ItemManager] is required
     pub fn member_manager(&self, collection: &Collection) -> Result<CollectionMemberManager> {
         CollectionMemberManager::new(Arc::clone(&self.client), collection)
     }
@@ -920,6 +924,13 @@ impl CollectionInvitationManager {
         self.invitation_manager_online.fetch_user_profile(username)
     }
 
+    /// Invite a user to a collection
+    ///
+    /// # Arguments:
+    /// * `collection` - the collection to invite to
+    /// * `username` - the username of the user to invite
+    /// * `pubkey` - the public key of the user to invite
+    /// * `access_level` - the level of access to give to user
     pub fn invite(&self, collection: &Collection, username: &str, pubkey: &[u8], access_level: CollectionAccessLevel) -> Result<()> {
         let invitation = collection.col.create_invitation(&self.account_crypto_manager, &self.identity_crypto_manager, username, pubkey, access_level)?;
         self.invitation_manager_online.invite(&invitation)

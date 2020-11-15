@@ -397,6 +397,7 @@ pub struct FetchOptions<'a> {
 }
 
 impl<'a> FetchOptions<'a> {
+    /// Return a new fetch options object
     pub fn new() -> Self {
         Self {
             limit: None,
