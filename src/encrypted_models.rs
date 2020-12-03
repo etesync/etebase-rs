@@ -131,8 +131,8 @@ impl ItemMetadata {
     ///
     /// # Arguments:
     /// * `type` - the type to be set
-    pub fn set_item_type(&mut self, type_: Option<&str>) -> &mut Self {
-        self.type_ = type_.and_then(|x| Some(x.to_string()));
+    pub fn set_item_type<T: AsRef<str>, I: Into<Option<T>>>(&mut self, type_: I) -> &mut Self {
+        self.type_ = type_.into().map(|s| s.as_ref().to_owned());
         self
     }
 
@@ -147,8 +147,8 @@ impl ItemMetadata {
     ///
     /// # Arguments:
     /// * `name` - the name to be set
-    pub fn set_name(&mut self, name: Option<&str>) -> &mut Self {
-        self.name = name.and_then(|x| Some(x.to_string()));
+    pub fn set_name<T: AsRef<str>, I: Into<Option<T>>>(&mut self, name: I) -> &mut Self {
+        self.name = name.into().map(|s| s.as_ref().to_owned());
         self
     }
 
@@ -161,8 +161,8 @@ impl ItemMetadata {
     ///
     /// # Arguments:
     /// * `mtime` - the modification time in milliseconds since epoch
-    pub fn set_mtime(&mut self, mtime: Option<i64>) -> &mut Self {
-        self.mtime = mtime;
+    pub fn set_mtime<I: Into<Option<i64>>>(&mut self, mtime: I) -> &mut Self {
+        self.mtime = mtime.into();
         self
     }
 
@@ -175,8 +175,8 @@ impl ItemMetadata {
     ///
     /// # Arguments:
     /// * `description` - the description to be set
-    pub fn set_description(&mut self, description: Option<&str>) -> &mut Self {
-        self.description = description.and_then(|x| Some(x.to_string()));
+    pub fn set_description<T: AsRef<str>, I: Into<Option<T>>>(&mut self, description: I) -> &mut Self {
+        self.description = description.into().map(|s| s.as_ref().to_owned());
         self
     }
 
@@ -189,8 +189,8 @@ impl ItemMetadata {
     ///
     /// # Arguments:
     /// * `color` - the color to be set in `#RRGGBB` or `#RRGGBBAA` format
-    pub fn set_color(&mut self, color: Option<&str>) -> &mut Self {
-        self.color = color.and_then(|x| Some(x.to_string()));
+    pub fn set_color<I: Into<Option<T>>, T: AsRef<str>>(&mut self, color: I) -> &mut Self {
+        self.color = color.into().map(|s| s.as_ref().to_owned());
         self
     }
 

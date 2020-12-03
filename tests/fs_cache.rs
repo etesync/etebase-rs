@@ -88,7 +88,7 @@ fn simple_cache_handling() -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
     let etebase = init_test_local(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let meta = ItemMetadata::new().set_name("Collection").set_description("Mine").set_color("#aabbcc").clone();
     let content = b"SomeContent";
 
     let col = col_mgr.create("some.coltype", &meta, content)?;
@@ -126,7 +126,7 @@ fn simple_cache_handling() -> Result<()> {
     fs_cache.collection_set_with_content(&col_mgr, &col)?;
     let item_mgr = col_mgr.item_manager(&col)?;
     let item = {
-        let meta = ItemMetadata::new().set_name(Some("Item 1")).clone();
+        let meta = ItemMetadata::new().set_name("Item 1").clone();
         let content = b"Content 1";
         item_mgr.create(&meta, content)?
     };
@@ -138,7 +138,7 @@ fn simple_cache_handling() -> Result<()> {
     assert_eq!(item2.content()?, item.content()?);
 
     let item = {
-        let meta = ItemMetadata::new().set_name(Some("Item 2")).clone();
+        let meta = ItemMetadata::new().set_name("Item 2").clone();
         let content = b"Content 2";
         item_mgr.create(&meta, content)?
     };
