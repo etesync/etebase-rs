@@ -569,11 +569,12 @@ impl CollectionManager {
     /// * `collection_type` - array of strings denoting the collection types
     /// * `options` - parameters to tune or optimize the fetch
     pub fn list_multi<'a, I>(&self, collection_types: I, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>>
-        where I: Iterator<Item = &'a str>
+        where I: IntoIterator,
+              I::Item: AsRef<str>,
         {
 
         // FIXME: we can avoid this extra allocation
-        let collection_type_uids: Vec<Vec<u8>> = collection_types.map(|x| self.account_crypto_manager.collection_type_to_uid(x).unwrap()).collect();
+        let collection_type_uids: Vec<Vec<u8>> = collection_types.into_iter().map(|x| self.account_crypto_manager.collection_type_to_uid(x.as_ref()).unwrap()).collect();
         let collection_type_uids = collection_type_uids.iter().map(|x| &x[..]);
         let response = self.collection_manager_online.list_multi(collection_type_uids, options)?;
 
