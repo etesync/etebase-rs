@@ -833,6 +833,46 @@ impl ItemManager {
         self.item_manager_online.transaction(items, deps, options)
     }
 
+    /// Pre-upload the item's content - use it with large files
+    ///
+    /// Pre-uploading item content is recommended when dealing with large files as it's much more
+    /// efficient. It uploads the content of the item in advance so you don't need to upload it as
+    /// part of transactions.
+    ///
+    /// # Arguments:
+    /// * `item` - the item to upload
+    pub fn upload_content(&self, item: &Item) -> Result<()> {
+        let item = &item.item;
+        for chunk in item.pending_chunks() {
+            match self.item_manager_online.chunk_upload(&item, &chunk, None) {
+                Err(Error::Conflict(_)) => (),
+                Err(err) => return Err(err),
+                _ => (),
+            };
+        }
+
+        Ok(())
+    }
+
+    /// Download the content of an item if missing
+    ///
+    /// When using some [FetchOptions] items may be incomplete. Use this call to download the
+    /// item's content so it can be accessed.
+    /// This is a much more efficient way of getting the content of large files.
+    ///
+    /// # Arguments:
+    /// * `item` - the item to upload
+    pub fn download_content(&self, item: &mut Item) -> Result<()> {
+        // FIXME: unnecessary copy
+        let item_uid = item.uid().to_owned();
+        let item = &mut item.item;
+        for chunk in item.missing_chunks() {
+            chunk.1 = Some(self.item_manager_online.chunk_download(&item_uid, &chunk.0, None)?);
+        }
+
+        Ok(())
+    }
+
     /// Load and return a cached [Item] object from a byte buffer obtained using [Self::cache_save]
     ///
     /// # Arguments:
@@ -1207,6 +1247,13 @@ impl Item {
     /// Check whether the item is marked as deleted
     pub fn is_deleted(&self) -> bool {
         self.item.is_deleted()
+    }
+
+    /// Check whether the item is missing content and should be downloaded
+    ///
+    /// If it is, the content should be downloaded with [ItemManager::download_content].
+    pub fn is_missing_content(&self) -> bool {
+        self.item.is_missing_content()
     }
 
     /// The UID of the item

@@ -9,7 +9,7 @@ use url::Url;
 use serde::{Serialize, Deserialize};
 use serde_bytes::Bytes;
 
-use super::error::Result;
+use super::error::{Result, Error};
 use super::http_client::Client;
 use crate::utils::{
     StrBase64,
@@ -17,6 +17,7 @@ use crate::utils::{
 };
 use super::encrypted_models::{
     CollectionAccessLevel,
+    ChunkArrayItem,
     EncryptedCollection,
     EncryptedItem,
     EncryptedRevision,
@@ -706,6 +707,30 @@ impl ItemManagerOnline {
 
             Ok(())
         }
+
+    pub(crate) fn chunk_upload(&self, item: &EncryptedItem, chunk: &ChunkArrayItem, options: Option<&FetchOptions>) -> Result<()> {
+        let chunk_uid = &chunk.0;
+        let chunk_content = match &chunk.1 {
+            Some(content) => content,
+            None => return Err(Error::ProgrammingError("Tried uploading a missing chunk.")),
+        };
+
+        let url = apply_fetch_options(self.api_base.join(&format!("{}/chunk/{}/", item.uid(), chunk_uid))?, options);
+        // FIXME: We are copying the vec here, we shouldn't! Fix the client.
+        let res = self.client.put(url.as_str(), chunk_content.to_vec())?;
+        res.error_for_status()?;
+
+        Ok(())
+    }
+
+    pub(crate) fn chunk_download(&self, item_uid: &str, chunk_uid: &str, options: Option<&FetchOptions>) -> Result<Vec<u8>> {
+        let url = apply_fetch_options(self.api_base.join(&format!("{}/chunk/{}/download/", item_uid, chunk_uid))?, options);
+        let res = self.client.get(url.as_str())?;
+        res.error_for_status()?;
+
+        Ok(res.bytes().to_vec())
+    }
+
 }
 
 /// A member of a collection

@@ -94,11 +94,9 @@ impl Client {
         self.imp.post(url, self.auth_token.as_deref(), body).as_result()
     }
 
-    /*
     pub(crate) fn put(&self, url: &str, body: Vec<u8>) -> Result<Response> {
         self.imp.put(url, self.auth_token.as_deref(), body).as_result()
     }
-    */
 
     pub(crate) fn patch(&self, url: &str, body: Vec<u8>) -> Result<Response> {
         self.imp.patch(url, self.auth_token.as_deref(), body).as_result()

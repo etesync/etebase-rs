@@ -39,6 +39,7 @@ use etebase::{
     Item,
     ItemMetadata,
     FetchOptions,
+    PrefetchOption,
     User,
     pretty_fingerprint,
     test_helpers::{
@@ -1473,6 +1474,44 @@ fn cache_collections_and_items() -> Result<()> {
         assert_eq!(item.uid(), loaded_item.uid());
         assert_eq!(item.etag(), loaded_item.etag());
         assert_eq!(item.meta()?, loaded_item.meta()?);
+    }
+
+    etebase.logout()
+}
+
+#[test]
+fn chunk_preupload_and_download() -> Result<()> {
+    let etebase = init_test(&USER)?;
+
+    let col_mgr = etebase.collection_manager()?;
+    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_content = b"SomeContent";
+
+    let col = col_mgr.create("some.coltype", &col_meta, col_content)?;
+    col_mgr.upload(&col, None)?;
+
+    let it_mgr = col_mgr.item_manager(&col)?;
+
+    let meta = ItemMetadata::new().set_name(Some("Item")).clone();
+    let content = b"SomeItemContent";
+    let item = it_mgr.create(&meta, content)?;
+    assert!(!item.is_missing_content());
+    it_mgr.upload_content(&item)?;
+    // Verify we don't fail even when already uploaded
+    it_mgr.upload_content(&item)?;
+
+    it_mgr.batch(iter::once(&item), None)?;
+
+    {
+        let mut item2 = it_mgr.fetch(item.uid(), Some(&FetchOptions::new().prefetch(&PrefetchOption::Medium)))?;
+        assert_eq!(item.meta()?, item2.meta()?);
+        // We can't get the content of partial item
+        assert_err!(item2.content(), Error::MissingContent(_));
+        assert!(item2.is_missing_content());
+        // Fetch the content and then try to get it
+        it_mgr.download_content(&mut item2)?;
+        assert!(!item2.is_missing_content());
+        verify_item(&item2, &item.meta()?, &item.content()?)?;
     }
 
     etebase.logout()

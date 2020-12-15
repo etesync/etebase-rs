@@ -495,10 +495,10 @@ impl EncryptedCollection {
 
 
 #[derive(Serialize, Deserialize, Clone)]
-struct ChunkArrayItem(
-    StringBase64,
+pub(crate) struct ChunkArrayItem(
+    pub StringBase64,
     #[serde(with = "serde_bytes")]
-    Option<Vec<u8>>,
+    pub Option<Vec<u8>>,
     );
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -894,6 +894,18 @@ impl EncryptedItem {
 
     fn additional_mac_data(&self) -> &[u8] {
         Self::additional_mac_data_static(&self.uid)
+    }
+
+    pub(crate) fn pending_chunks(&self) -> impl Iterator<Item = &ChunkArrayItem> {
+        self.content.chunks.iter()
+    }
+
+    pub(crate) fn missing_chunks(&mut self) -> impl Iterator<Item = &mut ChunkArrayItem> {
+        self.content.chunks.iter_mut().filter(|x| x.1.is_none())
+    }
+
+    pub fn is_missing_content(&self) -> bool {
+        self.content.chunks.iter().any(|x| x.1.is_none())
     }
 
     pub(crate) fn test_chunk_uids(&self) -> Vec<String> {
