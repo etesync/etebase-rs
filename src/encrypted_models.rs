@@ -497,6 +497,7 @@ impl EncryptedCollection {
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct ChunkArrayItem(
     pub StringBase64,
+    #[serde(default)]
     #[serde(with = "serde_bytes")]
     pub Option<Vec<u8>>,
     );
