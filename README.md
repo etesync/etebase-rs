@@ -13,6 +13,9 @@ In addition to exposing a Rust API, this library forms the basis of other Etebas
 [![docs.rs](https://docs.rs/etebase/badge.svg)](https://docs.rs/etebase/)
 [![Chat with us](https://img.shields.io/badge/chat-IRC%20|%20Matrix%20|%20Web-blue.svg)](https://www.etebase.com/community-chat/)
 
+# Documentation
+
+In addition to the API documentation, there are docs available at https://docs.etebase.com
 
 # Build
 
