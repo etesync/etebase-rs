@@ -640,6 +640,28 @@ impl ItemManagerOnline {
             Ok(serialized)
         }
 
+    pub fn fetch_multi<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ItemListResponse<EncryptedItem>>
+        where I: Iterator<Item = &'a StrBase64>
+        {
+            let items: Vec<ItemBatchBodyDep> = items.map(|x| {
+                ItemBatchBodyDep {
+                    uid: x,
+                    etag: None,
+                }
+            }).collect();
+
+            let body = rmp_serde::to_vec_named(&items)?;
+            let url = apply_fetch_options(self.api_base.join("fetch_updates/")?, options);
+            let res = self.client.post(url.as_str(), body)?;
+            res.error_for_status()?;
+            let res = res.bytes();
+
+            let serialized: ItemListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
+            serialized.data.iter().for_each(|x| x.mark_saved());
+
+            Ok(serialized)
+        }
+
     pub fn batch<'a, I, J>(&self, items: I, deps: J, options: Option<&FetchOptions>) -> Result<()>
         where I: Iterator<Item = &'a EncryptedItem>, J: Iterator<Item = &'a EncryptedItem>
         {

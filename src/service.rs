@@ -709,6 +709,8 @@ impl ItemManager {
 
     /// Fetch a single [Item] from the server using its UID
     ///
+    /// See [Self::fetch] for fetching multiple items
+    ///
     /// # Arguments:
     /// * `item_uid` - the UID of the collection to be fetched
     /// * `options` - parameters to tune or optimize the fetch
@@ -753,7 +755,7 @@ impl ItemManager {
     /// Fetch the latest revision of the supplied [Item]s from the server and return an [ItemListResponse]
     ///
     /// # Arguments:
-    /// * `items` - the list of items to be fetched
+    /// * `items` - the list of UIDs for the items to be fetched
     /// * `options` - parameters to tune or optimize the fetch
     pub fn fetch_updates<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ItemListResponse<Item>>
         where I: Iterator<Item = &'a Item>
@@ -761,6 +763,26 @@ impl ItemManager {
 
         let items = items.map(|x| &x.item);
         let response = self.item_manager_online.fetch_updates(items, options)?;
+        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x)).collect();
+        Ok(ItemListResponse {
+            data: data?,
+            done: response.done,
+            stoken: response.stoken,
+        })
+    }
+
+    /// Fetch multiple [Item]s using their UID
+    ///
+    /// See [Self::fetch] for fetching a single item
+    ///
+    /// # Arguments:
+    /// * `items` - the list of items to be fetched
+    /// * `options` - parameters to tune or optimize the fetch
+    pub fn fetch_multi<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ItemListResponse<Item>>
+        where I: Iterator<Item = &'a StrBase64>
+        {
+
+        let response = self.item_manager_online.fetch_multi(items, options)?;
         let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x)).collect();
         Ok(ItemListResponse {
             data: data?,
