@@ -798,9 +798,6 @@ fn item_fetch_updates() -> Result<()> {
         let items2 = it_mgr.fetch_multi(vec!["L4QQdlkCDJ9ySmrGD5fM0DsFo08MnWel", items[0].uid()].into_iter(), None)?;
         // Only 1 because only one of the items exists
         assert_eq!(items2.data().len(), 1);
-
-        // Fail handling invalid UIDs
-        assert_err!(it_mgr.fetch_multi(vec!["baduid", items[0].uid()].into_iter(), None), Error::Http(_));
     }
 
     let new_col = col_mgr.fetch(col.uid(), None)?;
