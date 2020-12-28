@@ -241,7 +241,7 @@ fn simple_collection_sync() -> Result<()> {
         let content2 = b"Content2";
         col_old.set_content(content2)?;
 
-        assert_err!(col_mgr.transaction(&col, None), Error::Conflict(_));
+        assert_err!(col_mgr.transaction(&col_old, None), Error::Conflict(_));
         let fetch_options = FetchOptions::new().stoken(col_old.stoken());
         assert_err!(col_mgr.upload(&col, Some(&fetch_options)), Error::Conflict(_));
     }
