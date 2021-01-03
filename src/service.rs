@@ -276,7 +276,7 @@ impl Account {
         let response_struct = LoginBodyResponse {
             username,
             challenge: &login_challenge.challenge,
-            host: client.server_url().host_str().unwrap_or(client.server_url().as_str()),
+            host: client.server_url().host_str().unwrap_or_else(|| client.server_url().as_str()),
             action: "login",
         };
         let response = rmp_serde::to_vec_named(&response_struct)?;

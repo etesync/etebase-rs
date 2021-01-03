@@ -675,7 +675,7 @@ impl ItemManagerOnline {
                     etag: x.last_etag(),
                 }
             }).collect();
-            let deps = if deps.len() > 0 {
+            let deps = if !deps.is_empty() {
                 Some(deps)
             } else {
                 None
@@ -709,7 +709,7 @@ impl ItemManagerOnline {
                     etag: x.last_etag(),
                 }
             }).collect();
-            let deps = if deps.len() > 0 {
+            let deps = if !deps.is_empty() {
                 Some(deps)
             } else {
                 None

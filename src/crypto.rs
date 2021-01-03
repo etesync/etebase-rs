@@ -98,7 +98,7 @@ impl CryptoManager {
     pub fn encrypt_detached(&self, msg: &[u8], additional_data: Option<&[u8]>) -> Result<(Vec<u8>, Vec<u8>)> {
         let key = aead::Key(self.cipher_key);
         let nonce = aead::gen_nonce();
-        let mut encrypted = msg.clone().to_owned();
+        let mut encrypted = msg.to_owned();
         let tag = aead::seal_detached(&mut encrypted[..], additional_data, &nonce, &key);
         let ret = [nonce.as_ref(), &encrypted].concat();
 
@@ -111,7 +111,7 @@ impl CryptoManager {
         let nonce = &cipher[..aead::NONCEBYTES];
         let nonce: &[u8; aead::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
         let cipher = &cipher[aead::NONCEBYTES..];
-        let mut decrypted = cipher.clone().to_owned();
+        let mut decrypted = cipher.to_owned();
         to_enc_error!(aead::open_detached(&mut decrypted[..], additional_data, &tag, &aead::Nonce(*nonce), &key), "decryption failed")?;
 
         Ok(decrypted)
@@ -123,7 +123,7 @@ impl CryptoManager {
         let nonce = &cipher[..aead::NONCEBYTES];
         let nonce: &[u8; aead::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
         let cipher = &cipher[aead::NONCEBYTES..];
-        let mut decrypted = cipher.clone().to_owned();
+        let mut decrypted = cipher.to_owned();
         to_enc_error!(aead::open_detached(&mut decrypted[..], additional_data, &tag, &aead::Nonce(*nonce), &key), "decryption failed")?;
 
         Ok(true)
@@ -303,7 +303,7 @@ fn get_encoded_chunk(content: &[u8], suffix: &str) -> String {
 /// Return a pretty formatted fingerprint of the content
 ///
 /// For example:
-/// ```
+/// ```shell
 /// 45680   71497   88570   93128
 /// 19189   84243   25687   20837
 /// 47924   46071   54113   18789

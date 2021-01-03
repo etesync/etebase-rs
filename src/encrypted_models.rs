@@ -42,7 +42,7 @@ use super::{
 };
 
 pub fn gen_uid_base64() -> StringBase64 {
-  return to_base64(&randombytes(24)).unwrap();
+  to_base64(&randombytes(24)).unwrap()
 }
 
 #[derive(Serialize, Deserialize)]
@@ -69,7 +69,7 @@ impl AccountCryptoManager {
     }
 
     pub fn collection_type_from_uid(&self, collection_type_uid: &[u8]) -> Result<String> {
-        buffer_unpad_fixed(&self.0.deterministic_decrypt(collection_type_uid, None)?, Self::COLTYPE_PAD_SIZE).map(|x| String::from_utf8(x).unwrap_or("BAD TYPE".to_owned()))
+        buffer_unpad_fixed(&self.0.deterministic_decrypt(collection_type_uid, None)?, Self::COLTYPE_PAD_SIZE).map(|x| String::from_utf8(x).unwrap_or_else(|_| "BAD TYPE".to_owned()))
     }
 }
 
@@ -132,7 +132,7 @@ impl ItemMetadata {
     /// # Arguments:
     /// * `type` - the type to be set
     pub fn set_item_type(&mut self, type_: Option<&str>) -> &mut Self {
-        self.type_ = type_.and_then(|x| Some(x.to_string()));
+        self.type_ = type_.map(|x| x.to_string());
         self
     }
 
@@ -148,7 +148,7 @@ impl ItemMetadata {
     /// # Arguments:
     /// * `name` - the name to be set
     pub fn set_name(&mut self, name: Option<&str>) -> &mut Self {
-        self.name = name.and_then(|x| Some(x.to_string()));
+        self.name = name.map(|x| x.to_string());
         self
     }
 
@@ -176,7 +176,7 @@ impl ItemMetadata {
     /// # Arguments:
     /// * `description` - the description to be set
     pub fn set_description(&mut self, description: Option<&str>) -> &mut Self {
-        self.description = description.and_then(|x| Some(x.to_string()));
+        self.description = description.map(|x| x.to_string());
         self
     }
 
@@ -190,7 +190,7 @@ impl ItemMetadata {
     /// # Arguments:
     /// * `color` - the color to be set in `#RRGGBB` or `#RRGGBBAA` format
     pub fn set_color(&mut self, color: Option<&str>) -> &mut Self {
-        self.color = color.and_then(|x| Some(x.to_string()));
+        self.color = color.map(|x| x.to_string());
         self
     }
 
@@ -608,7 +608,7 @@ impl EncryptedRevision {
         }
 
         // Shuffle the items and save the ordering if we have more than one
-        if chunks.len() > 0 {
+        if !chunks.is_empty() {
             let mut indices = shuffle(&mut chunks);
 
             // Filter duplicates and construct the indice list.
@@ -703,15 +703,16 @@ impl EncryptedRevision {
                         .into_iter()
                         .map(|index| &decrypted_chunks[index])
                         .flatten()
-                        .map(|x| *x)
+                        // FIXME: We shouldn't copy but rather just move from the array
+                        .copied()
                         .collect::<Vec<u8>>();
 
                     Ok(sorted_chunks)
                 } else {
-                    Ok(decrypted_chunks.into_iter().nth(0).unwrap_or(vec![]))
+                    Ok(decrypted_chunks.into_iter().next().unwrap_or_default())
                 }
             },
-            None => Ok(decrypted_chunks.into_iter().nth(0).unwrap_or(vec![]))
+            None => Ok(decrypted_chunks.into_iter().next().unwrap_or_default())
         }
     }
 
@@ -759,7 +760,7 @@ impl EncryptedItem {
         let ret = Self {
             uid: self.uid.to_string(),
             version: self.version,
-            encryption_key: self.encryption_key.as_ref().and_then(|x| Some(x.to_vec())),
+            encryption_key: self.encryption_key.as_ref().map(|x| x.to_vec()),
 
             content: revision,
 
@@ -885,7 +886,7 @@ impl EncryptedItem {
     }
 
     pub fn crypto_manager(&self, parent_crypto_manager: &CollectionCryptoManager) -> Result<ItemCryptoManager> {
-        let encryption_key = self.encryption_key.as_deref().and_then(|x| Some(&x[..]));
+        let encryption_key = self.encryption_key.as_deref().map(|x| &x[..]);
         Self::crypto_manager_static(parent_crypto_manager, &self.uid, self.version, encryption_key)
     }
 

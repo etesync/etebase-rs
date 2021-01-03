@@ -125,7 +125,8 @@ pub fn get_padding(length: u32) -> u32 {
     let s = (e.log2().floor() as u32) + 1;
     let last_bits = (e as u32) - s;
     let bit_mask = (1 << last_bits) - 1;
-    return (length + bit_mask) & !bit_mask;
+
+    (length + bit_mask) & !bit_mask
 }
 
 // FIXME: we should properly pad the meta and probably change these functions
@@ -170,7 +171,7 @@ pub(crate) fn buffer_unpad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>
 
     let mut buf = buf.to_vec();
 
-    let new_len = sodium_padding::unpad(&mut buf[..], len, blocksize).map_err(|_| Error::Padding("Failed unpadding"))?;
+    let new_len = sodium_padding::unpad(&buf[..], len, blocksize).map_err(|_| Error::Padding("Failed unpadding"))?;
     buf.truncate(new_len);
     Ok(buf)
 }
