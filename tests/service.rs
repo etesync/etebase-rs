@@ -8,7 +8,8 @@ use std::collections::HashSet;
 const CLIENT_NAME: &str = "etebase-tests";
 
 fn test_url() -> String {
-    env::var("ETEBASE_TEST_API_URL").unwrap_or("http://localhost:8033".to_owned())
+    let server = env::var("ETEBASE_TEST_HOST").expect("Set ETEBASE_TEST_HOST to run tests");
+    format!("http://{}", server)
 }
 
 use etebase::utils::{
@@ -60,8 +61,11 @@ use common::{
 
 fn user_reset(user: &TestUser) -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
+    let acct_user = etebase::User::new(user.username,user.email);
+    // sign-up the account if necessary, ignoring errors as we're about to reset it anyway
+    let _ = Account::signup_key(client.clone(), &acct_user, b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     let body_struct = etebase::test_helpers::SignupBody {
-        user: &etebase::User::new(user.username,user.email),
+        user: &acct_user,
         salt: &from_base64(user.salt)?,
         pubkey: &from_base64(user.pubkey)?,
         login_pubkey: &from_base64(user.loginPubkey)?,

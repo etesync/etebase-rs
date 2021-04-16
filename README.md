@@ -24,8 +24,19 @@ To build:
 $ cargo build
 ```
 
-To run the tests you first need an [Etebase server running](https://github.com/etesync/server) locally, because the tests test against a real server.
-You will also need to create a special user called `test@localhost` with password `SomePassword`, which the test suite expects.
+To test, run the `etesync/test-server` image using the latest version, e.g.,
+
+```
+docker run -p 3735:3735 -d etesync/test-server:latest
+```
+
+and then set `ETEBASE_TEST_HOST` to the host:port on which that is running; for the docker invocation above, that's
+```
+export ETEBASE_TEST_HOST=localhost:3735
+```
+
+and then run the tests:
+
 ```
 $ cargo test -- --test-threads 1
 ```

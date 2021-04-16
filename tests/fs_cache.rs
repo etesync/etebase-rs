@@ -6,7 +6,8 @@ use std::env;
 const CLIENT_NAME: &str = "etebase-tests";
 
 fn test_url() -> String {
-    env::var("ETEBASE_TEST_API_URL").unwrap_or("http://localhost:8033".to_owned())
+    let server = env::var("ETEBASE_TEST_HOST").expect("Set ETEBASE_TEST_HOST to run tests");
+    format!("http://{}", server)
 }
 
 use std::path::{
