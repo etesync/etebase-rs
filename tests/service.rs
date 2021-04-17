@@ -33,7 +33,6 @@ use etebase::{
     PrefetchOption, User,
 };
 
-#[allow(dead_code)]
 mod common;
 
 use common::{sessionStorageKey, TestUser, USER, USER2};

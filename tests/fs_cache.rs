@@ -23,7 +23,6 @@ use etebase::{
     Account, Client, ItemMetadata,
 };
 
-#[allow(dead_code)]
 mod common;
 
 use common::{sessionStorageKey, TestUser, USER};

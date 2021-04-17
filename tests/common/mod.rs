@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: © 2020 EteSync Authors
 // SPDX-License-Identifier: LGPL-2.1-only
+#![allow(dead_code)] // some test crates do not use all of these constants
 
 #[allow(non_snake_case)]
 pub struct TestUser {
