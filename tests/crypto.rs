@@ -9,7 +9,6 @@ use etebase::utils::from_base64;
 
 use etebase::error::Result;
 
-#[allow(dead_code)]
 mod common;
 
 use common::USER;
