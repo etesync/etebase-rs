@@ -1,17 +1,13 @@
 // SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
-use std::convert::TryInto;
-
-use etebase::test_helpers::crypto;
-
-use etebase::utils::from_base64;
-
-use etebase::error::Result;
-
 mod common;
 
 use common::USER;
+use etebase::error::Result;
+use etebase::test_helpers::crypto;
+use etebase::utils::from_base64;
+use std::convert::TryInto;
 
 #[test]
 fn derive_key() {
