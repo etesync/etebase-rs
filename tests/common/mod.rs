@@ -2,6 +2,13 @@
 // SPDX-License-Identifier: LGPL-2.1-only
 #![allow(dead_code)] // some test crates do not use all of these constants
 
+use std::env;
+
+pub fn test_url() -> String {
+    let server = env::var("ETEBASE_TEST_HOST").expect("Set ETEBASE_TEST_HOST to run tests");
+    format!("http://{}", server)
+}
+
 #[allow(non_snake_case)]
 pub struct TestUser {
     pub username: &'static str,

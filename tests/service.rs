@@ -1,20 +1,22 @@
 // SPDX-FileCopyrightText: © 2020 EteSync Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
+mod common;
+
+use common::{sessionStorageKey, test_url, TestUser, USER, USER2};
+use etebase::error::{Error, Result};
+use etebase::utils::{from_base64, randombytes_deterministic};
+use etebase::{
+    pretty_fingerprint,
+    test_helpers::{chunk_uids, test_reset},
+    Account, Client, Collection, CollectionAccessLevel, FetchOptions, Item, ItemMetadata,
+    PrefetchOption, User,
+};
+
 use std::collections::HashSet;
-use std::env;
 use std::iter;
 
 const CLIENT_NAME: &str = "etebase-tests";
-
-fn test_url() -> String {
-    let server = env::var("ETEBASE_TEST_HOST").expect("Set ETEBASE_TEST_HOST to run tests");
-    format!("http://{}", server)
-}
-
-use etebase::utils::{from_base64, randombytes_deterministic};
-
-use etebase::error::{Error, Result};
 
 macro_rules! assert_err {
     ($x:expr, $err:pat) => {
@@ -25,17 +27,6 @@ macro_rules! assert_err {
         }
     };
 }
-
-use etebase::{
-    pretty_fingerprint,
-    test_helpers::{chunk_uids, test_reset},
-    Account, Client, Collection, CollectionAccessLevel, FetchOptions, Item, ItemMetadata,
-    PrefetchOption, User,
-};
-
-mod common;
-
-use common::{sessionStorageKey, TestUser, USER, USER2};
 
 fn user_reset(user: &TestUser) -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;

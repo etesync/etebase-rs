@@ -1,31 +1,21 @@
 // SPDX-FileCopyrightText: © 2020 EteSync Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
-use std::env;
+mod common;
 
-const CLIENT_NAME: &str = "etebase-tests";
-
-fn test_url() -> String {
-    let server = env::var("ETEBASE_TEST_HOST").expect("Set ETEBASE_TEST_HOST to run tests");
-    format!("http://{}", server)
-}
-
-use std::io;
-use std::path::{Path, PathBuf};
-
-use remove_dir_all::remove_dir_all;
-
+use common::{sessionStorageKey, test_url, TestUser, USER};
 use etebase::error::Result;
-
 use etebase::{
     fs_cache::FileSystemCache,
     utils::{from_base64, randombytes, to_base64},
     Account, Client, ItemMetadata,
 };
+use remove_dir_all::remove_dir_all;
+use std::env;
+use std::io;
+use std::path::{Path, PathBuf};
 
-mod common;
-
-use common::{sessionStorageKey, TestUser, USER};
+const CLIENT_NAME: &str = "etebase-tests";
 
 pub struct TempDir {
     path: PathBuf,
