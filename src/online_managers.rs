@@ -385,6 +385,7 @@ pub enum PrefetchOption {
 }
 
 /// Configuration options for data fetching
+#[derive(Default)]
 pub struct FetchOptions<'a> {
     limit: Option<usize>,
     stoken: Option<&'a str>,
@@ -396,13 +397,7 @@ pub struct FetchOptions<'a> {
 impl<'a> FetchOptions<'a> {
     /// Return a new fetch options object
     pub fn new() -> Self {
-        Self {
-            limit: None,
-            stoken: None,
-            iterator: None,
-            prefetch: None,
-            with_collection: None,
-        }
+        Self::default()
     }
 
     /// Limit the amount of items returned

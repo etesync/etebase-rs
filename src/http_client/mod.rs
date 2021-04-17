@@ -31,7 +31,7 @@ pub struct Client {
 impl Client {
     fn normalize_url(server_url: &str) -> Result<Url> {
         let mut ret = Url::parse(server_url)?;
-        if !ret.path().ends_with("/") {
+        if !ret.path().ends_with('/') {
             ret.path_segments_mut().unwrap().push("");
         }
         Ok(ret)
@@ -84,28 +84,30 @@ impl Client {
     }
 
     pub(crate) fn get(&self, url: &str) -> Result<Response> {
-        self.imp.get(url, self.auth_token.as_deref()).as_result()
+        self.imp.get(url, self.auth_token.as_deref()).into_result()
     }
 
     pub(crate) fn post(&self, url: &str, body: Vec<u8>) -> Result<Response> {
         self.imp
             .post(url, self.auth_token.as_deref(), body)
-            .as_result()
+            .into_result()
     }
 
     pub(crate) fn put(&self, url: &str, body: Vec<u8>) -> Result<Response> {
         self.imp
             .put(url, self.auth_token.as_deref(), body)
-            .as_result()
+            .into_result()
     }
 
     pub(crate) fn patch(&self, url: &str, body: Vec<u8>) -> Result<Response> {
         self.imp
             .patch(url, self.auth_token.as_deref(), body)
-            .as_result()
+            .into_result()
     }
 
     pub(crate) fn delete(&self, url: &str) -> Result<Response> {
-        self.imp.delete(url, self.auth_token.as_deref()).as_result()
+        self.imp
+            .delete(url, self.auth_token.as_deref())
+            .into_result()
     }
 }

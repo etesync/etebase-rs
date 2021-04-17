@@ -88,7 +88,7 @@ impl ItemCryptoManager {
 }
 
 /// Metadata of the item
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
 pub struct ItemMetadata {
     #[serde(rename = "type")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -107,14 +107,7 @@ pub struct ItemMetadata {
 impl ItemMetadata {
     /// Create a new metadata object
     pub fn new() -> Self {
-        Self {
-            type_: None,
-            name: None,
-            mtime: None,
-
-            color: None,
-            description: None,
-        }
+        Self::default()
     }
 
     /// Set the item type
@@ -675,13 +668,11 @@ impl EncryptedRevision {
             while pos < content_length {
                 chunker.update(content[pos]);
                 let offset = pos - chunk_start;
-                if offset >= min_chunk {
-                    if (offset >= max_chunk) || chunker.split(mask) {
-                        let buf = &content[chunk_start..pos];
-                        let hash = to_base64(&crypto_manager.0.calculate_mac(buf)?)?;
-                        chunks.push(ChunkArrayItem(hash, Some(buf.to_vec())));
-                        chunk_start = pos;
-                    }
+                if offset >= min_chunk && ((offset >= max_chunk) || chunker.split(mask)) {
+                    let buf = &content[chunk_start..pos];
+                    let hash = to_base64(&crypto_manager.0.calculate_mac(buf)?)?;
+                    chunks.push(ChunkArrayItem(hash, Some(buf.to_vec())));
+                    chunk_start = pos;
                 }
                 pos += 1;
             }
