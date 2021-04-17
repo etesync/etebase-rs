@@ -112,7 +112,9 @@ impl Response {
                     .unwrap_or("Temporary server error")
                     .to_string(),
             ),
-            500..=599 => Error::ServerError(content.detail.unwrap_or("Server error").to_string()),
+            500..=501 | 505..=599 => {
+                Error::ServerError(content.detail.unwrap_or("Server error").to_string())
+            }
             status => Error::Http(format!(
                 "HTTP error {}! Code: '{}'. Detail: '{}'",
                 status,
@@ -122,8 +124,14 @@ impl Response {
         })
     }
 
-    /// Converts the object to a [Result]
+    #[deprecated(since = "0.5.1", note = "please use `into_result` instead")]
+    #[allow(clippy::wrong_self_convention)]
     pub fn as_result(self) -> Result<Self> {
+        self.into_result()
+    }
+
+    /// Converts the object to a [Result]
+    pub fn into_result(self) -> Result<Self> {
         match self.err {
             Some(err) => Err(err),
             None => Ok(self),
