@@ -8,41 +8,24 @@ use std::convert::TryInto;
 
 use std::collections::HashMap;
 
-use serde::{Serialize, Deserialize};
-use serde_repr::{Serialize_repr, Deserialize_repr};
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use super::{
-    try_into,
-    CURRENT_VERSION,
-    crypto::{
-        CryptoManager,
-        CryptoMac,
-        BoxCryptoManager,
-    },
     chunker::Rollsum,
-    error::{
-        Error,
-        Result,
-    },
+    crypto::{BoxCryptoManager, CryptoMac, CryptoManager},
+    error::{Error, Result},
+    try_into,
     utils::{
-        buffer_pad_small,
-        buffer_pad,
-        buffer_unpad,
-        buffer_pad_fixed,
-        buffer_unpad_fixed,
-        shuffle,
-        memcmp,
-        randombytes,
-        from_base64,
-        to_base64,
-        StringBase64,
-        MsgPackSerilization,
+        buffer_pad, buffer_pad_fixed, buffer_pad_small, buffer_unpad, buffer_unpad_fixed,
+        from_base64, memcmp, randombytes, shuffle, to_base64, MsgPackSerilization, StringBase64,
         SYMMETRIC_KEY_SIZE,
     },
+    CURRENT_VERSION,
 };
 
 pub fn gen_uid_base64() -> StringBase64 {
-  to_base64(&randombytes(24)).unwrap()
+    to_base64(&randombytes(24)).unwrap()
 }
 
 #[derive(Serialize, Deserialize)]
@@ -65,11 +48,18 @@ impl AccountCryptoManager {
     }
 
     pub fn collection_type_to_uid(&self, collection_type: &str) -> Result<Vec<u8>> {
-        self.0.deterministic_encrypt(&buffer_pad_fixed(collection_type.as_bytes(), Self::COLTYPE_PAD_SIZE)?, None)
+        self.0.deterministic_encrypt(
+            &buffer_pad_fixed(collection_type.as_bytes(), Self::COLTYPE_PAD_SIZE)?,
+            None,
+        )
     }
 
     pub fn collection_type_from_uid(&self, collection_type_uid: &[u8]) -> Result<String> {
-        buffer_unpad_fixed(&self.0.deterministic_decrypt(collection_type_uid, None)?, Self::COLTYPE_PAD_SIZE).map(|x| String::from_utf8(x).unwrap_or_else(|_| "BAD TYPE".to_owned()))
+        buffer_unpad_fixed(
+            &self.0.deterministic_decrypt(collection_type_uid, None)?,
+            Self::COLTYPE_PAD_SIZE,
+        )
+        .map(|x| String::from_utf8(x).unwrap_or_else(|_| "BAD TYPE".to_owned()))
     }
 }
 
@@ -274,10 +264,17 @@ impl SignedInvitation {
         }
     }
 
-    pub(crate) fn decrypted_encryption_key(&self, identity_crypto_manager: &BoxCryptoManager) -> Result<Vec<u8>> {
+    pub(crate) fn decrypted_encryption_key(
+        &self,
+        identity_crypto_manager: &BoxCryptoManager,
+    ) -> Result<Vec<u8>> {
         let from_pubkey = match self.from_pubkey.as_deref() {
             Some(from_pubkey) => from_pubkey,
-            None => return Err(Error::ProgrammingError("Missing invitation encryption key.")),
+            None => {
+                return Err(Error::ProgrammingError(
+                    "Missing invitation encryption key.",
+                ))
+            }
         };
         identity_crypto_manager.decrypt(&self.signed_encryption_key, try_into!(from_pubkey)?)
     }
@@ -310,11 +307,23 @@ pub struct EncryptedCollection {
 }
 
 impl EncryptedCollection {
-    pub fn new(parent_crypto_manager: &AccountCryptoManager, collection_type: &str, meta: &[u8], content: &[u8]) -> Result<Self> {
+    pub fn new(
+        parent_crypto_manager: &AccountCryptoManager,
+        collection_type: &str,
+        meta: &[u8],
+        content: &[u8],
+    ) -> Result<Self> {
         let version = CURRENT_VERSION;
         let collection_type = parent_crypto_manager.collection_type_to_uid(collection_type)?;
-        let collection_key = parent_crypto_manager.0.encrypt(&randombytes(SYMMETRIC_KEY_SIZE), Some(&collection_type))?;
-        let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, version, &collection_key, Some(&collection_type))?;
+        let collection_key = parent_crypto_manager
+            .0
+            .encrypt(&randombytes(SYMMETRIC_KEY_SIZE), Some(&collection_type))?;
+        let crypto_manager = Self::crypto_manager_static(
+            parent_crypto_manager,
+            version,
+            &collection_key,
+            Some(&collection_type),
+        )?;
         let item = EncryptedItem::new(&crypto_manager, &meta, content)?;
 
         Ok(Self {
@@ -385,7 +394,11 @@ impl EncryptedCollection {
         self.item.verify(&item_crypto_manager)
     }
 
-    pub fn set_meta(&mut self, crypto_manager: &CollectionCryptoManager, meta: &[u8]) -> Result<()> {
+    pub fn set_meta(
+        &mut self,
+        crypto_manager: &CollectionCryptoManager,
+        meta: &[u8],
+    ) -> Result<()> {
         let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
         self.item.set_meta(&item_crypto_manager, &meta)
     }
@@ -396,7 +409,11 @@ impl EncryptedCollection {
         self.item.meta(&item_crypto_manager)
     }
 
-    pub fn set_content(&mut self, crypto_manager: &CollectionCryptoManager, content: &[u8]) -> Result<()> {
+    pub fn set_content(
+        &mut self,
+        crypto_manager: &CollectionCryptoManager,
+        content: &[u8],
+    ) -> Result<()> {
         let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
         self.item.set_content(&item_crypto_manager, content)
     }
@@ -442,16 +459,28 @@ impl EncryptedCollection {
 
     pub fn collection_type(&self, account_crypto_manager: &AccountCryptoManager) -> Result<String> {
         match &self.collection_type {
-            Some(collection_type) => account_crypto_manager.collection_type_from_uid(collection_type),
+            Some(collection_type) => {
+                account_crypto_manager.collection_type_from_uid(collection_type)
+            }
             None => {
                 let crypto_manager = self.crypto_manager(account_crypto_manager)?;
                 let meta_raw = self.meta(&crypto_manager)?;
-                Ok(ItemMetadata::from_msgpack(&meta_raw)?.item_type().unwrap_or("BAD TYPE").to_owned())
-            },
+                Ok(ItemMetadata::from_msgpack(&meta_raw)?
+                    .item_type()
+                    .unwrap_or("BAD TYPE")
+                    .to_owned())
+            }
         }
     }
 
-    pub fn create_invitation(&self, account_crypto_manager: &AccountCryptoManager, identity_crypto_manager: &BoxCryptoManager, username: &str, pubkey: &[u8], access_level: CollectionAccessLevel) -> Result<SignedInvitation> {
+    pub fn create_invitation(
+        &self,
+        account_crypto_manager: &AccountCryptoManager,
+        identity_crypto_manager: &BoxCryptoManager,
+        username: &str,
+        pubkey: &[u8],
+        access_level: CollectionAccessLevel,
+    ) -> Result<SignedInvitation> {
         let uid = to_base64(&randombytes(32))?;
         let encryption_key = self.collection_key(account_crypto_manager)?;
         let collection_type = self.collection_type(account_crypto_manager)?;
@@ -460,7 +489,8 @@ impl EncryptedCollection {
             collection_type,
         };
         let raw_content = rmp_serde::to_vec_named(&content)?;
-        let signed_encryption_key = identity_crypto_manager.encrypt(&buffer_pad_small(&raw_content)?, try_into!(pubkey)?)?;
+        let signed_encryption_key = identity_crypto_manager
+            .encrypt(&buffer_pad_small(&raw_content)?, try_into!(pubkey)?)?;
         Ok(SignedInvitation {
             uid,
             version: CURRENT_VERSION,
@@ -474,25 +504,48 @@ impl EncryptedCollection {
         })
     }
 
-    fn collection_key_static(account_crypto_manager: &AccountCryptoManager, encryption_key: &[u8], collection_type: Option<&[u8]>) -> Result<Vec<u8>> {
-        account_crypto_manager.0.decrypt(encryption_key, collection_type)
+    fn collection_key_static(
+        account_crypto_manager: &AccountCryptoManager,
+        encryption_key: &[u8],
+        collection_type: Option<&[u8]>,
+    ) -> Result<Vec<u8>> {
+        account_crypto_manager
+            .0
+            .decrypt(encryption_key, collection_type)
     }
 
     fn collection_key(&self, account_crypto_manager: &AccountCryptoManager) -> Result<Vec<u8>> {
-        Self::collection_key_static(account_crypto_manager, &self.collection_key, self.collection_type.as_deref())
+        Self::collection_key_static(
+            account_crypto_manager,
+            &self.collection_key,
+            self.collection_type.as_deref(),
+        )
     }
 
-    fn crypto_manager_static(parent_crypto_manager: &AccountCryptoManager, version: u8, encryption_key: &[u8], collection_type: Option<&[u8]>) -> Result<CollectionCryptoManager> {
-        let encryption_key = Self::collection_key_static(parent_crypto_manager, encryption_key, collection_type)?;
+    fn crypto_manager_static(
+        parent_crypto_manager: &AccountCryptoManager,
+        version: u8,
+        encryption_key: &[u8],
+        collection_type: Option<&[u8]>,
+    ) -> Result<CollectionCryptoManager> {
+        let encryption_key =
+            Self::collection_key_static(parent_crypto_manager, encryption_key, collection_type)?;
 
         CollectionCryptoManager::new(try_into!(&encryption_key[..])?, version)
     }
 
-    pub fn crypto_manager(&self, parent_crypto_manager: &AccountCryptoManager) -> Result<CollectionCryptoManager> {
-        Self::crypto_manager_static(parent_crypto_manager, self.item.version, &self.collection_key, self.collection_type.as_deref())
+    pub fn crypto_manager(
+        &self,
+        parent_crypto_manager: &AccountCryptoManager,
+    ) -> Result<CollectionCryptoManager> {
+        Self::crypto_manager_static(
+            parent_crypto_manager,
+            self.item.version,
+            &self.collection_key,
+            self.collection_type.as_deref(),
+        )
     }
 }
-
 
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct ChunkArrayItem(
@@ -500,7 +553,7 @@ pub(crate) struct ChunkArrayItem(
     #[serde(default)]
     #[serde(with = "serde_bytes")]
     pub Option<Vec<u8>>,
-    );
+);
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EncryptedRevision {
@@ -513,7 +566,12 @@ pub struct EncryptedRevision {
 }
 
 impl EncryptedRevision {
-    pub fn new(crypto_manager: &ItemCryptoManager, additional_data: &[u8], meta: &[u8], content: &[u8]) -> Result<Self> {
+    pub fn new(
+        crypto_manager: &ItemCryptoManager,
+        additional_data: &[u8],
+        meta: &[u8],
+        content: &[u8],
+    ) -> Result<Self> {
         let mut ret = Self {
             uid: "".to_owned(),
             meta: vec![],
@@ -528,7 +586,11 @@ impl EncryptedRevision {
         Ok(ret)
     }
 
-    fn calculate_hash(&self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<Vec<u8>> {
+    fn calculate_hash(
+        &self,
+        crypto_manager: &ItemCryptoManager,
+        additional_data: &[u8],
+    ) -> Result<Vec<u8>> {
         let mut crypto_mac = crypto_manager.0.crypto_mac()?;
         crypto_mac.update(&[self.deleted as u8])?;
         crypto_mac.update_with_len_prefix(additional_data)?;
@@ -545,14 +607,25 @@ impl EncryptedRevision {
         crypto_mac.finalize()
     }
 
-    pub fn verify(&self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<bool> {
+    pub fn verify(
+        &self,
+        crypto_manager: &ItemCryptoManager,
+        additional_data: &[u8],
+    ) -> Result<bool> {
         let mac = from_base64(&self.uid)?;
         let ad_hash = self.calculate_hash(crypto_manager, additional_data)?;
 
-        crypto_manager.0.verify(&self.meta, try_into!(&mac[..])?, Some(&ad_hash))
+        crypto_manager
+            .0
+            .verify(&self.meta, try_into!(&mac[..])?, Some(&ad_hash))
     }
 
-    pub fn set_meta(&mut self, crypto_manager: &ItemCryptoManager, additional_data: &[u8], meta: &[u8]) -> Result<()> {
+    pub fn set_meta(
+        &mut self,
+        crypto_manager: &ItemCryptoManager,
+        additional_data: &[u8],
+        meta: &[u8],
+    ) -> Result<()> {
         let ad_hash = self.calculate_hash(crypto_manager, additional_data)?;
 
         let msg = buffer_pad_small(meta)?;
@@ -564,14 +637,27 @@ impl EncryptedRevision {
         Ok(())
     }
 
-    pub fn meta(&self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<Vec<u8>> {
+    pub fn meta(
+        &self,
+        crypto_manager: &ItemCryptoManager,
+        additional_data: &[u8],
+    ) -> Result<Vec<u8>> {
         let mac = from_base64(&self.uid)?;
         let ad_hash = self.calculate_hash(crypto_manager, additional_data)?;
 
-        buffer_unpad(&crypto_manager.0.decrypt_detached(&self.meta, try_into!(&mac[..])?, Some(&ad_hash))?)
+        buffer_unpad(&crypto_manager.0.decrypt_detached(
+            &self.meta,
+            try_into!(&mac[..])?,
+            Some(&ad_hash),
+        )?)
     }
 
-    pub fn set_content(&mut self, crypto_manager: &ItemCryptoManager, additional_data: &[u8], content: &[u8]) -> Result<()> {
+    pub fn set_content(
+        &mut self,
+        crypto_manager: &ItemCryptoManager,
+        additional_data: &[u8],
+        content: &[u8],
+    ) -> Result<()> {
         let meta = self.meta(crypto_manager, additional_data)?;
 
         let mut chunks: Vec<ChunkArrayItem> = vec![];
@@ -622,7 +708,7 @@ impl EncryptedRevision {
                         Some(previous_index) => {
                             indices[i] = *previous_index;
                             None
-                        },
+                        }
                         None => {
                             uid_indices.insert(uid.to_string(), i);
                             Some(chunk)
@@ -634,7 +720,7 @@ impl EncryptedRevision {
             // If we have more than one chunk we need to encode the mapping header in the last chunk
             if indices.len() > 1 {
                 // We encode it in an array so we can extend it later on if needed
-                let buf = rmp_serde::to_vec_named(&(indices, ))?;
+                let buf = rmp_serde::to_vec_named(&(indices,))?;
                 let hash = to_base64(&crypto_manager.0.calculate_mac(&buf)?)?;
                 chunks.push(ChunkArrayItem(hash, Some(buf)));
             }
@@ -652,10 +738,7 @@ impl EncryptedRevision {
         };
 
         // Encrypt all of the chunks
-        let encrypted_chunks: Result<Vec<_>> = chunks
-            .into_iter()
-            .map(encrypt_item)
-            .collect();
+        let encrypted_chunks: Result<Vec<_>> = chunks.into_iter().map(encrypt_item).collect();
 
         self.chunks = encrypted_chunks?;
         self.set_meta(crypto_manager, additional_data, &meta)?;
@@ -683,16 +766,13 @@ impl EncryptedRevision {
             Ok(buf)
         };
 
-        let decrypted_chunks: Result<Vec<_>> = self.chunks
-            .iter()
-            .map(item)
-            .collect();
+        let decrypted_chunks: Result<Vec<_>> = self.chunks.iter().map(item).collect();
         let mut decrypted_chunks = decrypted_chunks?;
 
         // If we have more than one chunk we have the mapping header in the last chunk
         if self.chunks.len() > 1 {
             let buf = decrypted_chunks.pop().unwrap();
-            let header_chunk: (Vec<usize>, ) = rmp_serde::from_read_ref(&buf)?;
+            let header_chunk: (Vec<usize>,) = rmp_serde::from_read_ref(&buf)?;
             indices = Some(header_chunk.0);
         }
 
@@ -711,12 +791,16 @@ impl EncryptedRevision {
                 } else {
                     Ok(decrypted_chunks.into_iter().next().unwrap_or_default())
                 }
-            },
-            None => Ok(decrypted_chunks.into_iter().next().unwrap_or_default())
+            }
+            None => Ok(decrypted_chunks.into_iter().next().unwrap_or_default()),
         }
     }
 
-    pub fn delete(&mut self, crypto_manager: &ItemCryptoManager, additional_data: &[u8]) -> Result<()> {
+    pub fn delete(
+        &mut self,
+        crypto_manager: &ItemCryptoManager,
+        additional_data: &[u8],
+    ) -> Result<()> {
         let meta = self.meta(crypto_manager, additional_data)?;
 
         self.deleted = true;
@@ -740,11 +824,21 @@ pub struct EncryptedItem {
 }
 
 impl EncryptedItem {
-    pub fn new(parent_crypto_manager: &CollectionCryptoManager, meta: &[u8], content: &[u8]) -> Result<Self> {
+    pub fn new(
+        parent_crypto_manager: &CollectionCryptoManager,
+        meta: &[u8],
+        content: &[u8],
+    ) -> Result<Self> {
         let uid = gen_uid_base64();
         let version = CURRENT_VERSION;
-        let crypto_manager = Self::crypto_manager_static(parent_crypto_manager, &uid, version, None)?;
-        let content = EncryptedRevision::new(&crypto_manager, Self::additional_mac_data_static(&uid), &meta, content)?;
+        let crypto_manager =
+            Self::crypto_manager_static(parent_crypto_manager, &uid, version, None)?;
+        let content = EncryptedRevision::new(
+            &crypto_manager,
+            Self::additional_mac_data_static(&uid),
+            &meta,
+            content,
+        )?;
 
         Ok(Self {
             uid,
@@ -808,7 +902,8 @@ impl EncryptedItem {
     }
 
     pub fn verify(&self, crypto_manager: &ItemCryptoManager) -> Result<bool> {
-        self.content.verify(crypto_manager, self.additional_mac_data())
+        self.content
+            .verify(crypto_manager, self.additional_mac_data())
     }
 
     pub fn set_meta(&mut self, crypto_manager: &ItemCryptoManager, meta: &[u8]) -> Result<()> {
@@ -826,13 +921,19 @@ impl EncryptedItem {
 
     pub fn meta(&self, crypto_manager: &ItemCryptoManager) -> Result<Vec<u8>> {
         self.verify(crypto_manager)?;
-        self.content.meta(crypto_manager, self.additional_mac_data())
+        self.content
+            .meta(crypto_manager, self.additional_mac_data())
     }
 
-    pub fn set_content(&mut self, crypto_manager: &ItemCryptoManager, content: &[u8]) -> Result<()> {
+    pub fn set_content(
+        &mut self,
+        crypto_manager: &ItemCryptoManager,
+        content: &[u8],
+    ) -> Result<()> {
         let ad_mac_data = Self::additional_mac_data_static(&self.uid);
         if self.is_locally_changed() {
-            self.content.set_content(crypto_manager, ad_mac_data, content)?;
+            self.content
+                .set_content(crypto_manager, ad_mac_data, content)?;
         } else {
             let mut rev = self.content.clone();
             rev.set_content(crypto_manager, ad_mac_data, content)?;
@@ -876,7 +977,12 @@ impl EncryptedItem {
         self.etag.borrow().to_owned()
     }
 
-    fn crypto_manager_static(parent_crypto_manager: &CollectionCryptoManager, uid: &str, version: u8, encryption_key: Option<&[u8]>) -> Result<ItemCryptoManager> {
+    fn crypto_manager_static(
+        parent_crypto_manager: &CollectionCryptoManager,
+        uid: &str,
+        version: u8,
+        encryption_key: Option<&[u8]>,
+    ) -> Result<ItemCryptoManager> {
         let encryption_key = match encryption_key {
             Some(encryption_key) => parent_crypto_manager.0.decrypt(encryption_key, None)?,
             None => parent_crypto_manager.0.derive_subkey(uid.as_bytes())?,
@@ -885,9 +991,17 @@ impl EncryptedItem {
         ItemCryptoManager::new(try_into!(&encryption_key[..])?, version)
     }
 
-    pub fn crypto_manager(&self, parent_crypto_manager: &CollectionCryptoManager) -> Result<ItemCryptoManager> {
+    pub fn crypto_manager(
+        &self,
+        parent_crypto_manager: &CollectionCryptoManager,
+    ) -> Result<ItemCryptoManager> {
         let encryption_key = self.encryption_key.as_deref().map(|x| &x[..]);
-        Self::crypto_manager_static(parent_crypto_manager, &self.uid, self.version, encryption_key)
+        Self::crypto_manager_static(
+            parent_crypto_manager,
+            &self.uid,
+            self.version,
+            encryption_key,
+        )
     }
 
     fn additional_mac_data_static(uid: &str) -> &[u8] {
@@ -911,9 +1025,6 @@ impl EncryptedItem {
     }
 
     pub(crate) fn test_chunk_uids(&self) -> Vec<String> {
-        self.content.chunks
-            .iter()
-            .map(|x| x.0.clone())
-            .collect()
+        self.content.chunks.iter().map(|x| x.0.clone()).collect()
     }
 }

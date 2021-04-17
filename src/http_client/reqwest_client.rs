@@ -1,27 +1,14 @@
 use reqwest::{
-    blocking:: {
-        Client as ReqwestClient,
-        RequestBuilder,
-    },
-    redirect::Policy,
+    blocking::{Client as ReqwestClient, RequestBuilder},
     header,
+    redirect::Policy,
 };
 
-use crate::error::{
-    Result,
-    Error,
-};
+use crate::error::{Error, Result};
 
-use super::client_impl::{
-    ClientImplementation,
-    Response,
-};
+use super::client_impl::{ClientImplementation, Response};
 
-static APP_USER_AGENT: &str = concat!(
-    env!("CARGO_PKG_NAME"),
-    "/",
-    env!("CARGO_PKG_VERSION"),
-);
+static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 impl From<reqwest::Error> for Error {
     fn from(err: reqwest::Error) -> Error {
@@ -44,14 +31,18 @@ impl Client {
             .redirect(Policy::none())
             .build()?;
 
-        Ok(Self{
-            req_client,
-        })
+        Ok(Self { req_client })
     }
 
-    fn with_auth_header(&self, builder: RequestBuilder, auth_token: Option<&str>) -> RequestBuilder {
+    fn with_auth_header(
+        &self,
+        builder: RequestBuilder,
+        auth_token: Option<&str>,
+    ) -> RequestBuilder {
         match auth_token {
-            Some(auth_token) => builder.header(header::AUTHORIZATION, format!("Token {}", auth_token)),
+            Some(auth_token) => {
+                builder.header(header::AUTHORIZATION, format!("Token {}", auth_token))
+            }
             None => builder,
         }
     }
@@ -75,7 +66,9 @@ impl Client {
     }
 
     fn post_inner(&self, url: &str, auth_token: Option<&str>, body: Vec<u8>) -> Result<Response> {
-        let req = self.prep_client(self.req_client.post(url), auth_token).body(body);
+        let req = self
+            .prep_client(self.req_client.post(url), auth_token)
+            .body(body);
         let resp = req.send()?;
         let status = resp.status().as_u16();
         let ret = Response::new(resp.bytes()?.to_vec(), status);
@@ -83,7 +76,9 @@ impl Client {
     }
 
     fn put_inner(&self, url: &str, auth_token: Option<&str>, body: Vec<u8>) -> Result<Response> {
-        let req = self.prep_client(self.req_client.put(url), auth_token).body(body);
+        let req = self
+            .prep_client(self.req_client.put(url), auth_token)
+            .body(body);
         let resp = req.send()?;
         let status = resp.status().as_u16();
         let ret = Response::new(resp.bytes()?.to_vec(), status);
@@ -91,7 +86,9 @@ impl Client {
     }
 
     fn patch_inner(&self, url: &str, auth_token: Option<&str>, body: Vec<u8>) -> Result<Response> {
-        let req = self.prep_client(self.req_client.patch(url), auth_token).body(body);
+        let req = self
+            .prep_client(self.req_client.patch(url), auth_token)
+            .body(body);
         let resp = req.send()?;
         let status = resp.status().as_u16();
         let ret = Response::new(resp.bytes()?.to_vec(), status);

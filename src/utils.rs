@@ -5,17 +5,15 @@ mod sodium_padding;
 
 use sodiumoxide::base64;
 
-use super::error::{
-    Error,
-    Result,
-};
+use super::error::{Error, Result};
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! try_into {
     ($x:expr) => {
-        ($x).try_into().or(Err(Error::ProgrammingError("Try into failed")))
-    }
+        ($x).try_into()
+            .or(Err(Error::ProgrammingError("Try into failed")))
+    };
 }
 
 pub type StrBase64 = str;
@@ -46,7 +44,8 @@ pub fn randombytes(size: usize) -> Vec<u8> {
 /// * `size` - the size of the returned buffer (in bytes)
 pub fn randombytes_deterministic(size: usize, seed: &[u8; 32]) -> Vec<u8> {
     // Not exactly like the sodium randombytes_deterministic but close enough
-    let nonce = sodiumoxide::crypto::stream::xchacha20::Nonce(*b"LibsodiumDRG\0\0\0\0\0\0\0\0\0\0\0\0");
+    let nonce =
+        sodiumoxide::crypto::stream::xchacha20::Nonce(*b"LibsodiumDRG\0\0\0\0\0\0\0\0\0\0\0\0");
     let key = sodiumoxide::crypto::stream::xchacha20::Key(*seed);
 
     sodiumoxide::crypto::stream::xchacha20::stream(size, &nonce, &key)
@@ -158,7 +157,8 @@ pub(crate) fn buffer_pad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>> 
     let mut ret = vec![0; padding];
     ret[..len].copy_from_slice(buf);
 
-    sodium_padding::pad(&mut ret[..], len, blocksize).map_err(|_| Error::Padding("Failed padding"))?;
+    sodium_padding::pad(&mut ret[..], len, blocksize)
+        .map_err(|_| Error::Padding("Failed padding"))?;
 
     Ok(ret)
 }
@@ -171,7 +171,8 @@ pub(crate) fn buffer_unpad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>
 
     let mut buf = buf.to_vec();
 
-    let new_len = sodium_padding::unpad(&buf[..], len, blocksize).map_err(|_| Error::Padding("Failed unpadding"))?;
+    let new_len = sodium_padding::unpad(&buf[..], len, blocksize)
+        .map_err(|_| Error::Padding("Failed unpadding"))?;
     buf.truncate(new_len);
     Ok(buf)
 }

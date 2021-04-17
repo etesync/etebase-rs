@@ -3,61 +3,30 @@
 
 extern crate rmp_serde;
 
-use std::sync::Arc;
 use std::convert::TryInto;
 use std::iter;
+use std::sync::Arc;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use super::{
-    try_into,
-    crypto::{
-        derive_key,
-        CryptoManager,
-        BoxCryptoManager,
-        LoginCryptoManager,
-    },
-    error::{
-        Error,
-        Result,
-    },
-    utils::{
-        buffer_unpad,
-        from_base64,
-        to_base64,
-        StrBase64,
-        randombytes,
-        SYMMETRIC_KEY_SIZE,
-        MsgPackSerilization,
-    },
+    crypto::{derive_key, BoxCryptoManager, CryptoManager, LoginCryptoManager},
     encrypted_models::{
-        AccountCryptoManager,
-        CollectionCryptoManager,
-        ItemCryptoManager,
-        CollectionAccessLevel,
-        EncryptedCollection,
-        EncryptedItem,
-        SignedInvitation,
-        SignedInvitationContent,
-        ItemMetadata,
+        AccountCryptoManager, CollectionAccessLevel, CollectionCryptoManager, EncryptedCollection,
+        EncryptedItem, ItemCryptoManager, ItemMetadata, SignedInvitation, SignedInvitationContent,
     },
+    error::{Error, Result},
     http_client::Client,
     online_managers::{
-        Authenticator,
-        User,
-        UserProfile,
-        LoginResponseUser,
-        LoginChallange,
-        LoginBodyResponse,
-        CollectionManagerOnline,
-        ItemManagerOnline,
-        CollectionMemberManagerOnline,
-        CollectionMember,
-        CollectionInvitationManagerOnline,
-        CollectionListResponse,
-        ItemListResponse,
-        IteratorListResponse,
-        FetchOptions,
+        Authenticator, CollectionInvitationManagerOnline, CollectionListResponse,
+        CollectionManagerOnline, CollectionMember, CollectionMemberManagerOnline, FetchOptions,
+        ItemListResponse, ItemManagerOnline, IteratorListResponse, LoginBodyResponse,
+        LoginChallange, LoginResponseUser, User, UserProfile,
+    },
+    try_into,
+    utils::{
+        buffer_unpad, from_base64, randombytes, to_base64, MsgPackSerilization, StrBase64,
+        SYMMETRIC_KEY_SIZE,
     },
 };
 
@@ -162,7 +131,9 @@ impl Account {
         super::init()?;
 
         if main_key.len() == SYMMETRIC_KEY_SIZE {
-            return Err(Error::ProgrammingError("Key should be exactly 32 bytes long."));
+            return Err(Error::ProgrammingError(
+                "Key should be exactly 32 bytes long.",
+            ));
         }
 
         let salt = randombytes(32);
@@ -171,7 +142,12 @@ impl Account {
         Self::signup_common(client, user, main_key, salt)
     }
 
-    fn signup_common(mut client: Client, user: &User, main_key: Vec<u8>, salt: Vec<u8>) -> Result<Self> {
+    fn signup_common(
+        mut client: Client,
+        user: &User,
+        main_key: Vec<u8>,
+        salt: Vec<u8>,
+    ) -> Result<Self> {
         let authenticator = Authenticator::new(&client);
         let version = super::CURRENT_VERSION;
 
@@ -184,12 +160,18 @@ impl Account {
         let content = [&account_key, &identity_crypto_manager.privkey()[..]].concat();
         let encrypted_content = main_crypto_manager.0.encrypt(&content, None)?;
 
-        let login_response = authenticator.signup(user, &salt, &login_crypto_manager.pubkey(),
-                                                  &identity_crypto_manager.pubkey(), &encrypted_content)?;
+        let login_response = authenticator.signup(
+            user,
+            &salt,
+            &login_crypto_manager.pubkey(),
+            &identity_crypto_manager.pubkey(),
+            &encrypted_content,
+        )?;
 
         client.set_token(Some(&login_response.token));
 
-        let account_crypto_manager = main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
+        let account_crypto_manager =
+            main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
 
         let ret = Self {
             main_key,
@@ -221,7 +203,7 @@ impl Account {
                 } else {
                     return Err(Error::Unauthorized(s));
                 }
-            },
+            }
             rest => rest?,
         };
 
@@ -242,7 +224,9 @@ impl Account {
         super::init()?;
 
         if main_key.len() < SYMMETRIC_KEY_SIZE {
-            return Err(Error::ProgrammingError("Key should be at least 32 bytes long."));
+            return Err(Error::ProgrammingError(
+                "Key should be at least 32 bytes long.",
+            ));
         }
 
         let authenticator = Authenticator::new(&client);
@@ -255,7 +239,7 @@ impl Account {
                 } else {
                     return Err(Error::Unauthorized(s));
                 }
-            },
+            }
             rest => rest?,
         };
 
@@ -264,7 +248,12 @@ impl Account {
         Self::login_common(client, username, main_key, login_challenge)
     }
 
-    fn login_common(mut client: Client, username: &str, main_key: Vec<u8>, login_challenge: LoginChallange) -> Result<Self> {
+    fn login_common(
+        mut client: Client,
+        username: &str,
+        main_key: Vec<u8>,
+        login_challenge: LoginChallange,
+    ) -> Result<Self> {
         let authenticator = Authenticator::new(&client);
 
         let version = login_challenge.version;
@@ -276,7 +265,10 @@ impl Account {
         let response_struct = LoginBodyResponse {
             username,
             challenge: &login_challenge.challenge,
-            host: client.server_url().host_str().unwrap_or_else(|| client.server_url().as_str()),
+            host: client
+                .server_url()
+                .host_str()
+                .unwrap_or_else(|| client.server_url().as_str()),
             action: "login",
         };
         let response = rmp_serde::to_vec_named(&response_struct)?;
@@ -287,9 +279,12 @@ impl Account {
 
         client.set_token(Some(&login_response.token));
 
-        let content = main_crypto_manager.0.decrypt(&login_response.user.encrypted_content, None)?;
+        let content = main_crypto_manager
+            .0
+            .decrypt(&login_response.user.encrypted_content, None)?;
         let account_key = &content[..SYMMETRIC_KEY_SIZE];
-        let account_crypto_manager = main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
+        let account_crypto_manager =
+            main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
 
         let ret = Self {
             main_key,
@@ -319,7 +314,11 @@ impl Account {
         let response_struct = LoginBodyResponse {
             username,
             challenge: &login_challenge.challenge,
-            host: &self.client.server_url().host_str().unwrap_or(&self.client.server_url().as_str()),
+            host: &self
+                .client
+                .server_url()
+                .host_str()
+                .unwrap_or(&self.client.server_url().as_str()),
             action: "login",
         };
         let response = rmp_serde::to_vec_named(&response_struct)?;
@@ -358,7 +357,9 @@ impl Account {
         let login_challenge = authenticator.get_login_challenge(username)?;
 
         let old_main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
-        let content = old_main_crypto_manager.0.decrypt(&self.user.encrypted_content, None)?;
+        let content = old_main_crypto_manager
+            .0
+            .decrypt(&self.user.encrypted_content, None)?;
         let old_login_crypto_manager = old_main_crypto_manager.login_crypto_manager()?;
 
         let main_key = derive_key(&login_challenge.salt, &password)?;
@@ -366,7 +367,6 @@ impl Account {
         let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
         let encrypted_content = main_crypto_manager.0.encrypt(&content, None)?;
-
 
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
@@ -386,7 +386,11 @@ impl Account {
         let response_struct = Body {
             username,
             challenge: &login_challenge.challenge,
-            host: &self.client.server_url().host_str().unwrap_or(&self.client.server_url().as_str()),
+            host: &self
+                .client
+                .server_url()
+                .host_str()
+                .unwrap_or(&self.client.server_url().as_str()),
             action: "changePassword",
 
             login_pubkey: &login_crypto_manager.pubkey(),
@@ -449,14 +453,21 @@ impl Account {
     /// * `client` - the already setup [Client] object
     /// * `account_data_stored` - the stored account string
     /// * `encryption_key` - the same encryption key passed to [Self::save] while saving the account
-    pub fn restore(mut client: Client, account_data_stored: &str, encryption_key: Option<&[u8]>) -> Result<Self> {
+    pub fn restore(
+        mut client: Client,
+        account_data_stored: &str,
+        encryption_key: Option<&[u8]>,
+    ) -> Result<Self> {
         let encryption_key = encryption_key.unwrap_or(&[0; 32]);
         let account_data_stored = from_base64(account_data_stored)?;
-        let account_data_stored: AccountDataStored = rmp_serde::from_read_ref(&account_data_stored)?;
+        let account_data_stored: AccountDataStored =
+            rmp_serde::from_read_ref(&account_data_stored)?;
         let version = account_data_stored.version;
 
         let crypto_manager = StorageCryptoManager::new(try_into!(encryption_key)?, version)?;
-        let decrypted = crypto_manager.0.decrypt(&account_data_stored.encrypted_data, Some(&[version]))?;
+        let decrypted = crypto_manager
+            .0
+            .decrypt(&account_data_stored.encrypted_data, Some(&[version]))?;
         let account_data: AccountData = rmp_serde::from_read_ref(&decrypted)?;
 
         client.set_token(account_data.auth_token);
@@ -465,9 +476,12 @@ impl Account {
         let main_key = crypto_manager.0.decrypt(account_data.key, None)?;
 
         let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
-        let content = main_crypto_manager.0.decrypt(&account_data.user.encrypted_content, None)?;
+        let content = main_crypto_manager
+            .0
+            .decrypt(&account_data.user.encrypted_content, None)?;
         let account_key = &content[..SYMMETRIC_KEY_SIZE];
-        let account_crypto_manager = main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
+        let account_crypto_manager =
+            main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
 
         Ok(Self {
             user: account_data.user,
@@ -480,12 +494,19 @@ impl Account {
 
     /// Return a [CollectionManager] for creating, fetching and uploading collections
     pub fn collection_manager(&self) -> Result<CollectionManager> {
-        CollectionManager::new(Arc::clone(&self.client), Arc::clone(&self.account_crypto_manager))
+        CollectionManager::new(
+            Arc::clone(&self.client),
+            Arc::clone(&self.account_crypto_manager),
+        )
     }
 
     /// Return a [CollectionInvitationManager] for managing collection invitations
     pub fn invitation_manager(&self) -> Result<CollectionInvitationManager> {
-        CollectionInvitationManager::new(Arc::clone(&self.client), Arc::clone(&self.account_crypto_manager), self.identity_crypto_manager()?)
+        CollectionInvitationManager::new(
+            Arc::clone(&self.client),
+            Arc::clone(&self.account_crypto_manager),
+            self.identity_crypto_manager()?,
+        )
     }
 
     fn main_crypto_manager(&self) -> Result<MainCryptoManager> {
@@ -496,7 +517,9 @@ impl Account {
 
     fn identity_crypto_manager(&self) -> Result<BoxCryptoManager> {
         let main_crypto_manager = self.main_crypto_manager()?;
-        let content = main_crypto_manager.0.decrypt(&self.user.encrypted_content, None)?;
+        let content = main_crypto_manager
+            .0
+            .decrypt(&self.user.encrypted_content, None)?;
         let privkey = &content[SYMMETRIC_KEY_SIZE..];
         main_crypto_manager.identity_crypto_manager(try_into!(privkey)?)
     }
@@ -525,7 +548,12 @@ impl CollectionManager {
     /// * `collection_type` - the type of [Item]s stored in the collection
     /// * `meta` - the [ItemMetadata] for the collection
     /// * `content` - the collection's content as a byte array. This is unrelated to the [Item]s in the collection.
-    pub fn create<T: MsgPackSerilization>(&self, collection_type: &str, meta: &T, content: &[u8]) -> Result<Collection> {
+    pub fn create<T: MsgPackSerilization>(
+        &self,
+        collection_type: &str,
+        meta: &T,
+        content: &[u8],
+    ) -> Result<Collection> {
         let meta = meta.to_msgpack()?;
         self.create_raw(collection_type, &meta, content)
     }
@@ -539,9 +567,23 @@ impl CollectionManager {
     /// * `collection_type` - the type of [Item]s stored in the collection
     /// * `meta` - the metadata for the collection as a byte array
     /// * `content` - the collection's content as a byte array. This is unrelated to the [Item]s in the collection.
-    pub fn create_raw(&self, collection_type: &str, meta: &[u8], content: &[u8]) -> Result<Collection> {
-        let encrypted_collection = EncryptedCollection::new(&self.account_crypto_manager, collection_type, &meta, content)?;
-        Collection::new(self.account_crypto_manager.clone(), encrypted_collection.crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
+    pub fn create_raw(
+        &self,
+        collection_type: &str,
+        meta: &[u8],
+        content: &[u8],
+    ) -> Result<Collection> {
+        let encrypted_collection = EncryptedCollection::new(
+            &self.account_crypto_manager,
+            collection_type,
+            &meta,
+            content,
+        )?;
+        Collection::new(
+            self.account_crypto_manager.clone(),
+            encrypted_collection.crypto_manager(&self.account_crypto_manager)?,
+            encrypted_collection,
+        )
     }
 
     /// Fetch a single [Collection] from the server using its UID
@@ -551,7 +593,11 @@ impl CollectionManager {
     /// * `options` - parameters to tune or optimize the fetch
     pub fn fetch(&self, col_uid: &StrBase64, options: Option<&FetchOptions>) -> Result<Collection> {
         let encrypted_collection = self.collection_manager_online.fetch(&col_uid, options)?;
-        Collection::new(self.account_crypto_manager.clone(), encrypted_collection.crypto_manager(&self.account_crypto_manager)?, encrypted_collection)
+        Collection::new(
+            self.account_crypto_manager.clone(),
+            encrypted_collection.crypto_manager(&self.account_crypto_manager)?,
+            encrypted_collection,
+        )
     }
 
     /// Fetch all [Collection]s of a specific type from the server and return a [CollectionListResponse]
@@ -559,7 +605,11 @@ impl CollectionManager {
     /// # Arguments:
     /// * `collection_type` - the type of [Item]s stored in the collection
     /// * `options` - parameters to tune or optimize the fetch
-    pub fn list(&self, collection_type: &str, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>> {
+    pub fn list(
+        &self,
+        collection_type: &str,
+        options: Option<&FetchOptions>,
+    ) -> Result<CollectionListResponse<Collection>> {
         self.list_multi(iter::once(collection_type), options)
     }
 
@@ -568,16 +618,38 @@ impl CollectionManager {
     /// # Arguments:
     /// * `collection_type` - array of strings denoting the collection types
     /// * `options` - parameters to tune or optimize the fetch
-    pub fn list_multi<'a, I>(&self, collection_types: I, options: Option<&FetchOptions>) -> Result<CollectionListResponse<Collection>>
-        where I: Iterator<Item = &'a str>
-        {
-
+    pub fn list_multi<'a, I>(
+        &self,
+        collection_types: I,
+        options: Option<&FetchOptions>,
+    ) -> Result<CollectionListResponse<Collection>>
+    where
+        I: Iterator<Item = &'a str>,
+    {
         // FIXME: we can avoid this extra allocation
-        let collection_type_uids: Vec<Vec<u8>> = collection_types.map(|x| self.account_crypto_manager.collection_type_to_uid(x).unwrap()).collect();
+        let collection_type_uids: Vec<Vec<u8>> = collection_types
+            .map(|x| {
+                self.account_crypto_manager
+                    .collection_type_to_uid(x)
+                    .unwrap()
+            })
+            .collect();
         let collection_type_uids = collection_type_uids.iter().map(|x| &x[..]);
-        let response = self.collection_manager_online.list_multi(collection_type_uids, options)?;
+        let response = self
+            .collection_manager_online
+            .list_multi(collection_type_uids, options)?;
 
-        let data: Result<Vec<Collection>> = response.data.into_iter().map(|x| Collection::new(self.account_crypto_manager.clone(), x.crypto_manager(&self.account_crypto_manager)?, x)).collect();
+        let data: Result<Vec<Collection>> = response
+            .data
+            .into_iter()
+            .map(|x| {
+                Collection::new(
+                    self.account_crypto_manager.clone(),
+                    x.crypto_manager(&self.account_crypto_manager)?,
+                    x,
+                )
+            })
+            .collect();
 
         Ok(CollectionListResponse {
             data: data?,
@@ -611,13 +683,21 @@ impl CollectionManager {
     /// # Arguments:
     /// * `collection` - the collection object to be uploaded
     /// * `options` - parameters to tune or optimize the upload
-    pub fn transaction(&self, collection: &Collection, options: Option<&FetchOptions>) -> Result<()> {
+    pub fn transaction(
+        &self,
+        collection: &Collection,
+        options: Option<&FetchOptions>,
+    ) -> Result<()> {
         let col = &collection.col;
         if col._is_new() {
             self.collection_manager_online.create(&col, options)?;
         } else {
             let item_manager_online = ItemManagerOnline::new(Arc::clone(&self.client), &col);
-            item_manager_online.transaction(vec![col.item()].into_iter(), std::iter::empty(), options)?;
+            item_manager_online.transaction(
+                vec![col.item()].into_iter(),
+                std::iter::empty(),
+                options,
+            )?;
         }
 
         Ok(())
@@ -629,7 +709,11 @@ impl CollectionManager {
     /// * `cached` - the byte buffer holding the cached collection obtained using [Self::cache_save]
     pub fn cache_load(&self, cached: &[u8]) -> Result<Collection> {
         let col = EncryptedCollection::cache_load(cached)?;
-        Collection::new(self.account_crypto_manager.clone(), col.crypto_manager(&self.account_crypto_manager)?, col)
+        Collection::new(
+            self.account_crypto_manager.clone(),
+            col.crypto_manager(&self.account_crypto_manager)?,
+            col,
+        )
     }
 
     /// Save the [Collection] object to a byte buffer for caching
@@ -657,7 +741,11 @@ impl CollectionManager {
     /// # Arguments:
     /// * `collection` - the collection for which the [ItemManager] is required
     pub fn item_manager(&self, collection: &Collection) -> Result<ItemManager> {
-        ItemManager::new(Arc::clone(&self.client), Arc::clone(&collection.cm), collection)
+        ItemManager::new(
+            Arc::clone(&self.client),
+            Arc::clone(&collection.cm),
+            collection,
+        )
     }
 
     /// Return the [CollectionMemberManager] for the supplied collection
@@ -676,7 +764,11 @@ pub struct ItemManager {
 }
 
 impl ItemManager {
-    fn new(client: Arc<Client>, collection_crypto_manager: Arc<CollectionCryptoManager>, collection: &Collection) -> Result<Self> {
+    fn new(
+        client: Arc<Client>,
+        collection_crypto_manager: Arc<CollectionCryptoManager>,
+        collection: &Collection,
+    ) -> Result<Self> {
         let item_manager_online = ItemManagerOnline::new(Arc::clone(&client), &collection.col);
         Ok(Self {
             collection_crypto_manager,
@@ -704,7 +796,10 @@ impl ItemManager {
     /// * `content` - the item's content as a byte array
     pub fn create_raw(&self, meta: &[u8], content: &[u8]) -> Result<Item> {
         let encrypted_item = EncryptedItem::new(&self.collection_crypto_manager, &meta, content)?;
-        Item::new(encrypted_item.crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
+        Item::new(
+            encrypted_item.crypto_manager(&self.collection_crypto_manager)?,
+            encrypted_item,
+        )
     }
 
     /// Fetch a single [Item] from the server using its UID
@@ -716,7 +811,10 @@ impl ItemManager {
     /// * `options` - parameters to tune or optimize the fetch
     pub fn fetch(&self, item_uid: &StrBase64, options: Option<&FetchOptions>) -> Result<Item> {
         let encrypted_item = self.item_manager_online.fetch(&item_uid, options)?;
-        Item::new(encrypted_item.crypto_manager(&self.collection_crypto_manager)?, encrypted_item)
+        Item::new(
+            encrypted_item.crypto_manager(&self.collection_crypto_manager)?,
+            encrypted_item,
+        )
     }
 
     /// Fetch all [Item]s of a collection and return an [ItemListResponse]
@@ -726,7 +824,11 @@ impl ItemManager {
     pub fn list(&self, options: Option<&FetchOptions>) -> Result<ItemListResponse<Item>> {
         let response = self.item_manager_online.list(options)?;
 
-        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x)).collect();
+        let data: Result<Vec<Item>> = response
+            .data
+            .into_iter()
+            .map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x))
+            .collect();
         Ok(ItemListResponse {
             data: data?,
             done: response.done,
@@ -739,11 +841,19 @@ impl ItemManager {
     /// # Arguments:
     /// * `item` - the item for which to fetch the revision history
     /// * `options` - parameters to tune or optimize the fetch
-    pub fn item_revisions(&self, item: &Item, options: Option<&FetchOptions>) -> Result<IteratorListResponse<Item>> {
+    pub fn item_revisions(
+        &self,
+        item: &Item,
+        options: Option<&FetchOptions>,
+    ) -> Result<IteratorListResponse<Item>> {
         let item = &item.item;
         let response = self.item_manager_online.item_revisions(item, options)?;
 
-        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x)).collect();
+        let data: Result<Vec<Item>> = response
+            .data
+            .into_iter()
+            .map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x))
+            .collect();
         Ok(IteratorListResponse {
             data: data?,
             done: response.done,
@@ -751,19 +861,26 @@ impl ItemManager {
         })
     }
 
-
     /// Fetch the latest revision of the supplied [Item]s from the server and return an [ItemListResponse]
     ///
     /// # Arguments:
     /// * `items` - the list of UIDs for the items to be fetched
     /// * `options` - parameters to tune or optimize the fetch
-    pub fn fetch_updates<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ItemListResponse<Item>>
-        where I: Iterator<Item = &'a Item>
-        {
-
+    pub fn fetch_updates<'a, I>(
+        &self,
+        items: I,
+        options: Option<&FetchOptions>,
+    ) -> Result<ItemListResponse<Item>>
+    where
+        I: Iterator<Item = &'a Item>,
+    {
         let items = items.map(|x| &x.item);
         let response = self.item_manager_online.fetch_updates(items, options)?;
-        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x)).collect();
+        let data: Result<Vec<Item>> = response
+            .data
+            .into_iter()
+            .map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x))
+            .collect();
         Ok(ItemListResponse {
             data: data?,
             done: response.done,
@@ -778,12 +895,20 @@ impl ItemManager {
     /// # Arguments:
     /// * `items` - the list of items to be fetched
     /// * `options` - parameters to tune or optimize the fetch
-    pub fn fetch_multi<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<ItemListResponse<Item>>
-        where I: Iterator<Item = &'a StrBase64>
-        {
-
+    pub fn fetch_multi<'a, I>(
+        &self,
+        items: I,
+        options: Option<&FetchOptions>,
+    ) -> Result<ItemListResponse<Item>>
+    where
+        I: Iterator<Item = &'a StrBase64>,
+    {
         let response = self.item_manager_online.fetch_multi(items, options)?;
-        let data: Result<Vec<Item>> = response.data.into_iter().map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x)).collect();
+        let data: Result<Vec<Item>> = response
+            .data
+            .into_iter()
+            .map(|x| Item::new(x.crypto_manager(&self.collection_crypto_manager)?, x))
+            .collect();
         Ok(ItemListResponse {
             data: data?,
             done: response.done,
@@ -797,9 +922,9 @@ impl ItemManager {
     /// * `items` - the list of items to be uploaded
     /// * `options` - parameters to tune or optimize the upload
     pub fn batch<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<()>
-        where I: Iterator<Item = &'a Item>
-        {
-
+    where
+        I: Iterator<Item = &'a Item>,
+    {
         let items = items.map(|x| &x.item);
         let deps = std::iter::empty();
         self.item_manager_online.batch(items, deps, options)
@@ -813,10 +938,16 @@ impl ItemManager {
     /// * `items` - the list of items to be uploaded
     /// * `deps` - the list of items to be treated as dependencies
     /// * `options` - parameters to tune or optimize the upload
-    pub fn batch_deps<'a, I, J>(&self, items: I, deps: J, options: Option<&FetchOptions>) -> Result<()>
-        where I: Iterator<Item = &'a Item>, J: Iterator<Item = &'a Item>
-        {
-
+    pub fn batch_deps<'a, I, J>(
+        &self,
+        items: I,
+        deps: J,
+        options: Option<&FetchOptions>,
+    ) -> Result<()>
+    where
+        I: Iterator<Item = &'a Item>,
+        J: Iterator<Item = &'a Item>,
+    {
         let items = items.map(|x| &x.item);
         let deps = deps.map(|x| &x.item);
         self.item_manager_online.batch(items, deps, options)
@@ -830,9 +961,9 @@ impl ItemManager {
     /// * `items` - the list of items to be uploaded
     /// * `options` - parameters to tune or optimize the upload
     pub fn transaction<'a, I>(&self, items: I, options: Option<&FetchOptions>) -> Result<()>
-        where I: Iterator<Item = &'a Item>
-        {
-
+    where
+        I: Iterator<Item = &'a Item>,
+    {
         let items = items.map(|x| &x.item);
         let deps = std::iter::empty();
         self.item_manager_online.transaction(items, deps, options)
@@ -846,10 +977,16 @@ impl ItemManager {
     /// * `items` - the list of items to be uploaded
     /// * `deps` - the list of items to be treated as dependencies
     /// * `options` - parameters to tune or optimize the upload
-    pub fn transaction_deps<'a, I, J>(&self, items: I, deps: J, options: Option<&FetchOptions>) -> Result<()>
-        where I: Iterator<Item = &'a Item>, J: Iterator<Item = &'a Item>
-        {
-
+    pub fn transaction_deps<'a, I, J>(
+        &self,
+        items: I,
+        deps: J,
+        options: Option<&FetchOptions>,
+    ) -> Result<()>
+    where
+        I: Iterator<Item = &'a Item>,
+        J: Iterator<Item = &'a Item>,
+    {
         let items = items.map(|x| &x.item);
         let deps = deps.map(|x| &x.item);
         self.item_manager_online.transaction(items, deps, options)
@@ -889,7 +1026,10 @@ impl ItemManager {
         let item_uid = item.uid().to_owned();
         let item = &mut item.item;
         for chunk in item.missing_chunks() {
-            chunk.1 = Some(self.item_manager_online.chunk_download(&item_uid, &chunk.0, None)?);
+            chunk.1 = Some(
+                self.item_manager_online
+                    .chunk_download(&item_uid, &chunk.0, None)?,
+            );
         }
 
         Ok(())
@@ -933,7 +1073,11 @@ pub struct CollectionInvitationManager {
 }
 
 impl CollectionInvitationManager {
-    fn new(client: Arc<Client>, account_crypto_manager: Arc<AccountCryptoManager>, identity_crypto_manager: BoxCryptoManager) -> Result<Self> {
+    fn new(
+        client: Arc<Client>,
+        account_crypto_manager: Arc<AccountCryptoManager>,
+        identity_crypto_manager: BoxCryptoManager,
+    ) -> Result<Self> {
         let invitation_manager_online = CollectionInvitationManagerOnline::new(Arc::clone(&client));
         Ok(Self {
             account_crypto_manager,
@@ -946,7 +1090,10 @@ impl CollectionInvitationManager {
     ///
     /// # Arguments:
     /// * `options` - the [FetchOptions] to fetch with
-    pub fn list_incoming(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<SignedInvitation>> {
+    pub fn list_incoming(
+        &self,
+        options: Option<&FetchOptions>,
+    ) -> Result<IteratorListResponse<SignedInvitation>> {
         self.invitation_manager_online.list_incoming(options)
     }
 
@@ -954,7 +1101,10 @@ impl CollectionInvitationManager {
     ///
     /// # Arguments:
     /// * `options` - the [FetchOptions] to fetch with
-    pub fn list_outgoing(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<SignedInvitation>> {
+    pub fn list_outgoing(
+        &self,
+        options: Option<&FetchOptions>,
+    ) -> Result<IteratorListResponse<SignedInvitation>> {
         self.invitation_manager_online.list_outgoing(options)
     }
 
@@ -963,11 +1113,18 @@ impl CollectionInvitationManager {
     /// # Arguments:
     /// * `invitation` - the invitation to accept
     pub fn accept(&self, invitation: &SignedInvitation) -> Result<()> {
-        let raw_content = buffer_unpad(&invitation.decrypted_encryption_key(&self.identity_crypto_manager)?)?;
+        let raw_content =
+            buffer_unpad(&invitation.decrypted_encryption_key(&self.identity_crypto_manager)?)?;
         let content: SignedInvitationContent = rmp_serde::from_read_ref(&raw_content)?;
-        let collection_type_uid = self.account_crypto_manager.collection_type_to_uid(&content.collection_type)?;
-        let encryption_key = &self.account_crypto_manager.0.encrypt(&content.encryption_key, Some(&collection_type_uid))?;
-        self.invitation_manager_online.accept(invitation, &collection_type_uid, &encryption_key)
+        let collection_type_uid = self
+            .account_crypto_manager
+            .collection_type_to_uid(&content.collection_type)?;
+        let encryption_key = &self
+            .account_crypto_manager
+            .0
+            .encrypt(&content.encryption_key, Some(&collection_type_uid))?;
+        self.invitation_manager_online
+            .accept(invitation, &collection_type_uid, &encryption_key)
     }
 
     /// Reject an invitation
@@ -993,8 +1150,20 @@ impl CollectionInvitationManager {
     /// * `username` - the username of the user to invite
     /// * `pubkey` - the public key of the user to invite
     /// * `access_level` - the level of access to give to user
-    pub fn invite(&self, collection: &Collection, username: &str, pubkey: &[u8], access_level: CollectionAccessLevel) -> Result<()> {
-        let invitation = collection.col.create_invitation(&self.account_crypto_manager, &self.identity_crypto_manager, username, pubkey, access_level)?;
+    pub fn invite(
+        &self,
+        collection: &Collection,
+        username: &str,
+        pubkey: &[u8],
+        access_level: CollectionAccessLevel,
+    ) -> Result<()> {
+        let invitation = collection.col.create_invitation(
+            &self.account_crypto_manager,
+            &self.identity_crypto_manager,
+            username,
+            pubkey,
+            access_level,
+        )?;
         self.invitation_manager_online.invite(&invitation)
     }
 
@@ -1015,7 +1184,6 @@ impl CollectionInvitationManager {
     }
 }
 
-
 /// An manager for managing the members of a collection
 pub struct CollectionMemberManager {
     member_manager_online: CollectionMemberManagerOnline,
@@ -1023,7 +1191,8 @@ pub struct CollectionMemberManager {
 
 impl CollectionMemberManager {
     fn new(client: Arc<Client>, collection: &Collection) -> Result<Self> {
-        let member_manager_online = CollectionMemberManagerOnline::new(Arc::clone(&client), &collection.col);
+        let member_manager_online =
+            CollectionMemberManagerOnline::new(Arc::clone(&client), &collection.col);
         Ok(Self {
             member_manager_online,
         })
@@ -1033,7 +1202,10 @@ impl CollectionMemberManager {
     ///
     /// # Arguments:
     /// * `options` - the [FetchOptions] to fetch with
-    pub fn list(&self, options: Option<&FetchOptions>) -> Result<IteratorListResponse<CollectionMember>> {
+    pub fn list(
+        &self,
+        options: Option<&FetchOptions>,
+    ) -> Result<IteratorListResponse<CollectionMember>> {
         self.member_manager_online.list(options)
     }
 
@@ -1055,11 +1227,15 @@ impl CollectionMemberManager {
     /// # Arguments:
     /// * `username` - the member's username
     /// * `access_level` - the new [CollectionAccessLevel]
-    pub fn modify_access_level(&self, username: &str, access_level: CollectionAccessLevel) -> Result<()> {
-        self.member_manager_online.modify_access_level(username, access_level)
+    pub fn modify_access_level(
+        &self,
+        username: &str,
+        access_level: CollectionAccessLevel,
+    ) -> Result<()> {
+        self.member_manager_online
+            .modify_access_level(username, access_level)
     }
 }
-
 
 /// A collection of items
 ///
@@ -1075,7 +1251,11 @@ pub struct Collection {
 }
 
 impl Collection {
-    fn new(account_crypto_manager: Arc<AccountCryptoManager>, crypto_manager: CollectionCryptoManager, encrypted_collection: EncryptedCollection) -> Result<Self> {
+    fn new(
+        account_crypto_manager: Arc<AccountCryptoManager>,
+        crypto_manager: CollectionCryptoManager,
+        encrypted_collection: EncryptedCollection,
+    ) -> Result<Self> {
         Ok(Self {
             col: encrypted_collection,
             cm: Arc::new(crypto_manager),

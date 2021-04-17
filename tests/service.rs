@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: © 2020 EteSync Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
+use std::collections::HashSet;
 use std::env;
 use std::iter;
-use std::collections::HashSet;
 
 const CLIENT_NAME: &str = "etebase-tests";
 
@@ -12,15 +12,9 @@ fn test_url() -> String {
     format!("http://{}", server)
 }
 
-use etebase::utils::{
-    from_base64,
-    randombytes_deterministic,
-};
+use etebase::utils::{from_base64, randombytes_deterministic};
 
-use etebase::error::{
-    Result,
-    Error,
-};
+use etebase::error::{Error, Result};
 
 macro_rules! assert_err {
     ($x:expr, $err:pat) => {
@@ -29,41 +23,30 @@ macro_rules! assert_err {
             Err(err) => None.expect(&err.to_string()),
             _ => None.expect("Got OK when expected failure"),
         }
-    }
+    };
 }
 
 use etebase::{
-    Account,
-    Client,
-    CollectionAccessLevel,
-    Collection,
-    Item,
-    ItemMetadata,
-    FetchOptions,
-    PrefetchOption,
-    User,
     pretty_fingerprint,
-    test_helpers::{
-        test_reset,
-        chunk_uids,
-    }
+    test_helpers::{chunk_uids, test_reset},
+    Account, Client, Collection, CollectionAccessLevel, FetchOptions, Item, ItemMetadata,
+    PrefetchOption, User,
 };
 
 #[allow(dead_code)]
 mod common;
 
-use common::{
-    USER,
-    USER2,
-    TestUser,
-    sessionStorageKey,
-};
+use common::{sessionStorageKey, TestUser, USER, USER2};
 
 fn user_reset(user: &TestUser) -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
-    let acct_user = etebase::User::new(user.username,user.email);
+    let acct_user = etebase::User::new(user.username, user.email);
     // sign-up the account if necessary, ignoring errors as we're about to reset it anyway
-    let _ = Account::signup_key(client.clone(), &acct_user, b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    let _ = Account::signup_key(
+        client.clone(),
+        &acct_user,
+        b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    );
     let body_struct = etebase::test_helpers::SignupBody {
         user: &acct_user,
         salt: &from_base64(user.salt)?,
@@ -118,7 +101,10 @@ fn is_etebase_server() -> Result<()> {
 
     // Verify we also fail correctly for login
     let client = Client::new(CLIENT_NAME, &test_url)?;
-    assert_err!(Account::login(client.clone(), USER2.username, USER2.password), Error::NotFound(_));
+    assert_err!(
+        Account::login(client.clone(), USER2.username, USER2.password),
+        Error::NotFound(_)
+    );
 
     Ok(())
 }
@@ -139,7 +125,12 @@ fn get_dashboard_url() -> Result<()> {
 fn loading_cache_without_collection_type() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let meta = ItemMetadata::new().set_item_type(Some("type")).set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let meta = ItemMetadata::new()
+        .set_item_type(Some("type"))
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let content = b"SomeContent";
 
     let col = col_mgr.cache_load(&etebase::utils::from_base64("kgHcBTvMlMyVzNkgTl9vMjNITDFsVlQ1VG5Dd1QzVkx0VDN5TUtBbDZ0UDYBzMDMlMy2QktLMk50R2NCY1pDRDBTcllKeHBzQczEUzXMyVxJSQptzPDMyMzNPMzhAVbMrsyjzPfMjU0pzODMq2lmzMAUEBLM_My-zOhGMsyREmHM6Mz3zO7MwVF8F2tnzOXM3TnM9MypzOQ9CczHfMzGCywPzOPMlsyTzOE-zIRAKczQJzVxRMz9NMz3MczbzMHM5zY_MDrMwsyRzJLM2StoaDhPTTFiQmR5bWZUTlZlanhwcWtPOExWLUpIUDFsUGRST2lCWXhnaEFnzMUEKMy4KGNOJ8z3zN1pzNFGzNLM_8yiCczpzLIxzJQSzNjM58yACS0sP8yCzKDM-GLM0MyCzJMPL8z-Hsz-QMzRT1BCRcyjWszRzLPMkxjMzFYmzMJ8IE1_zMMnCczyzIlUzIbMhxDM3XHMskHM9x9uaWhDzM3Myk1pzI7M78yWzOMrOFHMw04WzK7M-iXMm3tdzKAazMVpzOXMzczqR38KWMyPGEvMzkoyWmodzOvMwczSzLXMplkGzPIDzKvMxGEfQ8zjMcyIdAB4JczLcczfd8z5Vsz4ccyRdMzXzKU1zKcRzP_MycynzLhQzOUvJ8z3FMyHzOpMzLDMm8y6HAw1zKQgJl8CzNrM6XQFRsySFH7Mrn81zPPM4W0HzIPMh1PMpMyUzPNdzNsSzNE6ZQPM9cyGC04eDw7MrR9CaAnM73ZNzJYWOUzMr8zkzK_MxczAzKDMysz5zOt8LlN9zK3MynNizKDM0czXzNhBzNEdNhU8zNTMzTFIb8zmVszHzIfMiALMlkzM68zbzINAzNbMl8z8zMh_T8zHc8zJci7MtkDMl8ywcWIoe1zMuczCRFbMpcy3zJhvzK5PCz4EzMvMlszcAMyWzKIEAMzozPrMlh4JK8z3zMDM8XHMnWLMiMybAijMzczzzOtVaSPM-GbMvXrMksyyzK8_TQ7M9xzMw1PM-lvM68yrXHXM1y5AC0LM6iROcMzmzPzMlBHMtwrM50bMtlrMzX11zIvM4DM4zNIpDC1TEsybQkcuecynQMzCzK_M0sz-zOvMrhdNzJpuzKbM6j7Mjn7M6MzSYszrMzjM5szszIEJYWtfdVs7JVIvS0AQQcyBennMjMzgY8z6zORezOnM5CAZY8z3WWAKPcykT8yVzJDM4BjMz8zNzONtJglpzKRNQQHMxRPM7MymzPnMpy5RzNNIIsyfzKXM9hvMlUbMuczfzK8xzLTM08zlMcyczLLMlGzMrsyOAz7MvMzZzJjMwMyHHsygJMzczMnM1cybzLDMyszqDXrMmGZ3zJTM4nhqZhRhC8yTzMTMtHjM41UTIxvMtMyFzOZ-zIZyHszlzJM9WszhEUbM9VXMmxoNzKfMzUoKKUg9PjYOFMzgzO8jPQzM02TM8BcXzP7Mz8zUfkTMnVRJzIFCzK1ZH8yyzIrMvcy-zP5PzKJjFMygzKvM415LYszXQB_MnCfMzkJmbl_MnmDM42HM88zezOQibhHMuczczMfM2ixwzMvMpczDYRtWzLLM9cydIkjMrxDMj8yYzKkKzLtRzMM1zPbMyS5JYGnM08ylDmdUzL0ANMzgYSfM4jTMm8zvPE0dzL3Mw8zmzOxyzP3M93PM78z1NnoZVxfM7loNfMzxzPHM4j7MpB4NPD0rIczKzN4zKXnMww3M3czlADnMqczxeszuzMDMx8y_B8zyzPYTEjpZPD3M5cz6OALMxH3MgMznzPIXWkMZRzHMuHXMxMzrHEDM9szLaWYSWx4LdMz0zIjM5szMzN3M9syAzKUmWMzbf08QaEc9bMypzOA5bMzjzMQQzJNtVcyCzKJqNmLM0sy1NDMDRcyxzLrMyAzM8hPMv8y5zKoizOzMwEByGszRzIs4HcztNszTzP7M-syyzL_Ms8zFzK5EOk0mYwBGC8yTzO_MynPMrsyxzNMeHszvzI4uzKZ9FTvMzQM2zO0yzNNkzIrM58zfzP7My3rMnMz0zLt9zMgIW8z3zL0ucMy0zK5OZsypT8zOzJnMmMzgGA_M6xLMn8zXzOZ8UnogzL7MtcygzKfMtszUzLXMjUcwbAUQWyzMv8yfLczGcUrM68zdSFlVzJhFzP_M0m3MohzMsljMz8yQGMz-HnBgzJbM3syUzPo7zM3MjknMriHM7QF7YicvBkltX8zeLMyBG3vMq8zNzPPMzcymzIvM4czmEMzTEcyrzK7MtMzszJXMj8z3W8ywzI_MtjHM68yTzKNBEGjMt8y-dTxcbMzATnjMyMzqXHRHHMznzKrMqMy4zKgozLxZDGlZzN7Ml8yAzP99zMdzDwdYTsy2zKYczMcgzKlmasyQzPlDzLRJzMMVzOvM2k3MswbMpjnM53XM-sykzN8QY2YQzMPMjELMwAHMxEjMo8zfFw7MzQEBbcybzJ7M2czrzMTM9x3Mmsy1zILM42xqzIo-MQ_M5czXzLrMxcyozNhHzNsNzLFHzI1vzL3MoyTM3AlKFxzM0WZ0GjnMs8yXURjMm2xhQ8yONGfM28zVzKPMtMzlzIHM6VjM2BLMwA")?)?;
@@ -153,7 +144,11 @@ fn loading_cache_without_collection_type() -> Result<()> {
 fn simple_collection_handling() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let content = b"SomeContent";
 
     let mut col = col_mgr.create("some.coltype", &meta, content)?;
@@ -204,7 +199,11 @@ fn simple_item_handling() -> Result<()> {
 fn simple_collection_sync() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let content = b"SomeContent";
 
     let mut col = col_mgr.create("some.coltype", &meta, content)?;
@@ -247,7 +246,10 @@ fn simple_collection_sync() -> Result<()> {
 
         assert_err!(col_mgr.transaction(&col_old, None), Error::Conflict(_));
         let fetch_options = FetchOptions::new().stoken(col_old.stoken());
-        assert_err!(col_mgr.upload(&col, Some(&fetch_options)), Error::Conflict(_));
+        assert_err!(
+            col_mgr.upload(&col, Some(&fetch_options)),
+            Error::Conflict(_)
+        );
     }
 
     let content2 = b"Content2";
@@ -264,7 +266,11 @@ fn simple_collection_sync() -> Result<()> {
 fn collection_types() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr.create("some.coltype", &col_meta, col_content)?;
@@ -285,10 +291,14 @@ fn collection_types() -> Result<()> {
     }
 
     {
-        let collections = col_mgr.list_multi(vec!["bad.coltype", "some.coltype", "anotherbad"].into_iter(), None)?;
+        let collections = col_mgr.list_multi(
+            vec!["bad.coltype", "some.coltype", "anotherbad"].into_iter(),
+            None,
+        )?;
         assert_eq!(collections.data().len(), 1);
 
-        let collections = col_mgr.list_multi(vec!["bad.coltype", "anotherbad"].into_iter(), None)?;
+        let collections =
+            col_mgr.list_multi(vec!["bad.coltype", "anotherbad"].into_iter(), None)?;
         assert_eq!(collections.data().len(), 0);
     }
 
@@ -299,7 +309,11 @@ fn collection_types() -> Result<()> {
 fn simple_item_sync() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr.create("some.coltype", &col_meta, col_content)?;
@@ -340,7 +354,10 @@ fn simple_item_sync() -> Result<()> {
 
     {
         item_old.set_content(b"Bla bla")?;
-        assert_err!(it_mgr.transaction(iter::once(&item_old), None), Error::Conflict(_));
+        assert_err!(
+            it_mgr.transaction(iter::once(&item_old), None),
+            Error::Conflict(_)
+        );
     }
 
     let content2 = b"Content 2";
@@ -348,7 +365,10 @@ fn simple_item_sync() -> Result<()> {
 
     {
         let fetch_options = FetchOptions::new().stoken(col_old.stoken());
-        assert_err!(it_mgr.batch(iter::once(&item), Some(&fetch_options)), Error::Conflict(_));
+        assert_err!(
+            it_mgr.batch(iter::once(&item), Some(&fetch_options)),
+            Error::Conflict(_)
+        );
     }
 
     it_mgr.transaction(iter::once(&item), None)?;
@@ -366,7 +386,11 @@ fn simple_item_sync() -> Result<()> {
 fn collection_as_item() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let col_content = b"SomeContent";
 
     let mut col = col_mgr.create("some.coltype", &col_meta, col_content)?;
@@ -413,7 +437,11 @@ fn collection_as_item() -> Result<()> {
     {
         let collections = col_mgr.list("some.coltype", None)?;
         assert_eq!(collections.data().len(), 1);
-        verify_collection(&collections.data().first().unwrap(), &col_meta, col_content2)?;
+        verify_collection(
+            &collections.data().first().unwrap(),
+            &col_meta,
+            col_content2,
+        )?;
     }
 
     let mut col = col_mgr.fetch(col.uid(), None)?;
@@ -424,7 +452,11 @@ fn collection_as_item() -> Result<()> {
     {
         let collections = col_mgr.list("some.coltype", None)?;
         assert_eq!(collections.data().len(), 1);
-        verify_collection(&collections.data().first().unwrap(), &col_meta, col_content2)?;
+        verify_collection(
+            &collections.data().first().unwrap(),
+            &col_meta,
+            col_content2,
+        )?;
     }
 
     {
@@ -543,9 +575,12 @@ fn list_response_correctness() -> Result<()> {
 
     let it_mgr = col_mgr.item_manager(&col)?;
 
-    let items: Vec<Item> = (0..5).into_iter()
+    let items: Vec<Item> = (0..5)
+        .into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
+            let meta = ItemMetadata::new()
+                .set_name(Some(&format!("Item {}", i)))
+                .clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -572,7 +607,9 @@ fn list_response_correctness() -> Result<()> {
 
     // Also check collections
     for i in 0..4 {
-        let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
+        let meta = ItemMetadata::new()
+            .set_name(Some(&format!("Item {}", i)))
+            .clone();
         let content = b"";
         let col = col_mgr.create("some.coltype", &meta, content).unwrap();
         col_mgr.upload(&col, None)?;
@@ -621,9 +658,12 @@ fn item_transactions() -> Result<()> {
     let item_old = it_mgr.fetch(item.uid(), None)?;
     let mut item_old2 = it_mgr.fetch(item.uid(), None)?;
 
-    let items: Vec<Item> = (0..5).into_iter()
+    let items: Vec<Item> = (0..5)
+        .into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
+            let meta = ItemMetadata::new()
+                .set_name(Some(&format!("Item {}", i)))
+                .clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -654,13 +694,19 @@ fn item_transactions() -> Result<()> {
         let deps2 = items.iter().chain(iter::once(&item_old));
 
         // Old in the deps
-        assert_err!(it_mgr.transaction_deps(iter::once(&item), deps2.into_iter(), None), Error::Conflict(_));
+        assert_err!(
+            it_mgr.transaction_deps(iter::once(&item), deps2.into_iter(), None),
+            Error::Conflict(_)
+        );
         it_mgr.transaction(iter::once(&item), None)?;
 
         item_old2.set_meta(&meta3)?;
 
         // Old stoken in the item itself
-        assert_err!(it_mgr.transaction(iter::once(&item_old2), None), Error::Conflict(_));
+        assert_err!(
+            it_mgr.transaction(iter::once(&item_old2), None),
+            Error::Conflict(_)
+        );
     }
 
     {
@@ -671,7 +717,10 @@ fn item_transactions() -> Result<()> {
         item_old2.set_meta(&meta3)?;
 
         // Part of the transaction is bad, and part is good
-        assert_err!(it_mgr.transaction(vec![&item2, &item_old2].into_iter(), None), Error::Conflict(_));
+        assert_err!(
+            it_mgr.transaction(vec![&item2, &item_old2].into_iter(), None),
+            Error::Conflict(_)
+        );
 
         // Verify it hasn't changed after the transaction above failed
         let item2_fetch = it_mgr.fetch(item2.uid(), None)?;
@@ -688,7 +737,10 @@ fn item_transactions() -> Result<()> {
         let bad_etag = col.etag();
 
         let fetch_options = FetchOptions::new().stoken(Some(bad_etag));
-        assert_err!(it_mgr.transaction(iter::once(&item), Some(&fetch_options)), Error::Conflict(_));
+        assert_err!(
+            it_mgr.transaction(iter::once(&item), Some(&fetch_options)),
+            Error::Conflict(_)
+        );
 
         let fetch_options = FetchOptions::new().stoken(stoken);
         it_mgr.transaction(iter::once(&item), Some(&fetch_options))?;
@@ -717,9 +769,12 @@ fn item_batch_stoken() -> Result<()> {
 
     let mut item2 = it_mgr.fetch(item.uid(), None)?;
 
-    let items: Vec<Item> = (0..5).into_iter()
+    let items: Vec<Item> = (0..5)
+        .into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
+            let meta = ItemMetadata::new()
+                .set_name(Some(&format!("Item {}", i)))
+                .clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -736,8 +791,14 @@ fn item_batch_stoken() -> Result<()> {
         item.set_meta(&meta3)?;
 
         // Old stoken in the item itself should work for batch and fail for transaction or batch with deps
-        assert_err!(it_mgr.transaction(iter::once(&item), None), Error::Conflict(_));
-        assert_err!(it_mgr.batch_deps(iter::once(&item), iter::once(&item), None), Error::Conflict(_));
+        assert_err!(
+            it_mgr.transaction(iter::once(&item), None),
+            Error::Conflict(_)
+        );
+        assert_err!(
+            it_mgr.batch_deps(iter::once(&item), iter::once(&item), None),
+            Error::Conflict(_)
+        );
 
         it_mgr.batch(iter::once(&item), None)?;
     }
@@ -752,7 +813,10 @@ fn item_batch_stoken() -> Result<()> {
         let bad_etag = col.etag();
 
         let fetch_options = FetchOptions::new().stoken(Some(bad_etag));
-        assert_err!(it_mgr.batch(iter::once(&item), Some(&fetch_options)), Error::Conflict(_));
+        assert_err!(
+            it_mgr.batch(iter::once(&item), Some(&fetch_options)),
+            Error::Conflict(_)
+        );
 
         let fetch_options = FetchOptions::new().stoken(stoken);
         it_mgr.batch(iter::once(&item), Some(&fetch_options))?;
@@ -779,9 +843,12 @@ fn item_fetch_updates() -> Result<()> {
 
     it_mgr.batch(iter::once(&item), None)?;
 
-    let items: Vec<Item> = (0..5).into_iter()
+    let items: Vec<Item> = (0..5)
+        .into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
+            let meta = ItemMetadata::new()
+                .set_name(Some(&format!("Item {}", i)))
+                .clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -799,7 +866,10 @@ fn item_fetch_updates() -> Result<()> {
         let items2 = it_mgr.fetch_multi(items.iter().map(|x| x.uid()), None)?;
         assert_eq!(items2.data().len(), 5);
 
-        let items2 = it_mgr.fetch_multi(vec!["L4QQdlkCDJ9ySmrGD5fM0DsFo08MnWel", items[0].uid()].into_iter(), None)?;
+        let items2 = it_mgr.fetch_multi(
+            vec!["L4QQdlkCDJ9ySmrGD5fM0DsFo08MnWel", items[0].uid()].into_iter(),
+            None,
+        )?;
         // Only 1 because only one of the items exists
         assert_eq!(items2.data().len(), 1);
     }
@@ -871,7 +941,9 @@ fn item_revisions() -> Result<()> {
     let mut item = it_mgr.create(&meta, content)?;
 
     for i in 0..5 {
-        let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
+        let meta = ItemMetadata::new()
+            .set_name(Some(&format!("Item {}", i)))
+            .clone();
         item.set_meta(&meta)?;
         it_mgr.batch(iter::once(&item), None)?;
     }
@@ -896,7 +968,9 @@ fn item_revisions() -> Result<()> {
         assert!(revisions.done());
 
         for i in 0..5 {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
+            let meta = ItemMetadata::new()
+                .set_name(Some(&format!("Item {}", i)))
+                .clone();
             let rev = &revisions.data()[4 - i];
             assert_eq!(&rev.meta()?, &meta);
         }
@@ -929,9 +1003,12 @@ fn collection_invitations() -> Result<()> {
 
     let it_mgr = col_mgr.item_manager(&col)?;
 
-    let items: Vec<Item> = (0..5).into_iter()
+    let items: Vec<Item> = (0..5)
+        .into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
+            let meta = ItemMetadata::new()
+                .set_name(Some(&format!("Item {}", i)))
+                .clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -950,9 +1027,17 @@ fn collection_invitations() -> Result<()> {
     let user2_pubkey = invite_mgr2.pubkey();
     assert_eq!(&user2_profile.pubkey(), &user2_pubkey);
     // Off-band verification:
-    assert_eq!(pretty_fingerprint(&user2_profile.pubkey()), pretty_fingerprint(user2_pubkey));
+    assert_eq!(
+        pretty_fingerprint(&user2_profile.pubkey()),
+        pretty_fingerprint(user2_pubkey)
+    );
 
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(
+        &col,
+        USER2.username,
+        &user2_profile.pubkey(),
+        CollectionAccessLevel::ReadWrite,
+    )?;
 
     let invitations = invite_mgr.list_outgoing(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -974,7 +1059,12 @@ fn collection_invitations() -> Result<()> {
     }
 
     // Invite and then disinvite
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(
+        &col,
+        USER2.username,
+        &user2_profile.pubkey(),
+        CollectionAccessLevel::ReadWrite,
+    )?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -989,7 +1079,12 @@ fn collection_invitations() -> Result<()> {
     }
 
     // Invite again, this time accept
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(
+        &col,
+        USER2.username,
+        &user2_profile.pubkey(),
+        CollectionAccessLevel::ReadWrite,
+    )?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -1027,7 +1122,12 @@ fn collection_invitations() -> Result<()> {
     }
 
     // Add again
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(
+        &col,
+        USER2.username,
+        &user2_profile.pubkey(),
+        CollectionAccessLevel::ReadWrite,
+    )?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     assert_eq!(invitations.data().len(), 1);
@@ -1083,11 +1183,18 @@ fn iterating_invitations() -> Result<()> {
     let user2_profile = invite_mgr.fetch_user_profile(USER2.username)?;
 
     for i in 0..3 {
-        let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
+        let meta = ItemMetadata::new()
+            .set_name(Some(&format!("Item {}", i)))
+            .clone();
         let content = b"";
         let col = col_mgr.create("some.coltype", &meta, content).unwrap();
         col_mgr.upload(&col, None)?;
-        invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
+        invite_mgr.invite(
+            &col,
+            USER2.username,
+            &user2_profile.pubkey(),
+            CollectionAccessLevel::ReadWrite,
+        )?;
     }
 
     // Check incoming
@@ -1134,9 +1241,12 @@ fn collection_access_level() -> Result<()> {
 
     let it_mgr = col_mgr.item_manager(&col)?;
 
-    let items: Vec<Item> = (0..5).into_iter()
+    let items: Vec<Item> = (0..5)
+        .into_iter()
         .map(|i| {
-            let meta = ItemMetadata::new().set_name(Some(&format!("Item {}", i))).clone();
+            let meta = ItemMetadata::new()
+                .set_name(Some(&format!("Item {}", i)))
+                .clone();
             let content = b"";
             it_mgr.create(&meta, content).unwrap()
         })
@@ -1152,7 +1262,12 @@ fn collection_access_level() -> Result<()> {
     let member_mgr = col_mgr.member_manager(&col)?;
     let user2_profile = invite_mgr.fetch_user_profile(USER2.username)?;
 
-    invite_mgr.invite(&col, USER2.username, &user2_profile.pubkey(), CollectionAccessLevel::ReadWrite)?;
+    invite_mgr.invite(
+        &col,
+        USER2.username,
+        &user2_profile.pubkey(),
+        CollectionAccessLevel::ReadWrite,
+    )?;
 
     let invitations = invite_mgr2.list_incoming(None)?;
     invite_mgr2.accept(invitations.data().first().unwrap())?;
@@ -1196,7 +1311,10 @@ fn collection_access_level() -> Result<()> {
         let meta = ItemMetadata::new().set_name(Some("Some item")).clone();
         let content = b"";
         let item = it_mgr2.create(&meta, content)?;
-        assert_err!(it_mgr2.batch(iter::once(&item), None), Error::PermissionDenied(_));
+        assert_err!(
+            it_mgr2.batch(iter::once(&item), None),
+            Error::PermissionDenied(_)
+        );
     }
 
     member_mgr.modify_access_level(USER2.username, CollectionAccessLevel::Admin)?;
@@ -1227,7 +1345,10 @@ fn collection_access_level() -> Result<()> {
         assert_eq!(members2.data().len(), 1);
         assert!(members2.done());
         // Verify we got two different usersnames
-        assert_ne!(members.data().first().unwrap().username(), members2.data().first().unwrap().username());
+        assert_ne!(
+            members.data().first().unwrap().username(),
+            members2.data().first().unwrap().username()
+        );
 
         let members = member_mgr.list(None)?;
         assert!(members.done());
@@ -1241,7 +1362,11 @@ fn collection_access_level() -> Result<()> {
 fn chunking_large_data() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr.create("some.coltype", &col_meta, col_content)?;
@@ -1305,7 +1430,11 @@ fn login_and_password_change_with_key() -> Result<()> {
     let etebase = init_test(&USER)?;
 
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let col = col_mgr.create("some.coltype", &col_meta, b"")?;
     col_mgr.upload(&col, None)?;
 
@@ -1339,7 +1468,11 @@ fn signup_with_key() -> Result<()> {
     let etebase = Account::signup_key(client, &user, &main_key)?;
 
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let col = col_mgr.create("some.coltype", &col_meta, b"")?;
     col_mgr.upload(&col, None)?;
 
@@ -1369,7 +1502,11 @@ fn login_and_password_change() -> Result<()> {
     let mut etebase2 = Account::login(client.clone(), USER2.username, USER2.password)?;
 
     let col_mgr2 = etebase2.collection_manager()?;
-    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr2.create("some.coltype", &col_meta, col_content)?;
@@ -1385,7 +1522,10 @@ fn login_and_password_change() -> Result<()> {
 
     etebase2.logout()?;
 
-    assert_err!(Account::login(client.clone(), USER2.username, "BadPassword"), Error::Unauthorized(_));
+    assert_err!(
+        Account::login(client.clone(), USER2.username, "BadPassword"),
+        Error::Unauthorized(_)
+    );
 
     let mut etebase2 = Account::login(client.clone(), USER2.username, another_password)?;
 
@@ -1402,14 +1542,17 @@ fn login_and_password_change() -> Result<()> {
     etebase2.logout()
 }
 
-
 #[test]
 fn session_save_and_restore() -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
     let etebase = init_test(&USER)?;
 
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr.create("some.coltype", &col_meta, col_content)?;
@@ -1429,7 +1572,10 @@ fn session_save_and_restore() -> Result<()> {
     {
         let key = etebase::utils::randombytes(32);
         let saved = etebase.save(Some(&key))?;
-        assert_err!(Account::restore(client.clone(), &saved, None), Error::Encryption(_));
+        assert_err!(
+            Account::restore(client.clone(), &saved, None),
+            Error::Encryption(_)
+        );
         let etebase2 = Account::restore(client.clone(), &saved, Some(&key))?;
 
         let col_mgr2 = etebase2.collection_manager()?;
@@ -1445,7 +1591,11 @@ fn cache_collections_and_items() -> Result<()> {
     let etebase = init_test(&USER)?;
 
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr.create("some.coltype", &col_meta, col_content)?;
@@ -1498,7 +1648,11 @@ fn chunk_preupload_and_download() -> Result<()> {
     let etebase = init_test(&USER)?;
 
     let col_mgr = etebase.collection_manager()?;
-    let col_meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let col_meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let col_content = b"SomeContent";
 
     let col = col_mgr.create("some.coltype", &col_meta, col_content)?;
@@ -1517,7 +1671,10 @@ fn chunk_preupload_and_download() -> Result<()> {
     it_mgr.batch(iter::once(&item), None)?;
 
     {
-        let mut item2 = it_mgr.fetch(item.uid(), Some(&FetchOptions::new().prefetch(&PrefetchOption::Medium)))?;
+        let mut item2 = it_mgr.fetch(
+            item.uid(),
+            Some(&FetchOptions::new().prefetch(&PrefetchOption::Medium)),
+        )?;
         assert_eq!(item.meta()?, item2.meta()?);
         // We can't get the content of partial item
         assert_err!(item2.content(), Error::MissingContent(_));

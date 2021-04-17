@@ -3,58 +3,36 @@
 
 #![warn(clippy::all)]
 
-mod crypto;
 mod chunker;
+mod crypto;
+mod encrypted_models;
+pub mod error;
+pub mod fs_cache;
 mod http_client;
 mod online_managers;
-mod encrypted_models;
 mod service;
-pub mod fs_cache;
 pub mod utils;
-pub mod error;
 
 pub use crypto::pretty_fingerprint;
 
 pub use http_client::Client;
 
 pub mod http_custom_client {
-    pub use crate::http_client::{
-        ClientImplementation,
-        Response,
-    };
+    pub use crate::http_client::{ClientImplementation, Response};
 }
 
 pub use online_managers::{
-    User,
-    UserProfile,
-    CollectionMember,
-    PrefetchOption,
-    FetchOptions,
-    CollectionListResponse,
-    ItemListResponse,
-    IteratorListResponse,
-
-    RemovedCollection,
+    CollectionListResponse, CollectionMember, FetchOptions, ItemListResponse, IteratorListResponse,
+    PrefetchOption, RemovedCollection, User, UserProfile,
 };
 
-pub use encrypted_models::{
-    CollectionAccessLevel,
-    ItemMetadata,
-    SignedInvitation,
-};
+pub use encrypted_models::{CollectionAccessLevel, ItemMetadata, SignedInvitation};
 
-pub use service::{
-    Account,
-    Collection,
-    Item,
-};
+pub use service::{Account, Collection, Item};
 
 pub mod managers {
     pub use super::service::{
-        CollectionManager,
-        ItemManager,
-        CollectionMemberManager,
-        CollectionInvitationManager,
+        CollectionInvitationManager, CollectionManager, CollectionMemberManager, ItemManager,
     };
 }
 

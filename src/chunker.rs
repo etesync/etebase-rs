@@ -43,7 +43,9 @@ impl Rollsum {
         let add = add as u32;
         let drop = drop as u32;
         self.s1 = self.s1.wrapping_add(add.wrapping_sub(drop));
-        self.s2 = self.s2.wrapping_add(self.s1.wrapping_sub(WINDOW_SIZE * (drop + CHAR_OFFSET)));
+        self.s2 = self
+            .s2
+            .wrapping_add(self.s1.wrapping_sub(WINDOW_SIZE * (drop + CHAR_OFFSET)));
     }
 
     /**

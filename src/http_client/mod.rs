@@ -8,10 +8,7 @@ mod client_impl;
 #[cfg(feature = "networking")]
 mod reqwest_client;
 
-pub use client_impl::{
-    ClientImplementation,
-    Response,
-};
+pub use client_impl::{ClientImplementation, Response};
 
 #[cfg(feature = "networking")]
 use reqwest_client::Client as ReqwestImpl;
@@ -91,15 +88,21 @@ impl Client {
     }
 
     pub(crate) fn post(&self, url: &str, body: Vec<u8>) -> Result<Response> {
-        self.imp.post(url, self.auth_token.as_deref(), body).as_result()
+        self.imp
+            .post(url, self.auth_token.as_deref(), body)
+            .as_result()
     }
 
     pub(crate) fn put(&self, url: &str, body: Vec<u8>) -> Result<Response> {
-        self.imp.put(url, self.auth_token.as_deref(), body).as_result()
+        self.imp
+            .put(url, self.auth_token.as_deref(), body)
+            .as_result()
     }
 
     pub(crate) fn patch(&self, url: &str, body: Vec<u8>) -> Result<Response> {
-        self.imp.patch(url, self.auth_token.as_deref(), body).as_result()
+        self.imp
+            .patch(url, self.auth_token.as_deref(), body)
+            .as_result()
     }
 
     pub(crate) fn delete(&self, url: &str) -> Result<Response> {
