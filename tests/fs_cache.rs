@@ -10,37 +10,23 @@ fn test_url() -> String {
     format!("http://{}", server)
 }
 
-use std::path::{
-    Path,
-    PathBuf,
-};
 use std::io;
+use std::path::{Path, PathBuf};
 
 use remove_dir_all::remove_dir_all;
 
 use etebase::error::Result;
 
-
 use etebase::{
-    Account,
-    Client,
-    ItemMetadata,
     fs_cache::FileSystemCache,
-    utils::{
-        from_base64,
-        to_base64,
-        randombytes,
-    },
+    utils::{from_base64, randombytes, to_base64},
+    Account, Client, ItemMetadata,
 };
 
 #[allow(dead_code)]
 mod common;
 
-use common::{
-    USER,
-    TestUser,
-    sessionStorageKey,
-};
+use common::{sessionStorageKey, TestUser, USER};
 
 pub struct TempDir {
     path: PathBuf,
@@ -89,7 +75,11 @@ fn simple_cache_handling() -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
     let etebase = init_test_local(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let meta = ItemMetadata::new().set_name(Some("Collection")).set_description(Some("Mine")).set_color(Some("#aabbcc")).clone();
+    let meta = ItemMetadata::new()
+        .set_name(Some("Collection"))
+        .set_description(Some("Mine"))
+        .set_color(Some("#aabbcc"))
+        .clone();
     let content = b"SomeContent";
 
     let col = col_mgr.create("some.coltype", &meta, content)?;
@@ -117,12 +107,14 @@ fn simple_cache_handling() -> Result<()> {
     fs_cache.collection_save_stoken(col.uid(), "test")?;
     assert_eq!(fs_cache.collection_load_stoken(col.uid())?.unwrap(), "test");
     fs_cache.collection_save_stoken(col.uid(), "test2")?;
-    assert_eq!(fs_cache.collection_load_stoken(col.uid())?.unwrap(), "test2");
+    assert_eq!(
+        fs_cache.collection_load_stoken(col.uid())?.unwrap(),
+        "test2"
+    );
 
     fs_cache.collection_unset(&col_mgr, col.uid())?;
     assert!(fs_cache.collection(&col_mgr, col.uid()).is_err());
     assert!(fs_cache.collection_load_stoken(col.uid())?.is_none());
-
 
     fs_cache.collection_set_with_content(&col_mgr, &col)?;
     let item_mgr = col_mgr.item_manager(&col)?;

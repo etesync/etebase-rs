@@ -4,30 +4,24 @@
 use std::convert::TryInto;
 
 use sodiumoxide::crypto::{
-    aead::xchacha20poly1305_ietf as aead,
-    box_,
-    generichash,
-    kdf,
+    aead::xchacha20poly1305_ietf as aead, box_, generichash, kdf, pwhash::argon2id13, scalarmult,
     sign,
-    scalarmult,
-    pwhash::argon2id13,
 };
 
-use super::error::{
-    Error,
-    Result,
-};
+use super::error::{Error, Result};
 
 macro_rules! to_enc_error {
     ($x:expr, $msg:tt) => {
         ($x).or(Err(Error::Encryption($msg)))
-    }
+    };
 }
 
 fn generichash_quick(msg: &[u8], key: Option<&[u8]>) -> Result<Vec<u8>> {
     let mut state = to_enc_error!(generichash::State::new(32, key), "Failed to init hash")?;
     to_enc_error!(state.update(msg), "Failed to update hash")?;
-    Ok(to_enc_error!(state.finalize(), "Failed to finalize hash")?.as_ref().to_vec())
+    Ok(to_enc_error!(state.finalize(), "Failed to finalize hash")?
+        .as_ref()
+        .to_vec())
 }
 
 pub fn init() -> Result<()> {
@@ -37,10 +31,17 @@ pub fn init() -> Result<()> {
 pub fn derive_key(salt: &[u8], password: &str) -> Result<Vec<u8>> {
     let mut key = vec![0; 32];
     let salt = &salt[..argon2id13::SALTBYTES];
-    let salt: &[u8; argon2id13::SALTBYTES] = to_enc_error!(salt.try_into(), "Expect salt to be at least 16 bytes")?;
+    let salt: &[u8; argon2id13::SALTBYTES] =
+        to_enc_error!(salt.try_into(), "Expect salt to be at least 16 bytes")?;
     let password = password.as_bytes();
 
-    let ret = argon2id13::derive_key(&mut key, password, &argon2id13::Salt(*salt), argon2id13::OPSLIMIT_SENSITIVE, argon2id13::MEMLIMIT_MODERATE);
+    let ret = argon2id13::derive_key(
+        &mut key,
+        password,
+        &argon2id13::Salt(*salt),
+        argon2id13::OPSLIMIT_SENSITIVE,
+        argon2id13::MEMLIMIT_MODERATE,
+    );
     Ok(to_enc_error!(ret, "pwhash failed")?.as_ref().to_vec())
 }
 
@@ -62,11 +63,26 @@ impl CryptoManager {
         let mut sub_derivation_key = [0; 32];
         let mut deterministic_encryption_key = [0; 32];
 
-        to_enc_error!(kdf::derive_from_key(&mut cipher_key, 1, *context, &key), "Failed deriving key")?;
-        to_enc_error!(kdf::derive_from_key(&mut mac_key, 2, *context, &key), "Failed deriving key")?;
-        to_enc_error!(kdf::derive_from_key(&mut asym_key_seed, 3, *context, &key), "Failed deriving key")?;
-        to_enc_error!(kdf::derive_from_key(&mut sub_derivation_key, 4, *context, &key), "Failed deriving key")?;
-        to_enc_error!(kdf::derive_from_key(&mut deterministic_encryption_key, 5, *context, &key), "Failed deriving key")?;
+        to_enc_error!(
+            kdf::derive_from_key(&mut cipher_key, 1, *context, &key),
+            "Failed deriving key"
+        )?;
+        to_enc_error!(
+            kdf::derive_from_key(&mut mac_key, 2, *context, &key),
+            "Failed deriving key"
+        )?;
+        to_enc_error!(
+            kdf::derive_from_key(&mut asym_key_seed, 3, *context, &key),
+            "Failed deriving key"
+        )?;
+        to_enc_error!(
+            kdf::derive_from_key(&mut sub_derivation_key, 4, *context, &key),
+            "Failed deriving key"
+        )?;
+        to_enc_error!(
+            kdf::derive_from_key(&mut deterministic_encryption_key, 5, *context, &key),
+            "Failed deriving key"
+        )?;
 
         Ok(Self {
             version,
@@ -90,12 +106,20 @@ impl CryptoManager {
     pub fn decrypt(&self, cipher: &[u8], additional_data: Option<&[u8]>) -> Result<Vec<u8>> {
         let key = aead::Key(self.cipher_key);
         let nonce = &cipher[..aead::NONCEBYTES];
-        let nonce: &[u8; aead::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
+        let nonce: &[u8; aead::NONCEBYTES] =
+            to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
         let cipher = &cipher[aead::NONCEBYTES..];
-        Ok(to_enc_error!(aead::open(cipher, additional_data, &aead::Nonce(*nonce), &key), "decryption failed")?)
+        Ok(to_enc_error!(
+            aead::open(cipher, additional_data, &aead::Nonce(*nonce), &key),
+            "decryption failed"
+        )?)
     }
 
-    pub fn encrypt_detached(&self, msg: &[u8], additional_data: Option<&[u8]>) -> Result<(Vec<u8>, Vec<u8>)> {
+    pub fn encrypt_detached(
+        &self,
+        msg: &[u8],
+        additional_data: Option<&[u8]>,
+    ) -> Result<(Vec<u8>, Vec<u8>)> {
         let key = aead::Key(self.cipher_key);
         let nonce = aead::gen_nonce();
         let mut encrypted = msg.to_owned();
@@ -105,47 +129,90 @@ impl CryptoManager {
         Ok((tag[..].to_owned(), ret))
     }
 
-    pub fn decrypt_detached(&self, cipher: &[u8], tag: &[u8; aead::TAGBYTES], additional_data: Option<&[u8]>) -> Result<Vec<u8>> {
+    pub fn decrypt_detached(
+        &self,
+        cipher: &[u8],
+        tag: &[u8; aead::TAGBYTES],
+        additional_data: Option<&[u8]>,
+    ) -> Result<Vec<u8>> {
         let key = aead::Key(self.cipher_key);
         let tag = aead::Tag(*tag);
         let nonce = &cipher[..aead::NONCEBYTES];
-        let nonce: &[u8; aead::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
+        let nonce: &[u8; aead::NONCEBYTES] =
+            to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
         let cipher = &cipher[aead::NONCEBYTES..];
         let mut decrypted = cipher.to_owned();
-        to_enc_error!(aead::open_detached(&mut decrypted[..], additional_data, &tag, &aead::Nonce(*nonce), &key), "decryption failed")?;
+        to_enc_error!(
+            aead::open_detached(
+                &mut decrypted[..],
+                additional_data,
+                &tag,
+                &aead::Nonce(*nonce),
+                &key
+            ),
+            "decryption failed"
+        )?;
 
         Ok(decrypted)
     }
 
-    pub fn verify(&self, cipher: &[u8], tag: &[u8; aead::TAGBYTES], additional_data: Option<&[u8]>) -> Result<bool> {
+    pub fn verify(
+        &self,
+        cipher: &[u8],
+        tag: &[u8; aead::TAGBYTES],
+        additional_data: Option<&[u8]>,
+    ) -> Result<bool> {
         let key = aead::Key(self.cipher_key);
         let tag = aead::Tag(*tag);
         let nonce = &cipher[..aead::NONCEBYTES];
-        let nonce: &[u8; aead::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
+        let nonce: &[u8; aead::NONCEBYTES] =
+            to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
         let cipher = &cipher[aead::NONCEBYTES..];
         let mut decrypted = cipher.to_owned();
-        to_enc_error!(aead::open_detached(&mut decrypted[..], additional_data, &tag, &aead::Nonce(*nonce), &key), "decryption failed")?;
+        to_enc_error!(
+            aead::open_detached(
+                &mut decrypted[..],
+                additional_data,
+                &tag,
+                &aead::Nonce(*nonce),
+                &key
+            ),
+            "decryption failed"
+        )?;
 
         Ok(true)
     }
 
-    pub fn deterministic_encrypt(&self, msg: &[u8], additional_data: Option<&[u8]>) -> Result<Vec<u8>> {
+    pub fn deterministic_encrypt(
+        &self,
+        msg: &[u8],
+        additional_data: Option<&[u8]>,
+    ) -> Result<Vec<u8>> {
         let key = aead::Key(self.deterministic_encryption_key);
         let mac = self.calculate_mac(msg)?;
         let nonce = &mac[..aead::NONCEBYTES];
-        let nonce: &[u8; aead::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
+        let nonce: &[u8; aead::NONCEBYTES] =
+            to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
         let encrypted = aead::seal(msg, additional_data, &aead::Nonce(*nonce), &key);
         let ret = [nonce.as_ref(), &encrypted].concat();
 
         Ok(ret)
     }
 
-    pub fn deterministic_decrypt(&self, cipher: &[u8], additional_data: Option<&[u8]>) -> Result<Vec<u8>> {
+    pub fn deterministic_decrypt(
+        &self,
+        cipher: &[u8],
+        additional_data: Option<&[u8]>,
+    ) -> Result<Vec<u8>> {
         let key = aead::Key(self.deterministic_encryption_key);
         let nonce = &cipher[..aead::NONCEBYTES];
-        let nonce: &[u8; aead::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
+        let nonce: &[u8; aead::NONCEBYTES] =
+            to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
         let cipher = &cipher[aead::NONCEBYTES..];
-        Ok(to_enc_error!(aead::open(cipher, additional_data, &aead::Nonce(*nonce), &key), "decryption failed")?)
+        Ok(to_enc_error!(
+            aead::open(cipher, additional_data, &aead::Nonce(*nonce), &key),
+            "decryption failed"
+        )?)
     }
 
     pub fn derive_subkey(&self, salt: &[u8]) -> Result<Vec<u8>> {
@@ -175,10 +242,7 @@ impl LoginCryptoManager {
         let seed = sign::Seed(*seed);
         let (pubkey, privkey) = sign::keypair_from_seed(&seed);
 
-        Ok(Self {
-            privkey,
-            pubkey,
-        })
+        Ok(Self { privkey, pubkey })
     }
 
     pub fn sign_detached(&self, msg: &[u8]) -> Result<Vec<u8>> {
@@ -187,7 +251,12 @@ impl LoginCryptoManager {
         Ok(ret[..].to_vec())
     }
 
-    pub fn verify_detached(&self, msg: &[u8], signature: &[u8], pubkey: &[u8; sign::PUBLICKEYBYTES]) -> Result<bool> {
+    pub fn verify_detached(
+        &self,
+        msg: &[u8],
+        signature: &[u8],
+        pubkey: &[u8; sign::PUBLICKEYBYTES],
+    ) -> Result<bool> {
         let mut signature_copy = [0; 64];
         signature_copy[..].copy_from_slice(&signature[..]);
         let signature = sign::Signature(signature_copy);
@@ -217,10 +286,7 @@ impl BoxCryptoManager {
             None => box_::gen_keypair(),
         };
 
-        Ok(Self {
-            privkey,
-            pubkey,
-        })
+        Ok(Self { privkey, pubkey })
     }
 
     pub fn from_privkey(privkey: &[u8; box_::SECRETKEYBYTES]) -> Result<BoxCryptoManager> {
@@ -229,10 +295,7 @@ impl BoxCryptoManager {
         let pubkey_scalar = scalarmult::scalarmult_base(&privkey_scalar);
         let pubkey = box_::PublicKey(pubkey_scalar[..].try_into().unwrap());
 
-        Ok(BoxCryptoManager {
-            privkey,
-            pubkey,
-        })
+        Ok(BoxCryptoManager { privkey, pubkey })
     }
 
     pub fn encrypt(&self, msg: &[u8], pubkey: &[u8; box_::PUBLICKEYBYTES]) -> Result<Vec<u8>> {
@@ -249,9 +312,13 @@ impl BoxCryptoManager {
         let pubkey = box_::PublicKey(pubkey[..].try_into().unwrap());
         let privkey = box_::SecretKey(self.privkey[..].try_into().unwrap());
         let nonce = &cipher[..box_::NONCEBYTES];
-        let nonce: &[u8; box_::NONCEBYTES] = to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
+        let nonce: &[u8; box_::NONCEBYTES] =
+            to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
         let cipher = &cipher[box_::NONCEBYTES..];
-        Ok(to_enc_error!(box_::open(cipher, &box_::Nonce(*nonce), &pubkey, &privkey), "decryption failed")?)
+        Ok(to_enc_error!(
+            box_::open(cipher, &box_::Nonce(*nonce), &pubkey, &privkey),
+            "decryption failed"
+        )?)
     }
 
     pub fn pubkey(&self) -> &[u8] {
@@ -271,33 +338,40 @@ impl CryptoMac {
     pub fn new(key: Option<&[u8]>) -> Result<Self> {
         let state = to_enc_error!(generichash::State::new(32, key), "Failed to init hash")?;
 
-        Ok(Self {
-            state,
-        })
+        Ok(Self { state })
     }
 
     pub fn update(&mut self, msg: &[u8]) -> Result<()> {
-        Ok(to_enc_error!(self.state.update(msg), "Failed to update hash")?)
+        Ok(to_enc_error!(
+            self.state.update(msg),
+            "Failed to update hash"
+        )?)
     }
 
     pub fn update_with_len_prefix(&mut self, msg: &[u8]) -> Result<()> {
         let len = msg.len() as u32;
-        to_enc_error!(self.state.update(&len.to_le_bytes()), "Failed to update hash")?;
+        to_enc_error!(
+            self.state.update(&len.to_le_bytes()),
+            "Failed to update hash"
+        )?;
         to_enc_error!(self.state.update(msg), "Failed to update hash")?;
 
         Ok(())
     }
 
     pub fn finalize(self) -> Result<Vec<u8>> {
-        Ok(to_enc_error!(self.state.finalize(), "Failed to finalize hash")?.as_ref().to_vec())
+        Ok(
+            to_enc_error!(self.state.finalize(), "Failed to finalize hash")?
+                .as_ref()
+                .to_vec(),
+        )
     }
 }
 
 fn get_encoded_chunk(content: &[u8], suffix: &str) -> String {
-  let num = (((content[0] as u32) << 16) +
-    ((content[1] as u32) << 8) +
-    (content[2] as u32)) % 100000;
-  return format!("{:0>5}{}", num, suffix);
+    let num =
+        (((content[0] as u32) << 16) + ((content[1] as u32) << 8) + (content[2] as u32)) % 100000;
+    return format!("{:0>5}{}", num, suffix);
 }
 
 /// Return a pretty formatted fingerprint of the content
@@ -320,20 +394,21 @@ pub fn pretty_fingerprint(content: &[u8]) -> String {
      */
     let mut last_num: u32 = 0;
     let parts = (0..10).into_iter().map(|i| {
-        let suffix = if i % 4 == 3 {
-            "\n"
-        } else {
-            delimiter
-        };
+        let suffix = if i % 4 == 3 { "\n" } else { delimiter };
 
         last_num = (last_num << 3) | ((fingerprint[i] as u32) & 0xE0) >> 5;
         get_encoded_chunk(&fingerprint[i * 3..], suffix)
     });
 
-    let last_num = (0..10).into_iter().fold(0, |accum, i| (accum << 3) | ((fingerprint[i] as u32) & 0xE0) >> 5) % 100000;
+    let last_num = (0..10).into_iter().fold(0, |accum, i| {
+        (accum << 3) | ((fingerprint[i] as u32) & 0xE0) >> 5
+    }) % 100000;
     let last_num = format!("{:0>5}", last_num);
     let parts = parts
-        .chain(std::iter::once(get_encoded_chunk(&fingerprint[29..], delimiter)))
+        .chain(std::iter::once(get_encoded_chunk(
+            &fingerprint[29..],
+            delimiter,
+        )))
         .chain(std::iter::once(last_num));
     parts.collect::<String>()
 }

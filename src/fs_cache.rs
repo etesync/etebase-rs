@@ -1,23 +1,14 @@
 // SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
-use std::fs;
-use std::path::{
-    Path,
-    PathBuf,
+use super::{
+    error::Result,
+    http_client::Client,
+    service::{Account, Collection, CollectionManager, Item, ItemManager},
 };
 use remove_dir_all::remove_dir_all;
-use super::{
-    http_client::Client,
-    service::{
-        Account,
-        CollectionManager,
-        Collection,
-        ItemManager,
-        Item,
-    },
-    error::Result,
-};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 /*
 File structure:
@@ -41,7 +32,6 @@ pub struct FileSystemCache {
     cols_dir: PathBuf,
 }
 
-
 impl FileSystemCache {
     /// Initialize a file system cache object
     ///
@@ -54,10 +44,7 @@ impl FileSystemCache {
         let cols_dir = user_dir.join("cols");
         fs::create_dir_all(&cols_dir)?;
 
-        Ok(Self {
-            user_dir,
-            cols_dir,
-        })
+        Ok(Self { user_dir, cols_dir })
     }
 
     fn get_collection_items_dir(&self, col_uid: &str) -> PathBuf {
@@ -143,7 +130,10 @@ impl FileSystemCache {
     /// Raw data of all cached collections as a list response
     pub fn collection_list_raw(&self) -> Result<ListRawCacheResponse> {
         let ret = fs::read_dir(&self.cols_dir)?;
-        Ok(ListRawCacheResponse { inner_iter: ret, is_collection: true } )
+        Ok(ListRawCacheResponse {
+            inner_iter: ret,
+            is_collection: true,
+        })
     }
 
     /// Load a collection from cache
@@ -162,7 +152,11 @@ impl FileSystemCache {
     /// # Arguments:
     /// * `col_mgr` - collection manager for the account
     /// * `collection` - the collection to be saved
-    pub fn collection_set(&self, col_mgr: &CollectionManager, collection: &Collection) -> Result<()> {
+    pub fn collection_set(
+        &self,
+        col_mgr: &CollectionManager,
+        collection: &Collection,
+    ) -> Result<()> {
         let mut col_file = self.cols_dir.join(collection.uid());
         fs::create_dir_all(&col_file)?;
         col_file.push("col");
@@ -181,7 +175,11 @@ impl FileSystemCache {
     /// # Arguments:
     /// * `col_mgr` - collection manager for the account
     /// * `collection` - the collection to be saved
-    pub fn collection_set_with_content(&self, col_mgr: &CollectionManager, collection: &Collection) -> Result<()> {
+    pub fn collection_set_with_content(
+        &self,
+        col_mgr: &CollectionManager,
+        collection: &Collection,
+    ) -> Result<()> {
         let mut col_file = self.cols_dir.join(collection.uid());
         fs::create_dir_all(&col_file)?;
         col_file.push("col");
@@ -213,7 +211,10 @@ impl FileSystemCache {
     pub fn item_list_raw(&self, col_uid: &str) -> Result<ListRawCacheResponse> {
         let items_dir = self.get_collection_items_dir(col_uid);
         let ret = fs::read_dir(items_dir)?;
-        Ok(ListRawCacheResponse { inner_iter: ret, is_collection: false } )
+        Ok(ListRawCacheResponse {
+            inner_iter: ret,
+            is_collection: false,
+        })
     }
 
     /// Load an item from cache
@@ -247,7 +248,12 @@ impl FileSystemCache {
     /// * `item_mgr` - item manager for the parent collection
     /// * `col_uid` - the UID of the parent collection
     /// * `item` - the item to be saved
-    pub fn item_set_with_content(&self, item_mgr: &ItemManager, col_uid: &str, item: &Item) -> Result<()> {
+    pub fn item_set_with_content(
+        &self,
+        item_mgr: &ItemManager,
+        col_uid: &str,
+        item: &Item,
+    ) -> Result<()> {
         let item_file = self.get_collection_items_dir(col_uid).join(item.uid());
         let content = item_mgr.cache_save_with_content(item)?;
         fs::write(item_file, &content)?;

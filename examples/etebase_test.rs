@@ -3,13 +3,7 @@
 
 use std::env;
 
-use etebase::{
-    Account,
-    Client,
-    Collection,
-    Item,
-    error::Result,
-};
+use etebase::{error::Result, Account, Client, Collection, Item};
 
 const CLIENT_NAME: &str = "etebase-example";
 
@@ -61,4 +55,3 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-

@@ -2,13 +2,8 @@
 // SPDX-License-Identifier: LGPL-2.1-only
 
 use etebase::test_helpers::utils::{
-    get_padding,
-    test_buffer_pad,
-    test_buffer_unpad,
-    test_buffer_pad_fixed,
-    test_buffer_unpad_fixed,
+    get_padding, test_buffer_pad, test_buffer_pad_fixed, test_buffer_unpad, test_buffer_unpad_fixed,
 };
-
 
 #[test]
 fn padding() {
@@ -27,7 +22,6 @@ fn padding() {
     assert_eq!(get_padding(2343242), 2359296);
 }
 
-
 #[test]
 fn pad_unpad() {
     etebase::init().unwrap();
@@ -37,7 +31,6 @@ fn pad_unpad() {
     let unpadded = test_buffer_unpad(&padded[..]).unwrap();
     assert_eq!(unpadded, &buf[..]);
 }
-
 
 #[test]
 fn pad_unpad_fixed() {
