@@ -157,12 +157,12 @@ impl Account {
     /// # Arguments:
     /// * `client` - the already setup [Client] object
     /// * `user` - the already setup [User] object
-    /// * `main_key` - the key to signup with
+    /// * `main_key` - the 32-byte key to signup with
     pub fn signup_key(client: Client, user: &User, main_key: &[u8]) -> Result<Self> {
         super::init()?;
 
-        if main_key.len() < SYMMETRIC_KEY_SIZE {
-            return Err(Error::ProgrammingError("Key should be at least 32 bytes long."));
+        if main_key.len() == SYMMETRIC_KEY_SIZE {
+            return Err(Error::ProgrammingError("Key should be exactly 32 bytes long."));
         }
 
         let salt = randombytes(32);
