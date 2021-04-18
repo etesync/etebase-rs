@@ -130,7 +130,7 @@ impl Account {
     pub fn signup_key(client: Client, user: &User, main_key: &[u8]) -> Result<Self> {
         super::init()?;
 
-        if main_key.len() == SYMMETRIC_KEY_SIZE {
+        if main_key.len() != SYMMETRIC_KEY_SIZE {
             return Err(Error::ProgrammingError(
                 "Key should be exactly 32 bytes long.",
             ));
