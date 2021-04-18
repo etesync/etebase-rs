@@ -1,4 +1,4 @@
-name: Build
+name: Tests
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  test:
     name: Test
     runs-on: ubuntu-latest
 
@@ -25,7 +25,7 @@ jobs:
 
       - name: Run local test Server
         run: |
-          docker run -p 3735:3735 etesync/test-server:latest
+          docker run -d -p 3735:3735 etesync/test-server:latest
           ./scripts/wait-for-it.sh localhost:3735
 
       - name: Cache cargo build
@@ -47,25 +47,6 @@ jobs:
         env:
           ETEBASE_TEST_HOST: localhost:3735
         run: cargo test -- --test-threads=1
-
-  clippy:
-    runs-on: ubuntu-latest
-    needs: Test
-
-    steps:
-      - uses: actions/checkout@v1
-
-      - name: Cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo build
-        uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
       - run: rustup component add clippy
 
