@@ -22,8 +22,8 @@ include = [
 crate-type = ["lib"]
 
 [dependencies]
-sodiumoxide = "^0.2.6"
-libsodium-sys = "^0.2.6"
+sodiumoxide = "=0.2.6"
+libsodium-sys = "=0.2.6"
 url = "^2.1.1"
 serde = { version = "^1.0.105", features = ["derive"] }
 serde_bytes = "^0.11.5"
