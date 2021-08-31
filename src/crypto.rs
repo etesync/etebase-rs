@@ -17,7 +17,7 @@ macro_rules! to_enc_error {
 }
 
 fn generichash_quick(msg: &[u8], key: Option<&[u8]>) -> Result<Vec<u8>> {
-    let mut state = to_enc_error!(generichash::State::new(32, key), "Failed to init hash")?;
+    let mut state = to_enc_error!(generichash::State::new(Some(32), key), "Failed to init hash")?;
     to_enc_error!(state.update(msg), "Failed to update hash")?;
     Ok(to_enc_error!(state.finalize(), "Failed to finalize hash")?
         .as_ref()
@@ -248,7 +248,7 @@ impl LoginCryptoManager {
     pub fn sign_detached(&self, msg: &[u8]) -> Result<Vec<u8>> {
         let ret = sign::sign_detached(msg, &self.privkey);
 
-        Ok(ret[..].to_vec())
+        Ok(ret.to_bytes().to_vec())
     }
 
     pub fn verify_detached(
@@ -259,7 +259,7 @@ impl LoginCryptoManager {
     ) -> Result<bool> {
         let mut signature_copy = [0; 64];
         signature_copy[..].copy_from_slice(&signature[..]);
-        let signature = sign::Signature(signature_copy);
+        let signature = sign::Signature::new(signature_copy);
         let pubkey = sign::PublicKey(*pubkey);
         let ret = sign::verify_detached(&signature, msg, &pubkey);
 
@@ -336,7 +336,7 @@ pub struct CryptoMac {
 
 impl CryptoMac {
     pub fn new(key: Option<&[u8]>) -> Result<Self> {
-        let state = to_enc_error!(generichash::State::new(32, key), "Failed to init hash")?;
+        let state = to_enc_error!(generichash::State::new(Some(32), key), "Failed to init hash")?;
 
         Ok(Self { state })
     }
