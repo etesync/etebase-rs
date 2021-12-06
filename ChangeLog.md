@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.5.1
+* Update sodiumoxide dependency (it broke API)
+* Check for exact key length
+
 ## Version 0.5.0
 * Implement fetch_multi for fetching multiple items by uid
 * Implement prefetch, pre-upload and partial items
