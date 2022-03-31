@@ -137,7 +137,7 @@ dependencies = [
 
 [[package]]
 name = "etebase"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "libsodium-sys",
  "remove_dir_all 0.6.1",

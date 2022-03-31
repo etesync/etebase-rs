@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.5.3
+* Upgrade dependencies - ignore package lock. Upgrade to absolute latest.
+
 ## Version 0.5.2
 * Upgrade dependencies
 
