@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 0.5.2
+* Upgrade dependencies
+
 ## Version 0.5.1
 * Update sodiumoxide dependency (it broke API)
 * Check for exact key length
