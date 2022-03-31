@@ -259,7 +259,7 @@ impl LoginCryptoManager {
     ) -> Result<bool> {
         let mut signature_copy = [0; 64];
         signature_copy[..].copy_from_slice(&signature[..]);
-        let signature = sign::Signature::new(signature_copy);
+        let signature = to_enc_error!(sign::Signature::from_bytes(&signature_copy), "siganture copy failed")?;
         let pubkey = sign::PublicKey(*pubkey);
         let ret = sign::verify_detached(&signature, msg, &pubkey);
 
