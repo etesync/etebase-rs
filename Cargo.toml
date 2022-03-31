@@ -24,12 +24,12 @@ crate-type = ["lib"]
 [dependencies]
 sodiumoxide = "^0.2.7"
 libsodium-sys = "^0.2.7"
-url = "^2.1.1"
-serde = { version = "^1.0.105", features = ["derive"] }
+url = "^2.2.2"
+serde = { version = "^1.0.136", features = ["derive"] }
 serde_bytes = "^0.11.5"
-serde_repr = "^0.1.5"
-rmp-serde = "^0.14.3"
-reqwest = { version = "^0.10.4", features = ["blocking"], optional = true }
+serde_repr = "^0.1.7"
+rmp-serde = "^1.0.0"
+reqwest = { version = "^0.11.10", features = ["blocking"], optional = true }
 remove_dir_all = "^0.6.0"
 
 [features]
