@@ -30,7 +30,8 @@ pub fn test_reset(client: &Client, body_struct: SignupBody) -> Result<()> {
 
 /// A collection for which the user lost access
 ///
-/// Deleted collections are marked using [crate::Collection::is_deleted]. However, when we just lose access
+/// Deleted collections are marked using [`Collection::is_deleted`](crate::Collection::is_deleted).
+/// However, when we just lose access
 /// to a collection and it hasn't been deleted, we get this object.
 #[derive(Deserialize, Clone)]
 pub struct RemovedCollection {
@@ -375,7 +376,7 @@ impl<'a> Authenticator<'a> {
     }
 }
 
-/// Dictates how much data to prefetch when passed to [FetchOptions]
+/// Dictates how much data to prefetch when passed to [`FetchOptions`]
 #[derive(Clone)]
 pub enum PrefetchOption {
     /// Automatically decide based on the size of the data fetched
@@ -412,7 +413,7 @@ impl<'a> FetchOptions<'a> {
         self
     }
 
-    /// Used by [crate::managers::ItemManager] functions to toggle fetching the collection's item
+    /// Used by [`ItemManager`](crate::managers::ItemManager) functions to toggle fetching the collection's item
     pub fn with_collection(mut self, with_collection: bool) -> Self {
         self.with_collection = Some(with_collection);
         self
@@ -786,7 +787,7 @@ impl ItemManagerOnline {
 
 /// A member of a collection
 ///
-/// Obtained using [CollectionManager::list](crate::managers::CollectionManager::list)
+/// Obtained using [`CollectionManager::list`](crate::managers::CollectionManager::list)
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CollectionMember {
@@ -800,7 +801,7 @@ impl CollectionMember {
         &self.username
     }
 
-    /// The access_level of the member
+    /// The access level of the member
     pub fn access_level(&self) -> CollectionAccessLevel {
         self.access_level
     }

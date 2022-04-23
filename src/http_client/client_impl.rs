@@ -41,7 +41,7 @@ impl Response {
     /// Creates a new error response object
     ///
     /// # Arguments:
-    /// * `err` - the associated [Error]
+    /// * `err` - the associated [`Error`]
     pub fn new_err(err: Error) -> Self {
         Self {
             bytes: vec![],
@@ -50,7 +50,7 @@ impl Response {
         }
     }
 
-    /// Reset the response object to a valid state as if it was created with [Self::new]
+    /// Reset the response object to a valid state as if it was created with [`new`](Self::new)
     ///
     /// # Arguments:
     /// * `bytes` - the raw resposne body
@@ -61,10 +61,10 @@ impl Response {
         self.err = None;
     }
 
-    /// Reset the response object to an state as if it was created with [Self::new_err]
+    /// Reset the response object to an state as if it was created with [`new_err`](Self::new_err)
     ///
     /// # Arguments:
-    /// * `err` - the associated [Error]
+    /// * `err` - the associated [`Error`]
     pub fn reset_err(&mut self, err: Error) {
         self.err = Some(err);
     }
@@ -79,7 +79,7 @@ impl Response {
         self.status
     }
 
-    /// Returns [Ok] for valid responses and an [Error] object on error
+    /// Returns [`Ok`] for valid responses and an [`Error`] object on error
     pub fn error_for_status(&self) -> Result<()> {
         if self.status >= 200 && self.status < 300 {
             return Ok(());
@@ -130,7 +130,7 @@ impl Response {
         self.into_result()
     }
 
-    /// Converts the object to a [Result]
+    /// Converts the object to a [`Result`]
     pub fn into_result(self) -> Result<Self> {
         match self.err {
             Some(err) => Err(err),

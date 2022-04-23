@@ -228,7 +228,7 @@ impl SignedInvitation {
         &self.username
     }
 
-    /// The collection uid of the [crate::Collection] this invitation is for
+    /// The collection uid of the [`Collection`](crate::Collection) this invitation is for
     pub fn collection(&self) -> &str {
         &self.collection
     }
