@@ -797,7 +797,7 @@ impl ItemManager {
 
     /// Fetch a single [`Item`] from the server using its UID
     ///
-    /// See [`fetch`](Self::fetch) for fetching multiple items
+    /// See [`fetch_multi`](Self::fetch_multi) for fetching multiple items
     ///
     /// # Arguments:
     /// * `item_uid` - the UID of the collection to be fetched
