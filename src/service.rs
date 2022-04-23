@@ -316,7 +316,7 @@ impl Account {
                 .client
                 .server_url()
                 .host_str()
-                .unwrap_or(self.client.server_url().as_str()),
+                .unwrap_or_else(|| self.client.server_url().as_str()),
             action: "login",
         };
         let response = rmp_serde::to_vec_named(&response_struct)?;
@@ -388,7 +388,7 @@ impl Account {
                 .client
                 .server_url()
                 .host_str()
-                .unwrap_or(self.client.server_url().as_str()),
+                .unwrap_or_else(|| self.client.server_url().as_str()),
             action: "changePassword",
 
             login_pubkey: login_crypto_manager.pubkey(),
