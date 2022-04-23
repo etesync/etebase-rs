@@ -80,7 +80,7 @@ fn login_crypto_manager() {
     let signature = login_crypto_manager.sign_detached(msg).unwrap();
     let pubkey = login_crypto_manager.pubkey();
     assert!(login_crypto_manager
-        .verify_detached(msg, &signature, (&pubkey[..]).try_into().unwrap())
+        .verify_detached(msg, &signature, pubkey.try_into().unwrap())
         .unwrap());
 }
 
@@ -93,13 +93,10 @@ fn box_crypto_manager() {
 
     let msg = b"This Is Some Test Cleartext.";
     let cipher = box_crypto_manager
-        .encrypt(msg, (&box_crypto_manager2.pubkey()[..]).try_into().unwrap())
+        .encrypt(msg, box_crypto_manager2.pubkey().try_into().unwrap())
         .unwrap();
     let decrypted = box_crypto_manager2
-        .decrypt(
-            &cipher[..],
-            (&box_crypto_manager.pubkey()[..]).try_into().unwrap(),
-        )
+        .decrypt(&cipher[..], box_crypto_manager.pubkey().try_into().unwrap())
         .unwrap();
     assert_eq!(decrypted, msg);
 }

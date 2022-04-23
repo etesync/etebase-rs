@@ -261,7 +261,7 @@ impl LoginCryptoManager {
         pubkey: &[u8; sign::PUBLICKEYBYTES],
     ) -> Result<bool> {
         let mut signature_copy = [0; 64];
-        signature_copy[..].copy_from_slice(&signature[..]);
+        signature_copy[..].copy_from_slice(signature);
         let signature = to_enc_error!(
             sign::Signature::from_bytes(&signature_copy),
             "siganture copy failed"
