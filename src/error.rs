@@ -4,7 +4,7 @@
 use std::error;
 use std::fmt;
 
-/// A short-hand version of a [std::result::Result] that always returns an Etebase [Error].
+/// A short-hand version of a [`std::result::Result`] that always returns an Etebase [`Error`].
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// The error type returned from the Etebase API

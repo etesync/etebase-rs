@@ -93,10 +93,10 @@ pub struct Account {
 }
 
 impl Account {
-    /// Check whether the [Client] is pointing to a valid Etebase server
+    /// Check whether the [`Client`] is pointing to a valid Etebase server
     ///
     /// # Arguments:
-    /// * `client` - the already setup [Client] object
+    /// * `client` - the already setup [`Client`] object
     pub fn is_etebase_server(client: &Client) -> Result<bool> {
         let authenticator = Authenticator::new(client);
         authenticator.is_etebase_server()
@@ -105,8 +105,8 @@ impl Account {
     /// Signup a new user account and return a handle to it
     ///
     /// # Arguments:
-    /// * `client` - the already setup [Client] object
-    /// * `user` - the already setup [User] object
+    /// * `client` - the already setup [`Client`] object
+    /// * `user` - the already setup [`User`] object
     /// * `password` - the password to signup with
     pub fn signup(client: Client, user: &User, password: &str) -> Result<Self> {
         super::init()?;
@@ -119,11 +119,11 @@ impl Account {
 
     /// Signup a new user account with a key and return a handle to it
     ///
-    /// Unlike [Self::signup], this uses a strong key instead of a password
+    /// Unlike [`signup`](Self::signup), this uses a strong key instead of a password
     ///
     /// # Arguments:
-    /// * `client` - the already setup [Client] object
-    /// * `user` - the already setup [User] object
+    /// * `client` - the already setup [`Client`] object
+    /// * `user` - the already setup [`User`] object
     /// * `main_key` - the 32-byte key to signup with
     pub fn signup_key(client: Client, user: &User, main_key: &[u8]) -> Result<Self> {
         super::init()?;
@@ -182,11 +182,11 @@ impl Account {
         Ok(ret)
     }
 
-    /// Login a user and return a handle to an [Account] object
+    /// Login a user and return a handle to an [`Account`] object
     ///
     /// # Arguments:
     /// * `username` - the user's username. This is not the same as the user's email.
-    /// * `client` - the already setup [Client] object
+    /// * `client` - the already setup [`Client`] object
     /// * `password` - the user's password
     pub fn login(client: Client, username: &str, password: &str) -> Result<Self> {
         super::init()?;
@@ -210,13 +210,13 @@ impl Account {
         Self::login_common(client, username, main_key, login_challenge)
     }
 
-    /// Login a user with a key and return a handle to an [Account] object
+    /// Login a user with a key and return a handle to an [`Account`] object
     ///
-    /// Unlike [Self::login], this uses a strong key instead of a password
+    /// Unlike [`login`](Self::login), this uses a strong key instead of a password
     ///
     /// # Arguments:
     /// * `username` - the user's username. This is not the same as the user's email.
-    /// * `client` - the already setup [Client] object
+    /// * `client` - the already setup [`Client`] object
     /// * `main_key` - the key to signup with
     pub fn login_key(client: Client, username: &str, main_key: &[u8]) -> Result<Self> {
         super::init()?;
@@ -295,7 +295,7 @@ impl Account {
         Ok(ret)
     }
 
-    /// Fetch a new auth token for the account and update the [Account] object with it
+    /// Fetch a new auth token for the account and update the [`Account`] object with it
     pub fn fetch_token(&mut self) -> Result<()> {
         let mut client = (*self.client).clone();
         client.set_token(None);
@@ -419,7 +419,7 @@ impl Account {
         authenticator.logout()
     }
 
-    /// Save the account object to a string for restoring it later using [Self::restore]
+    /// Save the account object to a string for restoring it later using [`restore`](Self::restore)
     ///
     /// # Arguments:
     /// * `encryption_key` - used to encrypt the returned account string to enhance security
@@ -445,12 +445,13 @@ impl Account {
         to_base64(&serialized)
     }
 
-    /// Restore and return the [Account] object from the string obtained using [Self::save]
+    /// Restore and return the [`Account`] object from the string obtained using
+    /// [`save`](Self::save)
     ///
     /// # Arguments:
-    /// * `client` - the already setup [Client] object
+    /// * `client` - the already setup [`Client`] object
     /// * `account_data_stored` - the stored account string
-    /// * `encryption_key` - the same encryption key passed to [Self::save] while saving the account
+    /// * `encryption_key` - the same encryption key passed to [`save`](Self::save) while saving the account
     pub fn restore(
         mut client: Client,
         account_data_stored: &str,
@@ -490,7 +491,7 @@ impl Account {
         })
     }
 
-    /// Return a [CollectionManager] for creating, fetching and uploading collections
+    /// Return a [`CollectionManager`] for creating, fetching and uploading collections
     pub fn collection_manager(&self) -> Result<CollectionManager> {
         CollectionManager::new(
             Arc::clone(&self.client),
@@ -498,7 +499,7 @@ impl Account {
         )
     }
 
-    /// Return a [CollectionInvitationManager] for managing collection invitations
+    /// Return a [`CollectionInvitationManager`] for managing collection invitations
     pub fn invitation_manager(&self) -> Result<CollectionInvitationManager> {
         CollectionInvitationManager::new(
             Arc::clone(&self.client),
@@ -540,12 +541,12 @@ impl CollectionManager {
         })
     }
 
-    /// Create a new [Collection]
+    /// Create a new [`Collection`]
     ///
     /// # Arguments:
-    /// * `collection_type` - the type of [Item]s stored in the collection
-    /// * `meta` - the [ItemMetadata] for the collection
-    /// * `content` - the collection's content as a byte array. This is unrelated to the [Item]s in the collection.
+    /// * `collection_type` - the type of [`Item`]s stored in the collection
+    /// * `meta` - the [`ItemMetadata`] for the collection
+    /// * `content` - the collection's content as a byte array. This is unrelated to the [`Item`]s in the collection.
     pub fn create<T: MsgPackSerilization>(
         &self,
         collection_type: &str,
@@ -556,15 +557,15 @@ impl CollectionManager {
         self.create_raw(collection_type, &meta, content)
     }
 
-    /// Create a new [Collection] using raw metadata
+    /// Create a new [`Collection`] using raw metadata
     ///
-    /// Unlike [Self::create], this receives the metadata as valid [ItemMetadata]-like struct encoded using `msgpack`.
+    /// Unlike [`create`](Self::create), this receives the metadata as valid [`ItemMetadata`]-like struct encoded using `msgpack`.
     /// This can be used to create collections with custom metadata types.
     ///
     /// # Arguments:
-    /// * `collection_type` - the type of [Item]s stored in the collection
+    /// * `collection_type` - the type of [`Item`]s stored in the collection
     /// * `meta` - the metadata for the collection as a byte array
-    /// * `content` - the collection's content as a byte array. This is unrelated to the [Item]s in the collection.
+    /// * `content` - the collection's content as a byte array. This is unrelated to the [`Item`]s in the collection.
     pub fn create_raw(
         &self,
         collection_type: &str,
@@ -580,7 +581,7 @@ impl CollectionManager {
         )
     }
 
-    /// Fetch a single [Collection] from the server using its UID
+    /// Fetch a single [`Collection`] from the server using its UID
     ///
     /// # Arguments:
     /// * `col_uid` - the UID of the collection to be fetched
@@ -594,10 +595,10 @@ impl CollectionManager {
         )
     }
 
-    /// Fetch all [Collection]s of a specific type from the server and return a [CollectionListResponse]
+    /// Fetch all [`Collection`]s of a specific type from the server and return a [`CollectionListResponse`]
     ///
     /// # Arguments:
-    /// * `collection_type` - the type of [Item]s stored in the collection
+    /// * `collection_type` - the type of [`Item`]s stored in the collection
     /// * `options` - parameters to tune or optimize the fetch
     pub fn list(
         &self,
@@ -607,7 +608,7 @@ impl CollectionManager {
         self.list_multi(iter::once(collection_type), options)
     }
 
-    /// Fetch all [Collection]s of the supplied types from the server and return a [CollectionListResponse]
+    /// Fetch all [`Collection`]s of the supplied types from the server and return a [`CollectionListResponse`]
     ///
     /// # Arguments:
     /// * `collection_type` - array of strings denoting the collection types
@@ -650,7 +651,7 @@ impl CollectionManager {
         })
     }
 
-    /// Upload a [Collection]
+    /// Upload a [`Collection`]
     ///
     /// # Arguments:
     /// * `collection` - the collection object to be uploaded
@@ -667,7 +668,7 @@ impl CollectionManager {
         Ok(())
     }
 
-    /// Upload a [Collection] using a transaction
+    /// Upload a [`Collection`] using a transaction
     ///
     /// This call ensures that the collection hasn't changed since we last fetched it
     ///
@@ -694,10 +695,11 @@ impl CollectionManager {
         Ok(())
     }
 
-    /// Load and return a cached [Collection] object from a byte buffer
+    /// Load and return a cached [`Collection`] object from a byte buffer
     ///
     /// # Arguments:
-    /// * `cached` - the byte buffer holding the cached collection obtained using [Self::cache_save]
+    /// * `cached` - the byte buffer holding the cached collection obtained using
+    ///   [`cache_save`](Self::cache_save)
     pub fn cache_load(&self, cached: &[u8]) -> Result<Collection> {
         let col = EncryptedCollection::cache_load(cached)?;
         Collection::new(
@@ -707,9 +709,9 @@ impl CollectionManager {
         )
     }
 
-    /// Save the [Collection] object to a byte buffer for caching
+    /// Save the [`Collection`] object to a byte buffer for caching
     ///
-    /// The collection can later be loaded using [Self::cache_load]
+    /// The collection can later be loaded using [`cache_load`](Self::cache_load)
     ///
     /// # Arguments:
     /// * `collection` - the collection object to be cached
@@ -717,9 +719,9 @@ impl CollectionManager {
         collection.col.cache_save()
     }
 
-    /// Save the [Collection] object and its content to a byte buffer for caching
+    /// Save the [`Collection`] object and its content to a byte buffer for caching
     ///
-    /// The collection can later be loaded using [Self::cache_load]
+    /// The collection can later be loaded using [`cache_load`](Self::cache_load)
     ///
     /// # Arguments:
     /// * `collection` - the collection object to be cached
@@ -727,10 +729,10 @@ impl CollectionManager {
         collection.col.cache_save_with_content()
     }
 
-    /// Return the [ItemManager] for the supplied collection
+    /// Return the [`ItemManager`] for the supplied collection
     ///
     /// # Arguments:
-    /// * `collection` - the collection for which the [ItemManager] is required
+    /// * `collection` - the collection for which the [`ItemManager`] is required
     pub fn item_manager(&self, collection: &Collection) -> Result<ItemManager> {
         ItemManager::new(
             Arc::clone(&self.client),
@@ -739,10 +741,10 @@ impl CollectionManager {
         )
     }
 
-    /// Return the [CollectionMemberManager] for the supplied collection
+    /// Return the [`CollectionMemberManager`] for the supplied collection
     ///
     /// # Arguments:
-    /// * `collection` - the collection for which the [ItemManager] is required
+    /// * `collection` - the collection for which the [`ItemManager`] is required
     pub fn member_manager(&self, collection: &Collection) -> Result<CollectionMemberManager> {
         CollectionMemberManager::new(Arc::clone(&self.client), collection)
     }
@@ -767,19 +769,19 @@ impl ItemManager {
         })
     }
 
-    /// Create a new [Item]
+    /// Create a new [`Item`]
     ///
     /// # Arguments:
-    /// * `meta` - the [ItemMetadata] for the item
+    /// * `meta` - the [`ItemMetadata`] for the item
     /// * `content` - the item's content as a byte array
     pub fn create<T: MsgPackSerilization>(&self, meta: &T, content: &[u8]) -> Result<Item> {
         let meta = meta.to_msgpack()?;
         self.create_raw(&meta, content)
     }
 
-    /// Create a new [Item] using raw metadata
+    /// Create a new [`Item`] using raw metadata
     ///
-    /// Unlike [Self::create], this receives the metadata as valid [ItemMetadata]-like struct encoded using `msgpack`.
+    /// Unlike [`create`](Self::create), this receives the metadata as valid [`ItemMetadata`]-like struct encoded using `msgpack`.
     /// This can be used to create items with custom metadata types.
     ///
     /// # Arguments:
@@ -793,9 +795,9 @@ impl ItemManager {
         )
     }
 
-    /// Fetch a single [Item] from the server using its UID
+    /// Fetch a single [`Item`] from the server using its UID
     ///
-    /// See [Self::fetch] for fetching multiple items
+    /// See [`fetch`](Self::fetch) for fetching multiple items
     ///
     /// # Arguments:
     /// * `item_uid` - the UID of the collection to be fetched
@@ -808,7 +810,7 @@ impl ItemManager {
         )
     }
 
-    /// Fetch all [Item]s of a collection and return an [ItemListResponse]
+    /// Fetch all [`Item`]s of a collection and return an [`ItemListResponse`]
     ///
     /// # Arguments:
     /// * `options` - parameters to tune or optimize the fetch
@@ -827,7 +829,7 @@ impl ItemManager {
         })
     }
 
-    /// Fetch and return a list response of [Item]s with each item as the revision
+    /// Fetch and return a list response of [`Item`]s with each item as the revision
     ///
     /// # Arguments:
     /// * `item` - the item for which to fetch the revision history
@@ -852,7 +854,7 @@ impl ItemManager {
         })
     }
 
-    /// Fetch the latest revision of the supplied [Item]s from the server and return an [ItemListResponse]
+    /// Fetch the latest revision of the supplied [`Item`]s from the server and return an [`ItemListResponse`]
     ///
     /// # Arguments:
     /// * `items` - the list of UIDs for the items to be fetched
@@ -879,9 +881,9 @@ impl ItemManager {
         })
     }
 
-    /// Fetch multiple [Item]s using their UID
+    /// Fetch multiple [`Item`]s using their UID
     ///
-    /// See [Self::fetch] for fetching a single item
+    /// See [`fetch`](Self::fetch) for fetching a single item
     ///
     /// # Arguments:
     /// * `items` - the list of items to be fetched
@@ -907,7 +909,7 @@ impl ItemManager {
         })
     }
 
-    /// Upload the supplied [Item]s to the server
+    /// Upload the supplied [`Item`]s to the server
     ///
     /// # Arguments:
     /// * `items` - the list of items to be uploaded
@@ -921,7 +923,7 @@ impl ItemManager {
         self.item_manager_online.batch(items, deps, options)
     }
 
-    /// Upload the supplied [Item]s to the server with a list of items as dependencies
+    /// Upload the supplied [`Item`]s to the server with a list of items as dependencies
     ///
     /// This will fail if the dependencies have changed remotely
     ///
@@ -944,7 +946,7 @@ impl ItemManager {
         self.item_manager_online.batch(items, deps, options)
     }
 
-    /// Upload an [Item] using a transaction
+    /// Upload an [`Item`] using a transaction
     ///
     /// This call ensures that the item hasn't changed since we last fetched it
     ///
@@ -960,7 +962,7 @@ impl ItemManager {
         self.item_manager_online.transaction(items, deps, options)
     }
 
-    /// Create an upload transaction for the supplied [Item]s with a list of items as dependencies
+    /// Create an upload transaction for the supplied [`Item`]s with a list of items as dependencies
     ///
     /// This will fail if the dependencies have changed remotely
     ///
@@ -1006,7 +1008,7 @@ impl ItemManager {
 
     /// Download the content of an item if missing
     ///
-    /// When using some [FetchOptions] items may be incomplete. Use this call to download the
+    /// When using some [`FetchOptions`] items may be incomplete. Use this call to download the
     /// item's content so it can be accessed.
     /// This is a much more efficient way of getting the content of large files.
     ///
@@ -1026,7 +1028,8 @@ impl ItemManager {
         Ok(())
     }
 
-    /// Load and return a cached [Item] object from a byte buffer obtained using [Self::cache_save]
+    /// Load and return a cached [`Item`] object from a byte buffer obtained using
+    /// [`cache_save`](Self::cache_save)
     ///
     /// # Arguments:
     /// * `cached` - the byte buffer holding the cached item
@@ -1035,9 +1038,9 @@ impl ItemManager {
         Item::new(item.crypto_manager(&self.collection_crypto_manager)?, item)
     }
 
-    /// Save the [Item] object to a byte buffer for caching
+    /// Save the [`Item`] object to a byte buffer for caching
     ///
-    /// The item can later be loaded using [Self::cache_load]
+    /// The item can later be loaded using [`cache_load`](Self::cache_load)
     ///
     /// # Arguments:
     /// * `item` - the item object to be cached
@@ -1045,9 +1048,9 @@ impl ItemManager {
         item.item.cache_save()
     }
 
-    /// Save the [Item] object and its content to a byte buffer for caching
+    /// Save the [`Item`] object and its content to a byte buffer for caching
     ///
-    /// The item can later be loaded using [Self::cache_load]
+    /// The item can later be loaded using [`cache_load`](Self::cache_load)
     ///
     /// # Arguments:
     /// * `item` - the item object to be cached
@@ -1080,7 +1083,7 @@ impl CollectionInvitationManager {
     /// List the incoming collection invitations for the account
     ///
     /// # Arguments:
-    /// * `options` - the [FetchOptions] to fetch with
+    /// * `options` - the [`FetchOptions`] to fetch with
     pub fn list_incoming(
         &self,
         options: Option<&FetchOptions>,
@@ -1091,7 +1094,7 @@ impl CollectionInvitationManager {
     /// List the outgoing collection invitations for the account
     ///
     /// # Arguments:
-    /// * `options` - the [FetchOptions] to fetch with
+    /// * `options` - the [`FetchOptions`] to fetch with
     pub fn list_outgoing(
         &self,
         options: Option<&FetchOptions>,
@@ -1169,7 +1172,7 @@ impl CollectionInvitationManager {
     /// Our identity's public key
     ///
     /// This is the key users see when we send invitations.
-    /// Can be pretty printed with [crate::pretty_fingerprint].
+    /// Can be pretty printed with [`pretty_fingerprint`](crate::pretty_fingerprint).
     pub fn pubkey(&self) -> &[u8] {
         self.identity_crypto_manager.pubkey()
     }
@@ -1192,7 +1195,7 @@ impl CollectionMemberManager {
     /// List the members of a collection
     ///
     /// # Arguments:
-    /// * `options` - the [FetchOptions] to fetch with
+    /// * `options` - the [`FetchOptions`] to fetch with
     pub fn list(
         &self,
         options: Option<&FetchOptions>,
@@ -1217,7 +1220,7 @@ impl CollectionMemberManager {
     ///
     /// # Arguments:
     /// * `username` - the member's username
-    /// * `access_level` - the new [CollectionAccessLevel]
+    /// * `access_level` - the new [`CollectionAccessLevel`]
     pub fn modify_access_level(
         &self,
         username: &str,
@@ -1230,7 +1233,7 @@ impl CollectionMemberManager {
 
 /// A collection of items
 ///
-/// Like [Item]s, collections have two pieces of data associated with them:
+/// Like [`Item`]s, collections have two pieces of data associated with them:
 /// * [metadata](ItemMetadata) - contains meta information like name and modification time
 /// * Content - a buffer containing arbitrary binary data
 /// They also have an immutable type and an associated sync token
@@ -1264,20 +1267,20 @@ impl Collection {
     /// Set metadata for the collection object
     ///
     /// # Arguments:
-    /// * `meta` - the [ItemMetadata] object to be set for the collection
+    /// * `meta` - the [`ItemMetadata`] object to be set for the collection
     pub fn set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()> {
         let meta = meta.to_msgpack()?;
         self.col.set_meta(&self.cm, &meta)
     }
 
-    /// Return the [ItemMetadata] of the collection
+    /// Return the [`ItemMetadata`] of the collection
     pub fn meta(&self) -> Result<ItemMetadata> {
         self.meta_generic::<ItemMetadata>()
     }
 
-    /// Return the [ItemMetadata] of the collection deserializing using a generic metadata object
+    /// Return the [`ItemMetadata`] of the collection deserializing using a generic metadata object
     ///
-    /// The metadata object needs to implement the [MsgPackSerilization] trait.
+    /// The metadata object needs to implement the [`MsgPackSerilization`] trait.
     pub fn meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
         let decrypted = self.col.meta(&self.cm)?;
         T::from_msgpack(&decrypted)
@@ -1286,7 +1289,7 @@ impl Collection {
     /// Set metadata for the collection object from a byte array
     ///
     /// # Arguments:
-    /// * `meta` - the metadata for the collection. This needs to be a valid [ItemMetadata] struct encoded using `msgpack`.
+    /// * `meta` - the metadata for the collection. This needs to be a valid [`ItemMetadata`] struct encoded using `msgpack`.
     pub fn set_meta_raw(&mut self, meta: &[u8]) -> Result<()> {
         self.col.set_meta(&self.cm, meta)
     }
@@ -1333,7 +1336,7 @@ impl Collection {
 
     /// The sync token for the collection
     ///
-    /// The sync token reflects changes to the collection properties or its [Item]s on the server
+    /// The sync token reflects changes to the collection properties or its [`Item`]s on the server
     pub fn stoken(&self) -> Option<&str> {
         self.col.stoken()
     }
@@ -1343,7 +1346,7 @@ impl Collection {
         self.col.access_level()
     }
 
-    /// Return the collection as an [Item]
+    /// Return the collection as an [`Item`]
     pub fn item(&self) -> Result<Item> {
         let encrypted_item = self.col.item();
         let crypto_manager = encrypted_item.crypto_manager(&self.cm)?;
@@ -1385,20 +1388,20 @@ impl Item {
     /// Set metadata for the item object
     ///
     /// # Arguments:
-    /// * `meta` - the [ItemMetadata] object to be set for the item
+    /// * `meta` - the [`ItemMetadata`] object to be set for the item
     pub fn set_meta<T: MsgPackSerilization>(&mut self, meta: &T) -> Result<()> {
         let meta = meta.to_msgpack()?;
         self.item.set_meta(&self.cm, &meta)
     }
 
-    /// Return the [ItemMetadata] of the item
+    /// Return the [`ItemMetadata`] of the item
     pub fn meta(&self) -> Result<ItemMetadata> {
         self.meta_generic::<ItemMetadata>()
     }
 
-    /// Return the [ItemMetadata] of the collection deserializing using a generic metadata object
+    /// Return the [`ItemMetadata`] of the collection deserializing using a generic metadata object
     ///
-    /// The metadata object needs to implement the [MsgPackSerilization] trait.
+    /// The metadata object needs to implement the [`MsgPackSerilization`] trait.
     pub fn meta_generic<T: MsgPackSerilization>(&self) -> Result<T::Output> {
         let decrypted = self.item.meta(&self.cm)?;
         T::from_msgpack(&decrypted)
@@ -1407,7 +1410,7 @@ impl Item {
     /// Set metadata for the item object from a byte array
     ///
     /// # Arguments:
-    /// * `meta` - the metadata for the item. This needs to be a valid [ItemMetadata] struct encoded using `msgpack`.
+    /// * `meta` - the metadata for the item. This needs to be a valid [`ItemMetadata`] struct encoded using `msgpack`.
     pub fn set_meta_raw(&mut self, meta: &[u8]) -> Result<()> {
         self.item.set_meta(&self.cm, meta)
     }
@@ -1444,7 +1447,7 @@ impl Item {
 
     /// Check whether the item is missing content and should be downloaded
     ///
-    /// If it is, the content should be downloaded with [ItemManager::download_content].
+    /// If it is, the content should be downloaded with [`ItemManager::download_content`].
     pub fn is_missing_content(&self) -> bool {
         self.item.is_missing_content()
     }

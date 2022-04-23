@@ -36,7 +36,7 @@ pub fn randombytes(size: usize) -> Vec<u8> {
 
 /// Return a buffer filled with deterministically cryptographically random bytes
 ///
-/// This function is similar to [randombytes] but always returns the same data for the same seed.
+/// This function is similar to [`randombytes`] but always returns the same data for the same seed.
 /// Useful for testing purposes.
 ///
 /// # Arguments:
