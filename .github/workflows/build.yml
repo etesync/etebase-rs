@@ -7,50 +7,41 @@ on:
     branches: [ master ]
 
 jobs:
+  clippy:
+    name: Clippy lints
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@v1
+
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+
   test:
     name: Test
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/setup-go@v2.1.3
-      - uses: actions/checkout@v2
-
-      - uses: actions/checkout@v1
-
-      - name: Cache cargo registry
-        uses: actions/cache@v1
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@v1
 
       - name: Run local test Server
         run: |
           docker run -d -p 3735:3735 etesync/test-server:latest
           ./scripts/wait-for-it.sh localhost:3735
 
-      - name: Cache cargo build
-        uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - uses: actions-rs/cargo@v1.0.1
-        with:
-          command: check
-
-      - name: test
+      - name: Run tests
         env:
           ETEBASE_TEST_HOST: localhost:3735
         run: cargo test -- --test-threads=1
-
-      - run: rustup component add clippy
-
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
