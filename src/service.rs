@@ -612,17 +612,18 @@ impl CollectionManager {
     /// # Arguments:
     /// * `collection_type` - array of strings denoting the collection types
     /// * `options` - parameters to tune or optimize the fetch
-    pub fn list_multi<'a, I>(
+    pub fn list_multi<I>(
         &self,
         collection_types: I,
         options: Option<&FetchOptions>,
     ) -> Result<CollectionListResponse<Collection>>
     where
-        I: Iterator<Item = &'a str>,
+        I: IntoIterator,
+        I::Item: AsRef<str>,
     {
-        let collection_type_uids = collection_types.map(|x| {
+        let collection_type_uids = collection_types.into_iter().map(|x| {
             self.account_crypto_manager
-                .collection_type_to_uid(x)
+                .collection_type_to_uid(x.as_ref())
                 .unwrap()
         });
         let response = self
