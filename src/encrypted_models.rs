@@ -108,8 +108,8 @@ impl ItemMetadata {
     ///
     /// # Arguments:
     /// * `type` - the type to be set
-    pub fn set_item_type(&mut self, type_: Option<&str>) -> &mut Self {
-        self.type_ = type_.map(|x| x.to_string());
+    pub fn set_item_type(&mut self, type_: Option<impl Into<String>>) -> &mut Self {
+        self.type_ = type_.map(|x| x.into());
         self
     }
 
@@ -124,8 +124,8 @@ impl ItemMetadata {
     ///
     /// # Arguments:
     /// * `name` - the name to be set
-    pub fn set_name(&mut self, name: Option<&str>) -> &mut Self {
-        self.name = name.map(|x| x.to_string());
+    pub fn set_name(&mut self, name: Option<impl Into<String>>) -> &mut Self {
+        self.name = name.map(|x| x.into());
         self
     }
 
@@ -152,8 +152,8 @@ impl ItemMetadata {
     ///
     /// # Arguments:
     /// * `description` - the description to be set
-    pub fn set_description(&mut self, description: Option<&str>) -> &mut Self {
-        self.description = description.map(|x| x.to_string());
+    pub fn set_description(&mut self, description: Option<impl Into<String>>) -> &mut Self {
+        self.description = description.map(|x| x.into());
         self
     }
 
@@ -166,8 +166,8 @@ impl ItemMetadata {
     ///
     /// # Arguments:
     /// * `color` - the color to be set in `#RRGGBB` or `#RRGGBBAA` format
-    pub fn set_color(&mut self, color: Option<&str>) -> &mut Self {
-        self.color = color.map(|x| x.to_string());
+    pub fn set_color(&mut self, color: Option<impl Into<String>>) -> &mut Self {
+        self.color = color.map(|x| x.into());
         self
     }
 
