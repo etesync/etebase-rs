@@ -17,6 +17,12 @@ In addition to exposing a Rust API, this library forms the basis of other Etebas
 
 In addition to the API documentation, there are docs available at https://docs.etebase.com
 
+# Minimum supported Rust version (MSRV)
+
+The current MSRV is 1.56.0. Changes to the MSRV are not considered breaking and may occur in any patch release, it is however guaranteed that
+at least the previous Rust version will always be supported. This results in a three-month grace period from when a new Rust verion is released
+until it may become required.
+
 # Build
 
 To build:

@@ -6,6 +6,7 @@ repository = "https://github.com/etesync/etebase-rs/"
 version = "0.5.3"
 authors = ["Tom Hacohen <tom@stosb.com>"]
 edition = "2018"
+rust-version = "1.56.0"
 license = "BSD-3-Clause"
 readme = "README.md"
 keywords = ["encryption", "sync", "etesync", "cryptography", "firebase"]
