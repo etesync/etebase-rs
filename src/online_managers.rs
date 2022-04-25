@@ -7,7 +7,7 @@ use std::sync::Arc;
 use url::Url;
 
 use serde::{Deserialize, Serialize};
-use serde_bytes::Bytes;
+use serde_bytes::ByteBuf;
 
 use super::encrypted_models::{
     ChunkArrayItem, CollectionAccessLevel, EncryptedCollection, EncryptedItem, EncryptedRevision,
@@ -493,23 +493,23 @@ impl CollectionManagerOnline {
         Ok(serialized)
     }
 
-    pub fn list_multi<'a, I>(
+    pub fn list_multi<I>(
         &self,
         collection_types: I,
         options: Option<&FetchOptions>,
     ) -> Result<CollectionListResponse<EncryptedCollection>>
     where
-        I: Iterator<Item = &'a [u8]>,
+        I: IntoIterator<Item = Vec<u8>>,
     {
         let url = apply_fetch_options(self.api_base.join("list_multi/")?, options);
 
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
-        struct Body<'b> {
-            collection_types: Vec<&'b Bytes>,
+        struct Body {
+            collection_types: Vec<ByteBuf>,
         }
 
-        let collection_types: Vec<&Bytes> = collection_types.map(Bytes::new).collect();
+        let collection_types = collection_types.into_iter().map(ByteBuf::from).collect();
 
         let body_struct = Body { collection_types };
         let body = rmp_serde::to_vec_named(&body_struct)?;
