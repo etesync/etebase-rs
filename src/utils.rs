@@ -84,7 +84,7 @@ pub fn to_base64(bytes: &[u8]) -> Result<StringBase64> {
 // Fisher–Yates shuffle - an unbiased shuffler
 // The returend indices of where item is now.
 // So if the first item moved to position 3: ret[0] = 3
-pub(crate) fn shuffle<T>(a: &mut Vec<T>) -> Vec<usize> {
+pub(crate) fn shuffle<T>(a: &mut [T]) -> Vec<usize> {
     let len = a.len();
     let mut shuffled_indices: Vec<usize> = (0..len).collect();
 

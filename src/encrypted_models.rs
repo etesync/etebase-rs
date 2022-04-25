@@ -42,9 +42,7 @@ impl AccountCryptoManager {
     pub fn new(key: &[u8; 32], version: u8) -> Result<Self> {
         let context = b"Acct    ";
 
-        Ok(Self {
-            0: CryptoManager::new(key, &context, version)?,
-        })
+        Ok(Self(CryptoManager::new(key, context, version)?))
     }
 
     pub fn collection_type_to_uid(&self, collection_type: &str) -> Result<Vec<u8>> {
@@ -69,9 +67,7 @@ impl CollectionCryptoManager {
     pub fn new(key: &[u8; 32], version: u8) -> Result<Self> {
         let context = b"Col     ";
 
-        Ok(Self {
-            0: CryptoManager::new(key, &context, version)?,
-        })
+        Ok(Self(CryptoManager::new(key, context, version)?))
     }
 }
 
@@ -81,9 +77,7 @@ impl ItemCryptoManager {
     pub fn new(key: &[u8; 32], version: u8) -> Result<Self> {
         let context = b"ColItem ";
 
-        Ok(Self {
-            0: CryptoManager::new(key, &context, version)?,
-        })
+        Ok(Self(CryptoManager::new(key, context, version)?))
     }
 }
 
@@ -317,7 +311,7 @@ impl EncryptedCollection {
             &collection_key,
             Some(&collection_type),
         )?;
-        let item = EncryptedItem::new(&crypto_manager, &meta, content)?;
+        let item = EncryptedItem::new(&crypto_manager, meta, content)?;
 
         Ok(Self {
             item,
@@ -393,7 +387,7 @@ impl EncryptedCollection {
         meta: &[u8],
     ) -> Result<()> {
         let item_crypto_manager = self.item.crypto_manager(crypto_manager)?;
-        self.item.set_meta(&item_crypto_manager, &meta)
+        self.item.set_meta(&item_crypto_manager, meta)
     }
 
     pub fn meta(&self, crypto_manager: &CollectionCryptoManager) -> Result<Vec<u8>> {
@@ -573,8 +567,8 @@ impl EncryptedRevision {
             chunks: vec![],
         };
 
-        ret.set_meta(&crypto_manager, additional_data, meta)?;
-        ret.set_content(&crypto_manager, additional_data, content)?;
+        ret.set_meta(crypto_manager, additional_data, meta)?;
+        ret.set_content(crypto_manager, additional_data, content)?;
 
         Ok(ret)
     }
@@ -743,11 +737,11 @@ impl EncryptedRevision {
             let hash_str = &item.0;
             let buf = &item.1;
             let buf = match buf {
-                Some(buf) => buffer_unpad(&crypto_manager.0.decrypt(&buf, None)?)?,
+                Some(buf) => buffer_unpad(&crypto_manager.0.decrypt(buf, None)?)?,
                 None => return Err(Error::MissingContent("Got chunk without data")),
             };
 
-            let hash = from_base64(&hash_str)?;
+            let hash = from_base64(hash_str)?;
             let calculated_mac = crypto_manager.0.calculate_mac(&buf)?;
 
             if !memcmp(&hash, &calculated_mac) {
@@ -772,8 +766,7 @@ impl EncryptedRevision {
                 if indices.len() > 1 {
                     let sorted_chunks: Vec<u8> = indices
                         .into_iter()
-                        .map(|index| &decrypted_chunks[index])
-                        .flatten()
+                        .flat_map(|index| &decrypted_chunks[index])
                         // FIXME: We shouldn't copy but rather just move from the array
                         .copied()
                         .collect::<Vec<u8>>();
@@ -827,7 +820,7 @@ impl EncryptedItem {
         let content = EncryptedRevision::new(
             &crypto_manager,
             Self::additional_mac_data_static(&uid),
-            &meta,
+            meta,
             content,
         )?;
 
@@ -986,7 +979,7 @@ impl EncryptedItem {
         &self,
         parent_crypto_manager: &CollectionCryptoManager,
     ) -> Result<ItemCryptoManager> {
-        let encryption_key = self.encryption_key.as_deref().map(|x| &x[..]);
+        let encryption_key = self.encryption_key.as_deref();
         Self::crypto_manager_static(
             parent_crypto_manager,
             &self.uid,

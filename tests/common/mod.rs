@@ -25,7 +25,7 @@ pub struct TestUser {
 }
 
 #[allow(non_upper_case_globals)]
-pub const sessionStorageKey: &'static str = "YA0cMVJ9Q_SKYJCvKNni9y13vf62rEIq8M6kjtT14b4";
+pub const sessionStorageKey: &str = "YA0cMVJ9Q_SKYJCvKNni9y13vf62rEIq8M6kjtT14b4";
 
 pub const USER: TestUser = TestUser {
   username: "test_user",

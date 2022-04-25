@@ -509,7 +509,7 @@ impl CollectionManagerOnline {
             collection_types: Vec<&'b Bytes>,
         }
 
-        let collection_types: Vec<&Bytes> = collection_types.map(|x| Bytes::new(x)).collect();
+        let collection_types: Vec<&Bytes> = collection_types.map(Bytes::new).collect();
 
         let body_struct = Body { collection_types };
         let body = rmp_serde::to_vec_named(&body_struct)?;

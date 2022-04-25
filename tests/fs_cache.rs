@@ -32,8 +32,8 @@ impl TempDir {
 
         let path = tmpdir.join(&name);
         match std::fs::create_dir(&path) {
-            Ok(_) => return Ok(TempDir { path }),
-            Err(e) => return Err(e),
+            Ok(_) => Ok(TempDir { path }),
+            Err(e) => Err(e),
         }
     }
 
