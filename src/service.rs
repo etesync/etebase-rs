@@ -620,15 +620,11 @@ impl CollectionManager {
     where
         I: Iterator<Item = &'a str>,
     {
-        // FIXME: we can avoid this extra allocation
-        let collection_type_uids: Vec<Vec<u8>> = collection_types
-            .map(|x| {
-                self.account_crypto_manager
-                    .collection_type_to_uid(x)
-                    .unwrap()
-            })
-            .collect();
-        let collection_type_uids = collection_type_uids.iter().map(|x| &x[..]);
+        let collection_type_uids = collection_types.map(|x| {
+            self.account_crypto_manager
+                .collection_type_to_uid(x)
+                .unwrap()
+        });
         let response = self
             .collection_manager_online
             .list_multi(collection_type_uids, options)?;
