@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  workflow_call:
+    inputs:
+      rust-version:
+        required: true
+        type: string
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ inputs.rust-version }}
+          override: true
+      - uses: Swatinem/rust-cache@v1
+
+      - name: Run local test Server
+        run: |
+          docker run -d -p 3735:3735 etesync/test-server:latest
+          ./scripts/wait-for-it.sh localhost:3735
+
+      - name: Run tests
+        env:
+          ETEBASE_TEST_HOST: localhost:3735
+        run: cargo test -- --test-threads=1
