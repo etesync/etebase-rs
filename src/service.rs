@@ -98,9 +98,9 @@ impl Account {
     ///
     /// # Arguments:
     /// * `client` - the already setup [`Client`] object
+    #[deprecated = "Use `Client::is_server_valid` instead"]
     pub fn is_etebase_server(client: &Client) -> Result<bool> {
-        let authenticator = Authenticator::new(client);
-        authenticator.is_etebase_server()
+        client.is_server_valid()
     }
 
     /// Creates a new user on the server and returns a handle to it. The user is authenticated
