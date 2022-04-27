@@ -15,9 +15,10 @@ use reqwest_client::Client as ReqwestImpl;
 
 /// The network client to use to interact with the Etebase server
 ///
-/// This is in charge of actually connecting to the server and making network requests. Depending
-/// on your configuration this can be overridden and replaced with a completely different
-/// implementation.
+/// This is in charge of actually connecting to the server and making network requests.
+/// If the `"networking"` crate feature is enabled, it uses an internal HTTP client based on
+/// the `reqwest` crate. If the feature is not enabled, an external HTTP(S) client implementation
+/// implementing the [`ClientImplementation`] trait needs to be supplied.
 #[derive(Clone)]
 pub struct Client {
     auth_token: Option<String>,
@@ -37,13 +38,19 @@ impl Client {
         Ok(ret)
     }
 
-    /// Return a new client object
+    /// Creates a new client object for the server located at `server_url`.
     ///
-    /// The client object manages the connection to the Etebase server
+    /// The `client_name` will be used to populate the `User-Agent` header in all requests
+    /// to the server.
     ///
-    /// # Arguments:
-    /// * `client_name` - a string identifier for the client
-    /// * `server_url` - the Etebase server URL
+    /// # Examples
+    ///
+    /// ```
+    /// use etebase::Client;
+    ///
+    /// // For an application called "FancyClient"
+    /// let my_client = Client::new("FancyClient", "https://myhost.example");
+    /// ```
     #[cfg(feature = "networking")]
     pub fn new(client_name: &str, server_url: &str) -> Result<Self> {
         let imp = ReqwestImpl::new(client_name)?;
@@ -54,6 +61,29 @@ impl Client {
         })
     }
 
+    /// Creates a new client object for the server located at `server_url` using a user-supplied
+    /// HTTP(S) client implementation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use etebase::{Client, http_custom_client::ClientImplementation};
+    /// # use etebase::http_custom_client::Response;
+    /// # struct ExternalClient;
+    ///
+    /// // For some `ExternalClient` provided by the HTTP client implementation of choice:
+    /// impl ClientImplementation for ExternalClient {
+    ///     // ...
+    /// #   fn get(&self, _: &str, _: Option<&str>) -> Response { unimplemented!() }
+    /// #   fn post(&self, _: &str, _: Option<&str>, _: Vec<u8>) -> Response { unimplemented!() }
+    /// #   fn put(&self, _: &str, _: Option<&str>, _: Vec<u8>) -> Response { unimplemented!() }
+    /// #   fn patch(&self, _: &str, _: Option<&str>, _: Vec<u8>) -> Response { unimplemented!() }
+    /// #   fn delete(&self, _: &str, _: Option<&str>) -> Response { unimplemented!() }
+    /// }
+    ///
+    /// let external_client = Box::new(ExternalClient);
+    /// let my_client = Client::new_with_impl("https://myhost.example", external_client);
+    /// ```
     #[cfg(not(feature = "networking"))]
     pub fn new_with_impl(server_url: &str, imp: Box<dyn ClientImplementation>) -> Result<Self> {
         Ok(Self {
@@ -72,6 +102,17 @@ impl Client {
     }
 
     /// Set the server url associated with this client
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use etebase::Client;
+    ///
+    /// let mut client = Client::new("ExampleClient", "https://invalid.example").unwrap();
+    /// client.set_server_url("https://another.example");
+    ///
+    /// assert_eq!(client.server_url().to_string(), "https://another.example/");
+    /// ```
     pub fn set_server_url(&mut self, server_url: &str) -> Result<()> {
         self.api_base = Self::normalize_url(server_url)?;
 
@@ -79,6 +120,16 @@ impl Client {
     }
 
     /// Return the server url associated with this client
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use etebase::Client;
+    ///
+    /// let client = Client::new("ExampleClient", "https://invalid.example").unwrap();
+    ///
+    /// assert_eq!(client.server_url().to_string(), "https://invalid.example/");
+    /// ```
     pub fn server_url(&self) -> &Url {
         &self.api_base
     }

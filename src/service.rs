@@ -83,7 +83,8 @@ pub struct AccountDataStored<'a> {
     pub encrypted_data: &'a [u8],
 }
 
-/// Represents a user account and is the main object for all user interactions and data manipulation
+/// The main object for all user interactions and data manipulation, representing an authenticated
+/// user account.
 pub struct Account {
     main_key: Vec<u8>,
     version: u8,
@@ -102,12 +103,8 @@ impl Account {
         authenticator.is_etebase_server()
     }
 
-    /// Signup a new user account and return a handle to it
-    ///
-    /// # Arguments:
-    /// * `client` - the already setup [`Client`] object
-    /// * `user` - the already setup [`User`] object
-    /// * `password` - the password to signup with
+    /// Creates a new user on the server and returns a handle to it. The user is authenticated
+    /// using the given `password`.
     pub fn signup(client: Client, user: &User, password: &str) -> Result<Self> {
         super::init()?;
 
@@ -117,14 +114,8 @@ impl Account {
         Self::signup_common(client, user, main_key, salt)
     }
 
-    /// Signup a new user account with a key and return a handle to it
-    ///
-    /// Unlike [`signup`](Self::signup), this uses a strong key instead of a password
-    ///
-    /// # Arguments:
-    /// * `client` - the already setup [`Client`] object
-    /// * `user` - the already setup [`User`] object
-    /// * `main_key` - the 32-byte key to signup with
+    /// Creates a new user on the server and returns a handle to it. The user is authenticated
+    /// using a cryptographically secure random 32-byte `main_key` instead of a password.
     pub fn signup_key(client: Client, user: &User, main_key: &[u8]) -> Result<Self> {
         super::init()?;
 
@@ -182,12 +173,7 @@ impl Account {
         Ok(ret)
     }
 
-    /// Login a user and return a handle to an [`Account`] object
-    ///
-    /// # Arguments:
-    /// * `username` - the user's username. This is not the same as the user's email.
-    /// * `client` - the already setup [`Client`] object
-    /// * `password` - the user's password
+    /// Authenticates a user using their `password` and returns an `Account` handle on success.
     pub fn login(client: Client, username: &str, password: &str) -> Result<Self> {
         super::init()?;
 
@@ -210,14 +196,8 @@ impl Account {
         Self::login_common(client, username, main_key, login_challenge)
     }
 
-    /// Login a user with a key and return a handle to an [`Account`] object
-    ///
-    /// Unlike [`login`](Self::login), this uses a strong key instead of a password
-    ///
-    /// # Arguments:
-    /// * `username` - the user's username. This is not the same as the user's email.
-    /// * `client` - the already setup [`Client`] object
-    /// * `main_key` - the key to signup with
+    /// Authenticates a user using the same `main_key` as was provided to
+    /// [`signup_key`](Self::signup_key) and returns an `Account` handle on success.
     pub fn login_key(client: Client, username: &str, main_key: &[u8]) -> Result<Self> {
         super::init()?;
 
@@ -333,8 +313,7 @@ impl Account {
 
     /// Change the server URL for this account handle
     ///
-    /// # Arguments:
-    /// * `api_base` - the new server URL to be set
+    /// See also [`Client::set_server_url`].
     pub fn force_server_url(&mut self, api_base: &str) -> Result<()> {
         let mut client = (*self.client).clone();
         client.set_server_url(api_base)?;
@@ -343,11 +322,9 @@ impl Account {
         Ok(())
     }
 
-    /// Change the user's login password
-    ///
-    /// # Arguments:
-    /// * `password` - the new password to be set
-    pub fn change_password(&mut self, password: &str) -> Result<()> {
+    /// Change the user's login password. If the account currently uses key-based login, the key is
+    /// invalidated and subsequent logins have to use the password.
+    pub fn change_password(&mut self, new_password: &str) -> Result<()> {
         let authenticator = Authenticator::new(&self.client);
         let version = self.version;
         let username = &self.user.username;
@@ -360,7 +337,7 @@ impl Account {
             .decrypt(&self.user.encrypted_content, None)?;
         let old_login_crypto_manager = old_main_crypto_manager.login_crypto_manager()?;
 
-        let main_key = derive_key(&login_challenge.salt, password)?;
+        let main_key = derive_key(&login_challenge.salt, new_password)?;
         let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
         let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
@@ -419,10 +396,9 @@ impl Account {
         authenticator.logout()
     }
 
-    /// Save the account object to a string for restoring it later using [`restore`](Self::restore)
+    /// Serializes the account object to a string for restoring it later using [`restore`](Self::restore).
     ///
-    /// # Arguments:
-    /// * `encryption_key` - used to encrypt the returned account string to enhance security
+    /// The data should be encrypted using a 32-byte `encryption_key` for added security.
     pub fn save(&self, encryption_key: Option<&[u8]>) -> Result<String> {
         let version = super::CURRENT_VERSION;
         let encryption_key = encryption_key.unwrap_or(&[0; 32]);
@@ -445,13 +421,14 @@ impl Account {
         to_base64(&serialized)
     }
 
-    /// Restore and return the [`Account`] object from the string obtained using
-    /// [`save`](Self::save)
+    /// Deserialize and return the [`Account`] object from the string obtained using
+    /// [`save`](Self::save).
     ///
     /// # Arguments:
     /// * `client` - the already setup [`Client`] object
     /// * `account_data_stored` - the stored account string
     /// * `encryption_key` - the same encryption key passed to [`save`](Self::save) while saving the account
+    // FIXME: we don't actually need a full `Client` here, only its `ClientImplementation`
     pub fn restore(
         mut client: Client,
         account_data_stored: &str,
