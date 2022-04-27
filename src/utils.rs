@@ -26,10 +26,19 @@ pub const SYMMETRIC_TAG_SIZE: usize = 16; // sodium.crypto_aead_xchacha20poly130
 /// The size of a symmetric encryption nonce
 pub const SYMMETRIC_NONCE_SIZE: usize = 24; // sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
 
-/// Return a buffer filled with cryptographically random bytes
+/// Returns a buffer filled with cryptographically random bytes.
 ///
-/// # Arguments:
-/// * `size` - the size of the returned buffer (in bytes)
+/// # Examples
+///
+/// ```
+/// use etebase::utils::randombytes;
+///
+/// let a = randombytes(5);
+/// assert_eq!(5, a.len());
+///
+/// let b = randombytes(0);
+/// assert!(b.is_empty());
+/// ```
 pub fn randombytes(size: usize) -> Vec<u8> {
     sodiumoxide::randombytes::randombytes(size)
 }
@@ -42,6 +51,26 @@ pub fn randombytes(size: usize) -> Vec<u8> {
 /// # Arguments:
 /// * `seed` - the seed to generate the random data from
 /// * `size` - the size of the returned buffer (in bytes)
+///
+/// # Examples
+///
+/// ```
+/// use etebase::utils::randombytes_deterministic;
+///
+/// let seed = [42; 32];
+///
+/// // Equal seeds produce equal sequences, regardless of length
+/// let a = randombytes_deterministic(10, &seed);
+/// let b = randombytes_deterministic(5, &seed);
+///
+/// assert_eq!(a[..5], b);
+///
+/// // Different seeds produce different sequences
+/// let c = randombytes_deterministic(10, &[0; 32]);
+///
+/// assert_ne!(a, c);
+/// assert_eq!(c, &[5, 67, 208, 128, 105, 110, 24, 70, 104, 100]);
+/// ```
 pub fn randombytes_deterministic(size: usize, seed: &[u8; 32]) -> Vec<u8> {
     // Not exactly like the sodium randombytes_deterministic but close enough
     let nonce =
@@ -51,21 +80,47 @@ pub fn randombytes_deterministic(size: usize, seed: &[u8; 32]) -> Vec<u8> {
     sodiumoxide::crypto::stream::xchacha20::stream(size, &nonce, &key)
 }
 
-/// A constant-time comparison function
+/// A constant-time comparison function. Returns `true` if `x` and `y` are equal.
 ///
 /// Use this when comparing secret data in order to prevent side-channel attacks.
 ///
-/// # Arguments:
-/// * `x` - the first buffer
-/// * `y` - the second buffer
+/// # Examples
+///
+/// ```
+/// use etebase::utils::memcmp;
+///
+/// fn validate_password(input: &[u8]) -> Result<(), ()> {
+///     let password = b"hunter2";
+///
+///     if memcmp(input, password) {
+///         Ok(())
+///     } else {
+///         Err(())
+///     }
+/// }
+///
+/// assert_eq!(Err(()), validate_password(b"letmein"));
+/// assert_eq!(Err(()), validate_password(b""));
+/// assert_eq!(Ok(()), validate_password(b"hunter2"));
+/// ```
 pub fn memcmp(x: &[u8], y: &[u8]) -> bool {
     sodiumoxide::utils::memcmp(x, y)
 }
 
-/// Convert a Base64 URL encoded string to a buffer
+/// Converts a Base64 URL encoded string to a Vec of bytes.
 ///
-/// # Arguments:
-/// * `string` - the Base64 URL encoded string
+/// # Examples
+///
+/// ```
+/// use etebase::utils::from_base64;
+///
+/// let data = "SGVsbG8_IFdvcmxkIQ";
+/// let decoded = from_base64(data);
+///
+/// assert_eq!(Ok(b"Hello? World!".to_vec()), decoded);
+///
+/// assert_eq!(Ok(b"".to_vec()), from_base64(""));
+/// ```
 pub fn from_base64(string: &StrBase64) -> Result<Vec<u8>> {
     match base64::decode(string, base64::Variant::UrlSafeNoPadding) {
         Ok(bytes) => Ok(bytes),
@@ -75,8 +130,18 @@ pub fn from_base64(string: &StrBase64) -> Result<Vec<u8>> {
 
 /// Convert a buffer to a Base64 URL encoded string
 ///
-/// # Arguments:
-/// * `bytes` - the buffer to convert
+/// # Examples
+///
+/// ```
+/// use etebase::utils::to_base64;
+///
+/// let data = b"Hello? World!";
+/// let encoded = to_base64(data);
+///
+/// assert_eq!(Ok("SGVsbG8_IFdvcmxkIQ"), encoded.as_deref());
+///
+/// assert_eq!(Ok(""), to_base64(b"").as_deref());
+/// ```
 pub fn to_base64(bytes: &[u8]) -> Result<StringBase64> {
     Ok(base64::encode(bytes, base64::Variant::UrlSafeNoPadding))
 }
