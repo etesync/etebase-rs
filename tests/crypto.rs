@@ -13,7 +13,11 @@ use std::convert::TryInto;
 fn derive_key() {
     etebase::init().unwrap();
 
-    let derived = crypto::derive_key(&from_base64(USER.salt).unwrap(), USER.password).unwrap();
+    let derived = crypto::derive_key(
+        from_base64(USER.salt).unwrap()[..16].try_into().unwrap(),
+        USER.password,
+    )
+    .unwrap();
     let expected = from_base64(USER.key).unwrap();
     assert_eq!(&derived[..], &expected[..]);
 }

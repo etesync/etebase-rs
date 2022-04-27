@@ -8,7 +8,7 @@ use sodiumoxide::crypto::{
     sign,
 };
 
-use crate::utils::SYMMETRIC_KEY_SIZE;
+use crate::utils::{SALT_LENGTH, SYMMETRIC_KEY_SIZE};
 
 use super::error::{Error, Result};
 
@@ -33,11 +33,8 @@ pub fn init() -> Result<()> {
     to_enc_error!(sodiumoxide::init(), "Failed initialising libsodium")
 }
 
-pub fn derive_key(salt: &[u8], password: &str) -> Result<[u8; SYMMETRIC_KEY_SIZE]> {
+pub fn derive_key(salt: &[u8; SALT_LENGTH], password: &str) -> Result<[u8; SYMMETRIC_KEY_SIZE]> {
     let mut key = [0; SYMMETRIC_KEY_SIZE];
-    let salt = &salt[..argon2id13::SALTBYTES];
-    let salt: &[u8; argon2id13::SALTBYTES] =
-        to_enc_error!(salt.try_into(), "Expect salt to be at least 16 bytes")?;
     let password = password.as_bytes();
 
     argon2id13::derive_key(

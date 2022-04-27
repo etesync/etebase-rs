@@ -7,6 +7,7 @@ use std::convert::TryInto;
 use std::iter;
 use std::sync::Arc;
 
+use crate::utils::SALT_LENGTH;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -25,8 +26,8 @@ use super::{
     },
     try_into,
     utils::{
-        buffer_unpad, from_base64, randombytes, to_base64, MsgPackSerilization, StrBase64,
-        SYMMETRIC_KEY_SIZE,
+        buffer_unpad, from_base64, randombytes, randombytes_array, to_base64, MsgPackSerilization,
+        StrBase64, SYMMETRIC_KEY_SIZE,
     },
 };
 
@@ -108,8 +109,10 @@ impl Account {
     pub fn signup(client: Client, user: &User, password: &str) -> Result<Self> {
         super::init()?;
 
-        let salt = randombytes(32);
-        let main_key = derive_key(&salt, password)?;
+        // only the first 16 bytes of the salt are used for key generation, but previous
+        // implementations have always generated 32 bytes regardless.
+        let salt = randombytes_array::<32>();
+        let main_key = derive_key(&salt[..16].try_into().unwrap(), password)?;
 
         Self::signup_common(client, user, main_key, &salt)
     }
@@ -124,7 +127,9 @@ impl Account {
             .try_into()
             .map_err(|_| Error::ProgrammingError("Key should be exactly 32 bytes long."))?;
 
-        let salt = randombytes(32);
+        // Since the key is provided as-is instead of being generated from a password+hash, this is
+        // not actually used for anything; generate it anyway for consistency.
+        let salt = randombytes_array::<32>();
 
         Self::signup_common(client, user, main_key, &salt)
     }
@@ -189,7 +194,17 @@ impl Account {
             rest => rest?,
         };
 
-        let main_key = derive_key(&login_challenge.salt, password)?;
+        // A 32-byte value is generated during signup, but only first 16 bytes are used for key
+        // generation.
+        let salt = login_challenge
+            .salt
+            .get(..SALT_LENGTH)
+            .ok_or(Error::Encryption(
+                "Salt obtained from login challenge too short: expected at least 16 bytes",
+            ))?
+            .try_into()
+            .unwrap();
+        let main_key = derive_key(&salt, password)?;
 
         Self::login_common(client, username, main_key, login_challenge)
     }
@@ -330,7 +345,15 @@ impl Account {
             .decrypt(&self.user.encrypted_content, None)?;
         let old_login_crypto_manager = old_main_crypto_manager.login_crypto_manager()?;
 
-        let main_key = derive_key(&login_challenge.salt, new_password)?;
+        let salt = login_challenge
+            .salt
+            .get(..SALT_LENGTH)
+            .ok_or(Error::Encryption(
+                "Salt obtained from login challenge too short: expected at least 16 bytes",
+            ))?
+            .try_into()
+            .unwrap();
+        let main_key = derive_key(&salt, new_password)?;
         let main_crypto_manager = MainCryptoManager::new(&main_key, version)?;
         let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
