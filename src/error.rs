@@ -8,7 +8,7 @@ use std::fmt;
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// The error type returned from the Etebase API
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     /// A generic error
     Generic(String),
