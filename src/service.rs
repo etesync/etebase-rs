@@ -7,7 +7,7 @@ use std::convert::TryInto;
 use std::iter;
 use std::sync::Arc;
 
-use crate::utils::SALT_LENGTH;
+use crate::utils::{PRIVATE_KEY_SIZE, SALT_LENGTH};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -269,9 +269,16 @@ impl Account {
         let content = main_crypto_manager
             .0
             .decrypt(&login_response.user.encrypted_content, None)?;
-        let account_key = &content[..SYMMETRIC_KEY_SIZE];
-        let account_crypto_manager =
-            main_crypto_manager.account_crypto_manager(try_into!(account_key)?)?;
+
+        // The content is the concatenation of the account key and the private key
+        let account_key = content
+            .get(..SYMMETRIC_KEY_SIZE)
+            .ok_or(Error::Encryption(
+                "Server's login response too short to contain account key",
+            ))?
+            .try_into()
+            .unwrap();
+        let account_crypto_manager = main_crypto_manager.account_crypto_manager(account_key)?;
 
         let ret = Self {
             main_key,
@@ -417,8 +424,17 @@ impl Account {
     /// The data should be encrypted using a 32-byte `encryption_key` for added security.
     pub fn save(&self, encryption_key: Option<&[u8]>) -> Result<String> {
         let version = super::CURRENT_VERSION;
-        let encryption_key = encryption_key.unwrap_or(&[0; 32]);
-        let crypto_manager = StorageCryptoManager::new(try_into!(encryption_key)?, version)?;
+
+        let encryption_key = if let Some(encryption_key) = encryption_key {
+            // TODO: change argument type to Option<&[u8; 32]>
+            encryption_key.try_into().map_err(|_| {
+                Error::ProgrammingError("Encryption key must be exactly 32 bytes long")
+            })?
+        } else {
+            &[0; 32]
+        };
+
+        let crypto_manager = StorageCryptoManager::new(encryption_key, version)?;
         let account_data = AccountData {
             user: self.user.clone(),
             version,
@@ -450,13 +466,21 @@ impl Account {
         account_data_stored: &str,
         encryption_key: Option<&[u8]>,
     ) -> Result<Self> {
-        let encryption_key = encryption_key.unwrap_or(&[0; 32]);
+        let encryption_key = if let Some(encryption_key) = encryption_key {
+            // TODO: change argument type to Option<&[u8; 32]>
+            encryption_key.try_into().map_err(|_| {
+                Error::ProgrammingError("Encryption key must be exactly 32 bytes long")
+            })?
+        } else {
+            &[0; 32]
+        };
+
         let account_data_stored = from_base64(account_data_stored)?;
         let account_data_stored: AccountDataStored =
             rmp_serde::from_read_ref(&account_data_stored)?;
         let version = account_data_stored.version;
 
-        let crypto_manager = StorageCryptoManager::new(try_into!(encryption_key)?, version)?;
+        let crypto_manager = StorageCryptoManager::new(encryption_key, version)?;
         let decrypted = crypto_manager
             .0
             .decrypt(account_data_stored.encrypted_data, Some(&[version]))?;
@@ -466,15 +490,25 @@ impl Account {
         client.set_server_url(account_data.server_url)?;
 
         let main_key = crypto_manager.0.decrypt(account_data.key, None)?;
-        let main_key = try_into!(&main_key[..])?;
+        let main_key = main_key
+            .as_slice()
+            .try_into()
+            .map_err(|_| Error::Encryption("Restored main key has wrong size"))?;
 
         let main_crypto_manager = MainCryptoManager::new(&main_key, version)?;
         let content = main_crypto_manager
             .0
             .decrypt(&account_data.user.encrypted_content, None)?;
-        let account_key = &content[..SYMMETRIC_KEY_SIZE];
-        let account_crypto_manager =
-            main_crypto_manager.account_crypto_manager(try_into!(account_key)?)?;
+
+        // The content is the concatenation of the account key and the private key
+        let account_key = content
+            .get(..SYMMETRIC_KEY_SIZE)
+            .ok_or(Error::Encryption(
+                "Server's login response too short to contain account key",
+            ))?
+            .try_into()
+            .unwrap();
+        let account_crypto_manager = main_crypto_manager.account_crypto_manager(account_key)?;
 
         Ok(Self {
             user: account_data.user,
@@ -512,8 +546,16 @@ impl Account {
         let content = main_crypto_manager
             .0
             .decrypt(&self.user.encrypted_content, None)?;
-        let privkey = &content[SYMMETRIC_KEY_SIZE..];
-        main_crypto_manager.identity_crypto_manager(try_into!(privkey)?)
+
+        // The content is the concatenation of the account key and the private key
+        let privkey = content
+            .get(SYMMETRIC_KEY_SIZE..(SYMMETRIC_KEY_SIZE + PRIVATE_KEY_SIZE))
+            .ok_or(Error::Encryption(
+                "Server's login response too short to contain private key",
+            ))?
+            .try_into()
+            .unwrap();
+        main_crypto_manager.identity_crypto_manager(privkey)
     }
 }
 

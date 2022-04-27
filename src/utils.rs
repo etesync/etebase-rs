@@ -24,6 +24,8 @@ pub type StringBase64 = String;
 
 /// The size of the salt added to the password to derive the symmetric encryption key
 pub const SALT_LENGTH: usize = 16; // sodium.crypto_pwhash_argon2id_SALTBYTES
+/// The size of the private encryption key
+pub const PRIVATE_KEY_SIZE: usize = 32; // sodium.crypto_box_curve25519xsalsa20poly1305_SECRETKEYBYTES;
 /// The size of a symmetric encryption key
 pub const SYMMETRIC_KEY_SIZE: usize = 32; // sodium.crypto_aead_xchacha20poly1305_ietf_KEYBYTES;
 /// The size of a symmetric encryption tag

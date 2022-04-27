@@ -16,7 +16,6 @@ use super::{
     chunker::Rollsum,
     crypto::{BoxCryptoManager, CryptoMac, CryptoManager},
     error::{Error, Result},
-    try_into,
     utils::{
         buffer_pad, buffer_pad_fixed, buffer_pad_small, buffer_unpad, buffer_unpad_fixed,
         from_base64, memcmp, randombytes, shuffle, to_base64, MsgPackSerilization, StringBase64,
@@ -266,15 +265,17 @@ impl SignedInvitation {
         &self,
         identity_crypto_manager: &BoxCryptoManager,
     ) -> Result<Vec<u8>> {
-        let from_pubkey = match self.from_pubkey.as_deref() {
-            Some(from_pubkey) => from_pubkey,
-            None => {
-                return Err(Error::ProgrammingError(
-                    "Missing invitation encryption key.",
-                ))
-            }
-        };
-        identity_crypto_manager.decrypt(&self.signed_encryption_key, try_into!(from_pubkey)?)
+        let from_pubkey = self
+            .from_pubkey
+            .as_deref()
+            .ok_or(Error::ProgrammingError(
+                "Missing invitation encryption key.",
+            ))?
+            .try_into()
+            .map_err(|_| {
+                Error::Encryption("Received invitation encryption key has wrong length")
+            })?;
+        identity_crypto_manager.decrypt(&self.signed_encryption_key, from_pubkey)
     }
 }
 
@@ -527,9 +528,12 @@ impl EncryptedCollection {
         collection_type: Option<&[u8]>,
     ) -> Result<CollectionCryptoManager> {
         let encryption_key =
-            Self::collection_key_static(parent_crypto_manager, encryption_key, collection_type)?;
+            Self::collection_key_static(parent_crypto_manager, encryption_key, collection_type)?
+                .as_slice()
+                .try_into()
+                .map_err(|_| Error::Encryption("Collection encryption key has wrong length"))?;
 
-        CollectionCryptoManager::new(try_into!(&encryption_key[..])?, version)
+        CollectionCryptoManager::new(&encryption_key, version)
     }
 
     pub fn crypto_manager(
@@ -610,12 +614,13 @@ impl EncryptedRevision {
         crypto_manager: &ItemCryptoManager,
         additional_data: &[u8],
     ) -> Result<bool> {
-        let mac = from_base64(&self.uid)?;
+        let mac = from_base64(&self.uid)?
+            .as_slice()
+            .try_into()
+            .map_err(|_| Error::Encryption("Collection MAC has wrong length"))?;
         let ad_hash = self.calculate_hash(crypto_manager, additional_data)?;
 
-        crypto_manager
-            .0
-            .verify(&self.meta, try_into!(&mac[..])?, Some(&ad_hash))
+        crypto_manager.0.verify(&self.meta, &mac, Some(&ad_hash))
     }
 
     pub fn set_meta(
@@ -640,14 +645,17 @@ impl EncryptedRevision {
         crypto_manager: &ItemCryptoManager,
         additional_data: &[u8],
     ) -> Result<Vec<u8>> {
-        let mac = from_base64(&self.uid)?;
+        let mac = from_base64(&self.uid)?
+            .as_slice()
+            .try_into()
+            .map_err(|_| Error::Encryption("Collection MAC has wrong length"))?;
         let ad_hash = self.calculate_hash(crypto_manager, additional_data)?;
 
-        buffer_unpad(&crypto_manager.0.decrypt_detached(
-            &self.meta,
-            try_into!(&mac[..])?,
-            Some(&ad_hash),
-        )?)
+        buffer_unpad(
+            &crypto_manager
+                .0
+                .decrypt_detached(&self.meta, &mac, Some(&ad_hash))?,
+        )
     }
 
     pub fn set_content(
