@@ -80,14 +80,14 @@ fn verify_item(item: &Item, meta: &ItemMetadata, content: &[u8]) -> Result<()> {
 #[test]
 fn is_etebase_server() -> Result<()> {
     let client = Client::new(CLIENT_NAME, &test_url())?;
-    assert!(Account::is_etebase_server(&client)?);
+    assert!(client.is_server_valid()?);
 
     let test_url = format!("{}/api/", test_url());
     let client = Client::new(CLIENT_NAME, &test_url)?;
-    assert!(!Account::is_etebase_server(&client)?);
+    assert!(!client.is_server_valid()?);
 
     let client = Client::new(CLIENT_NAME, "http://doesnotexist")?;
-    assert!(Account::is_etebase_server(&client).is_err());
+    assert!(client.is_server_valid().is_err());
 
     // Verify we also fail correctly for login
     let client = Client::new(CLIENT_NAME, &test_url)?;

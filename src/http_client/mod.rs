@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use url::Url;
 
+use crate::online_managers::Authenticator;
+
 use super::error::Result;
 
 mod client_impl;
@@ -91,6 +93,23 @@ impl Client {
             auth_token: None,
             imp: Arc::new(imp),
         })
+    }
+
+    /// Checks whether the [`Client`] is pointing to a valid Etebase server.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use etebase::Client;
+    ///
+    /// let invalid_client = Client::new("ExampleClient", "https://example.com").unwrap();
+    /// assert!(!invalid_client.is_server_valid().unwrap());
+    ///
+    /// let valid_client = Client::new("ExampleClient", "https://api.etebase.com/").unwrap();
+    /// assert!(valid_client.is_server_valid().unwrap());
+    /// ```
+    pub fn is_server_valid(&self) -> Result<bool> {
+        Authenticator::new(self).is_etebase_server()
     }
 
     pub(crate) fn set_token(&mut self, token: Option<&str>) {
