@@ -111,7 +111,7 @@ impl Account {
         let salt = randombytes(32);
         let main_key = derive_key(&salt, password)?;
 
-        Self::signup_common(client, user, main_key, salt)
+        Self::signup_common(client, user, main_key, &salt)
     }
 
     /// Creates a new user on the server and returns a handle to it. The user is authenticated
@@ -128,14 +128,14 @@ impl Account {
         let salt = randombytes(32);
         let main_key = main_key.to_vec();
 
-        Self::signup_common(client, user, main_key, salt)
+        Self::signup_common(client, user, main_key, &salt)
     }
 
     fn signup_common(
         mut client: Client,
         user: &User,
         main_key: Vec<u8>,
-        salt: Vec<u8>,
+        salt: &[u8],
     ) -> Result<Self> {
         let authenticator = Authenticator::new(&client);
         let version = super::CURRENT_VERSION;
@@ -151,7 +151,7 @@ impl Account {
 
         let login_response = authenticator.signup(
             user,
-            &salt,
+            salt,
             login_crypto_manager.pubkey(),
             identity_crypto_manager.pubkey(),
             &encrypted_content,
