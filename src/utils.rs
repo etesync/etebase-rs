@@ -146,9 +146,23 @@ pub fn to_base64(bytes: &[u8]) -> Result<StringBase64> {
     Ok(base64::encode(bytes, base64::Variant::UrlSafeNoPadding))
 }
 
-// Fisher–Yates shuffle - an unbiased shuffler
-// The returend indices of where item is now.
-// So if the first item moved to position 3: ret[0] = 3
+/// Fisher–Yates shuffle - an unbiased shuffler
+///
+/// Shuffles the passed slice in-place and returns the new indices of all input items.
+///
+/// # Examples
+///
+/// ```no_compile
+/// let mut data = vec!["foo", "bar", "baz"];
+///
+/// let ret = shuffle(&mut data);
+/// // Let's assume the data was randomly shuffled like this:
+/// # data = vec!["bar", "baz", "foo"];
+/// assert_eq!(data, &["bar", "baz", "foo"]);
+///
+/// // The first element (foo) is now at index 2, the second is at index 0, the third is at index 1
+/// assert_eq!(ret, &[2, 0, 1]);
+/// ```
 pub(crate) fn shuffle<T>(a: &mut [T]) -> Vec<usize> {
     let len = a.len();
     let mut shuffled_indices: Vec<usize> = (0..len).collect();
