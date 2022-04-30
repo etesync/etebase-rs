@@ -1036,7 +1036,7 @@ fn collection_invitations() -> Result<()> {
     assert_eq!(invitations.data().len(), 1);
     {
         let invitation = invitations.data().first().unwrap();
-        assert_eq!(invitation.from_username().unwrap(), USER.username);
+        assert_eq!(invitation.sender_username().unwrap(), USER.username);
     }
 
     invite_mgr2.reject(invitations.data().first().unwrap())?;
@@ -1084,7 +1084,7 @@ fn collection_invitations() -> Result<()> {
     // Should be verified by user2 off-band
     let user1_pubkey = invite_mgr.pubkey();
     let invitation = invitations.data().first().unwrap();
-    assert_eq!(invitation.from_pubkey(), user1_pubkey);
+    assert_eq!(invitation.sender_pubkey(), user1_pubkey);
 
     invite_mgr2.accept(invitation)?;
 

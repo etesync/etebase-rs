@@ -239,16 +239,26 @@ impl SignedInvitation {
     }
 
     /// The username this invitation is form
-    pub fn from_username(&self) -> Option<&str> {
+    pub fn sender_username(&self) -> Option<&str> {
         self.from_username.as_deref()
     }
 
     /// The public key of the inviting user
-    pub fn from_pubkey(&self) -> &[u8] {
+    pub fn sender_pubkey(&self) -> &[u8] {
         match self.from_pubkey.as_deref() {
             Some(from_pubkey) => from_pubkey,
             None => panic!("Can never happen. Tried getting empty pubkey."),
         }
+    }
+
+    #[deprecated = "This method has been renamed to sender_username() to avoid potential confusion regarding its name"]
+    pub fn from_username(&self) -> Option<&str> {
+        self.sender_username()
+    }
+
+    #[deprecated = "This method has been renamed to sender_pubkey() to avoid potential confusion regarding its name"]
+    pub fn from_pubkey(&self) -> &[u8] {
+        self.sender_pubkey()
     }
 
     pub(crate) fn decrypted_encryption_key(
