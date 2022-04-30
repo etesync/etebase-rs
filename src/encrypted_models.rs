@@ -218,7 +218,7 @@ pub struct SignedInvitation {
 }
 
 impl SignedInvitation {
-    /// The uid of the collection
+    /// The uid of the invitation
     pub fn uid(&self) -> &str {
         &self.uid
     }
@@ -238,7 +238,7 @@ impl SignedInvitation {
         self.access_level
     }
 
-    /// The username this invitation is form
+    /// The username of the inviting user
     pub fn sender_username(&self) -> Option<&str> {
         self.from_username.as_deref()
     }
