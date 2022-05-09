@@ -1144,6 +1144,10 @@ impl CollectionInvitationManager {
         pubkey: &[u8],
         access_level: CollectionAccessLevel,
     ) -> Result<()> {
+        // TODO: change argument type to &[u8; 32]
+        let pubkey: &[u8; 32] = pubkey
+            .try_into()
+            .map_err(|_| Error::ProgrammingError("Public key should be exactly 32 bytes long"))?;
         let invitation = collection.col.create_invitation(
             &self.account_crypto_manager,
             &self.identity_crypto_manager,

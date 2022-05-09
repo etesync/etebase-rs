@@ -10,6 +10,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use sodiumoxide::crypto::sign;
 
 use super::{
     chunker::Rollsum,
@@ -475,7 +476,7 @@ impl EncryptedCollection {
         account_crypto_manager: &AccountCryptoManager,
         identity_crypto_manager: &BoxCryptoManager,
         username: &str,
-        pubkey: &[u8],
+        pubkey: &[u8; sign::PUBLICKEYBYTES],
         access_level: CollectionAccessLevel,
     ) -> Result<SignedInvitation> {
         let uid = to_base64(&randombytes(32))?;
@@ -486,8 +487,8 @@ impl EncryptedCollection {
             collection_type,
         };
         let raw_content = rmp_serde::to_vec_named(&content)?;
-        let signed_encryption_key = identity_crypto_manager
-            .encrypt(&buffer_pad_small(&raw_content)?, try_into!(pubkey)?)?;
+        let signed_encryption_key =
+            identity_crypto_manager.encrypt(&buffer_pad_small(&raw_content)?, pubkey)?;
         Ok(SignedInvitation {
             uid,
             version: CURRENT_VERSION,
@@ -978,11 +979,17 @@ impl EncryptedItem {
         encryption_key: Option<&[u8]>,
     ) -> Result<ItemCryptoManager> {
         let encryption_key = match encryption_key {
-            Some(encryption_key) => parent_crypto_manager.0.decrypt(encryption_key, None)?,
+            Some(encryption_key) => parent_crypto_manager
+                .0
+                .decrypt(encryption_key, None)?
+                .try_into()
+                .map_err(|_| {
+                    Error::ProgrammingError("Decrypted encryption key has wrong length")
+                })?,
             None => parent_crypto_manager.0.derive_subkey(uid.as_bytes())?,
         };
 
-        ItemCryptoManager::new(try_into!(&encryption_key[..])?, version)
+        ItemCryptoManager::new(&encryption_key, version)
     }
 
     pub fn crypto_manager(

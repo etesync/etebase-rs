@@ -18,7 +18,7 @@ macro_rules! to_enc_error {
     };
 }
 
-fn generichash_quick(msg: &[u8], key: Option<&[u8]>) -> Result<Vec<u8>> {
+fn generichash_quick(msg: &[u8], key: Option<&[u8]>) -> Result<[u8; 32]> {
     let mut state = to_enc_error!(
         generichash::State::new(Some(32), key),
         "Failed to init hash"
@@ -26,7 +26,8 @@ fn generichash_quick(msg: &[u8], key: Option<&[u8]>) -> Result<Vec<u8>> {
     to_enc_error!(state.update(msg), "Failed to update hash")?;
     Ok(to_enc_error!(state.finalize(), "Failed to finalize hash")?
         .as_ref()
-        .to_vec())
+        .try_into()
+        .expect("generichash returned result of wrong size"))
 }
 
 pub fn init() -> Result<()> {
@@ -219,7 +220,7 @@ impl CryptoManager {
         )?)
     }
 
-    pub fn derive_subkey(&self, salt: &[u8]) -> Result<Vec<u8>> {
+    pub fn derive_subkey(&self, salt: &[u8]) -> Result<[u8; 32]> {
         generichash_quick(&self.sub_derivation_key, Some(salt))
     }
 
@@ -227,11 +228,11 @@ impl CryptoManager {
         CryptoMac::new(Some(&self.mac_key))
     }
 
-    pub fn calculate_mac(&self, msg: &[u8]) -> Result<Vec<u8>> {
+    pub fn calculate_mac(&self, msg: &[u8]) -> Result<[u8; 32]> {
         generichash_quick(msg, Some(&self.mac_key))
     }
 
-    pub fn calculate_hash(&self, msg: &[u8]) -> Result<Vec<u8>> {
+    pub fn calculate_hash(&self, msg: &[u8]) -> Result<[u8; 32]> {
         generichash_quick(msg, None)
     }
 }

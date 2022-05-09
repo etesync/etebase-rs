@@ -37,19 +37,19 @@ fn crypto_manager() {
     let subkey = crypto_manager.derive_subkey(&[0; 32]).unwrap();
 
     assert_eq!(
-        subkey,
+        &subkey[..],
         from_base64("4w-VCSTETv26JjVlVlD2VaACcb6aQSD2JbF-e89xnaA").unwrap()
     );
 
     let hash = crypto_manager.calculate_mac(&[0; 32]).unwrap();
     assert_eq!(
-        hash,
+        &hash[..],
         from_base64("bz6eMZdAkIuiLUuFDiVwuH3IFs4hYkRfhzang_JzHr8").unwrap()
     );
 
     let hash = crypto_manager.calculate_hash(&[0; 32]).unwrap();
     assert_eq!(
-        hash,
+        &hash[..],
         from_base64("iesNaoppHa4s0V7QNpkxzgqUnsr6XD-T-BIYM2RuFcM").unwrap()
     );
 
