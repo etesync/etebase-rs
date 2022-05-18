@@ -24,10 +24,9 @@ use super::{
         ItemListResponse, ItemManagerOnline, IteratorListResponse, LoginBodyResponse,
         LoginChallange, LoginResponseUser, User, UserProfile,
     },
-    try_into,
     utils::{
-        buffer_unpad, from_base64, randombytes, randombytes_array, to_base64, MsgPackSerilization,
-        StrBase64, SYMMETRIC_KEY_SIZE,
+        buffer_unpad, from_base64, randombytes_array, to_base64, MsgPackSerilization, StrBase64,
+        SYMMETRIC_KEY_SIZE,
     },
 };
 
@@ -148,7 +147,7 @@ impl Account {
 
         let identity_crypto_manager = BoxCryptoManager::keygen(None)?;
 
-        let account_key = randombytes(SYMMETRIC_KEY_SIZE);
+        let account_key = randombytes_array();
         let content = [&account_key, identity_crypto_manager.privkey()].concat();
         let encrypted_content = main_crypto_manager.0.encrypt(&content, None)?;
 
@@ -162,8 +161,7 @@ impl Account {
 
         client.set_token(Some(&login_response.token));
 
-        let account_crypto_manager =
-            main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
+        let account_crypto_manager = main_crypto_manager.account_crypto_manager(&account_key)?;
 
         let ret = Self {
             main_key,

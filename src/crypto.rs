@@ -301,14 +301,14 @@ impl BoxCryptoManager {
         let privkey_scalar = scalarmult::Scalar(*privkey);
         let privkey = box_::SecretKey(*privkey);
         let pubkey_scalar = scalarmult::scalarmult_base(&privkey_scalar);
-        let pubkey = box_::PublicKey(pubkey_scalar[..].try_into().unwrap());
+        let pubkey = box_::PublicKey(pubkey_scalar.0);
 
         Ok(BoxCryptoManager { privkey, pubkey })
     }
 
     pub fn encrypt(&self, msg: &[u8], pubkey: &[u8; box_::PUBLICKEYBYTES]) -> Result<Vec<u8>> {
-        let pubkey = box_::PublicKey(pubkey[..].try_into().unwrap());
-        let privkey = box_::SecretKey(self.privkey[..].try_into().unwrap());
+        let pubkey = box_::PublicKey(*pubkey);
+        let privkey = box_::SecretKey(self.privkey.0);
         let nonce = box_::gen_nonce();
         let encrypted = box_::seal(msg, &nonce, &pubkey, &privkey);
         let ret = [nonce.as_ref(), &encrypted].concat();
@@ -317,8 +317,8 @@ impl BoxCryptoManager {
     }
 
     pub fn decrypt(&self, cipher: &[u8], pubkey: &[u8; sign::PUBLICKEYBYTES]) -> Result<Vec<u8>> {
-        let pubkey = box_::PublicKey(pubkey[..].try_into().unwrap());
-        let privkey = box_::SecretKey(self.privkey[..].try_into().unwrap());
+        let pubkey = box_::PublicKey(*pubkey);
+        let privkey = box_::SecretKey(self.privkey.0);
         let nonce = &cipher[..box_::NONCEBYTES];
         let nonce: &[u8; box_::NONCEBYTES] =
             to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;
