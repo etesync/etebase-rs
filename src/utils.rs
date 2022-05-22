@@ -10,15 +10,6 @@ use sodiumoxide::{
 
 use super::error::{Error, Result};
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! try_into {
-    ($x:expr) => {
-        ($x).try_into()
-            .or(Err(Error::ProgrammingError("Try into failed")))
-    };
-}
-
 pub type StrBase64 = str;
 pub type StringBase64 = String;
 
