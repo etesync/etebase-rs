@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
-mod sodium_padding;
-
-use sodiumoxide::base64;
+use sodiumoxide::{
+    base64,
+    padding::{pad, unpad},
+};
 
 use super::error::{Error, Result};
 
@@ -236,8 +237,7 @@ pub(crate) fn buffer_pad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>> 
     let mut ret = vec![0; padding];
     ret[..len].copy_from_slice(buf);
 
-    sodium_padding::pad(&mut ret[..], len, blocksize)
-        .map_err(|_| Error::Padding("Failed padding"))?;
+    pad(&mut ret[..], len, blocksize).map_err(|_| Error::Padding("Failed padding"))?;
 
     Ok(ret)
 }
@@ -250,8 +250,8 @@ pub(crate) fn buffer_unpad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>
 
     let mut buf = buf.to_vec();
 
-    let new_len = sodium_padding::unpad(&buf[..], len, blocksize)
-        .map_err(|_| Error::Padding("Failed unpadding"))?;
+    let new_len =
+        unpad(&buf[..], len, blocksize).map_err(|_| Error::Padding("Failed unpadding"))?;
     buf.truncate(new_len);
     Ok(buf)
 }
