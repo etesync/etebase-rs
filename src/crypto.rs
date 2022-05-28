@@ -231,10 +231,6 @@ impl CryptoManager {
     pub fn calculate_mac(&self, msg: &[u8]) -> Result<[u8; 32]> {
         generichash_quick(msg, Some(&self.mac_key))
     }
-
-    pub fn calculate_hash(&self, msg: &[u8]) -> Result<[u8; 32]> {
-        generichash_quick(msg, None)
-    }
 }
 
 pub struct LoginCryptoManager {
@@ -473,12 +469,6 @@ mod tests {
         assert_eq!(
             &hash[..],
             from_base64("bz6eMZdAkIuiLUuFDiVwuH3IFs4hYkRfhzang_JzHr8").unwrap()
-        );
-
-        let hash = crypto_manager.calculate_hash(&[0; 32]).unwrap();
-        assert_eq!(
-            &hash[..],
-            from_base64("iesNaoppHa4s0V7QNpkxzgqUnsr6XD-T-BIYM2RuFcM").unwrap()
         );
 
         let clear_text = b"This Is Some Test Cleartext.";
