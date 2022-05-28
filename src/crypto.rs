@@ -252,24 +252,6 @@ impl LoginCryptoManager {
         Ok(ret.to_bytes().to_vec())
     }
 
-    pub fn verify_detached(
-        &self,
-        msg: &[u8],
-        signature: &[u8],
-        pubkey: &[u8; sign::PUBLICKEYBYTES],
-    ) -> Result<bool> {
-        let mut signature_copy = [0; 64];
-        signature_copy[..].copy_from_slice(signature);
-        let signature = to_enc_error!(
-            sign::Signature::from_bytes(&signature_copy),
-            "siganture copy failed"
-        )?;
-        let pubkey = sign::PublicKey(*pubkey);
-        let ret = sign::verify_detached(&signature, msg, &pubkey);
-
-        Ok(ret)
-    }
-
     pub fn pubkey(&self) -> &[u8] {
         &self.pubkey[..]
     }
@@ -424,6 +406,8 @@ pub fn pretty_fingerprint(content: &[u8]) -> String {
 mod tests {
     use std::convert::TryInto;
 
+    use sodiumoxide::crypto::sign;
+
     use crate::error::Result;
     use crate::utils::from_base64;
 
@@ -501,9 +485,10 @@ mod tests {
         let msg = b"This Is Some Test Cleartext.";
         let signature = login_crypto_manager.sign_detached(msg).unwrap();
         let pubkey = login_crypto_manager.pubkey();
-        assert!(login_crypto_manager
-            .verify_detached(msg, &signature, pubkey.try_into().unwrap())
-            .unwrap());
+
+        let signature = sign::Signature::from_bytes(&signature).unwrap();
+        let pubkey = sign::PublicKey::from_slice(pubkey).unwrap();
+        assert!(sign::verify_detached(&signature, msg, &pubkey));
     }
 
     #[test]
