@@ -165,7 +165,8 @@ fn deterministic_encrypt() -> Result<()> {
         .unwrap();
     assert_eq!(cipher, cipher2);
 
-    let precalc = vec![
+    const BLOCK_SIZE: usize = 32;
+    const PRECALC: [&str; BLOCK_SIZE * 2] = [
         "Jp5B3loU3qoohgvlOuiYcbEI1JUhHzwfKsqRRvR_KZFQWvJFn07eHg",
         "yeX7EzjL43RCN89Ch5RBjWkmIj4GwFNgKJhKYEmbn0Crgey8ScixVzk",
         "wq1YkcgH4XEkjRPb8A93Si6hVUdzekkx3Zi_RghmbPrnvdKHFAEp1oNk",
@@ -231,12 +232,13 @@ fn deterministic_encrypt() -> Result<()> {
         "idxFzEtY_FQ-dcY2MJ7WuIt_UmafJApFW1vPWAP6LnEIm2TahVqDGs93wgQs4kewWeBsVhjmtLCMH7IcNyavDa0yc9bzd5EhwHZwmVuc7TVo6TmsN3MiMg57Spq78Ur-2sCrwpwX",
         "wDkNMUPUFESxc0Kz0jqUrm6BnPu9OYOJn8VSMc_YjamfRkJi5CSHWZmv-Ps__dg5dwOR1gzIg56z4SUfyBSR9nVpF34DpgoFEs3E69B8GdnjANpTY6swRA2hGnue2jBzRTQrWjwYbA",
     ];
+    const INPUT: &[u8] = &[60; BLOCK_SIZE * 2];
 
-    let blocksize = 32;
-    for i in 0..(blocksize * 2) {
-        let buf = vec![60; i];
-        let cipher = crypto_manager.deterministic_encrypt(&buf, None).unwrap();
-        assert_eq!(from_base64(precalc[i]).unwrap(), cipher);
+    for (i, expected) in PRECALC.iter().enumerate() {
+        let cipher = crypto_manager
+            .deterministic_encrypt(&INPUT[..i], None)
+            .unwrap();
+        assert_eq!(from_base64(expected).unwrap(), cipher);
     }
 
     Ok(())
