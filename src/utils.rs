@@ -286,3 +286,46 @@ pub trait MsgPackSerilization {
     /// * `data` - the MsgPack buffer
     fn from_msgpack(data: &[u8]) -> Result<Self::Output>;
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn padding() {
+        crate::init().unwrap();
+
+        // Because of how we use padding (unpadding) we need to make sure padding is always larger than the content
+        // Otherwise we risk the unpadder to fail thinking it should unpad when it shouldn't.
+
+        for i in 1..(1 << 14) {
+            if super::get_padding(i) <= i {
+                println!("Yo");
+                assert_eq!(format!("Failed for {}", i), "");
+            }
+        }
+
+        assert_eq!(super::get_padding(2343242), 2359296);
+    }
+
+    #[test]
+    fn pad_unpad() {
+        crate::init().unwrap();
+
+        let buf = [0; 1076];
+        let padded = super::buffer_pad(&buf).unwrap();
+        let unpadded = super::buffer_unpad(&padded[..]).unwrap();
+        assert_eq!(unpadded, &buf[..]);
+    }
+
+    #[test]
+    fn pad_unpad_fixed() {
+        crate::init().unwrap();
+
+        let blocksize = 32;
+        for i in 0..(blocksize * 2) {
+            let buf = vec![60; i];
+            let padded = super::buffer_pad_fixed(&buf, blocksize).unwrap();
+            let unpadded = super::buffer_unpad_fixed(&padded[..], blocksize).unwrap();
+            assert_eq!(unpadded, &buf[..]);
+        }
+    }
+}

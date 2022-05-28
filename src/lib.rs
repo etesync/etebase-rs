@@ -39,36 +39,13 @@ pub mod managers {
 
 #[doc(hidden)]
 pub mod test_helpers {
-    pub mod crypto {
-        pub use super::super::crypto::*;
-    }
-    pub mod utils {
-        use super::super::error::Result;
-
-        pub use super::super::utils::*;
-        pub fn test_buffer_pad(buf: &[u8]) -> Result<Vec<u8>> {
-            buffer_pad(buf)
-        }
-
-        pub fn test_buffer_unpad(buf: &[u8]) -> Result<Vec<u8>> {
-            buffer_unpad(buf)
-        }
-
-        pub fn test_buffer_pad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>> {
-            buffer_pad_fixed(buf, blocksize)
-        }
-
-        pub fn test_buffer_unpad_fixed(buf: &[u8], blocksize: usize) -> Result<Vec<u8>> {
-            buffer_unpad_fixed(buf, blocksize)
-        }
-    }
     pub use super::online_managers::{
         // Test stuff
         test_reset,
         SignupBody,
     };
 
-    pub fn chunk_uids(item: &super::service::Item) -> Vec<String> {
+    pub fn chunk_uids(item: &crate::Item) -> Vec<String> {
         super::service::test_chunk_uids(item)
     }
 }
