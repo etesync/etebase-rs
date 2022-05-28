@@ -88,7 +88,7 @@ pub struct AccountDataStored<'a> {
 pub struct Account {
     main_key: [u8; SYMMETRIC_KEY_SIZE],
     version: u8,
-    pub user: LoginResponseUser,
+    user: LoginResponseUser,
     client: Arc<Client>,
     account_crypto_manager: Arc<AccountCryptoManager>,
 }
