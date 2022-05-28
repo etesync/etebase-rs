@@ -66,7 +66,7 @@ impl StorageCryptoManager {
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AccountData<'a> {
+struct AccountData<'a> {
     pub version: u8,
     #[serde(with = "serde_bytes")]
     pub key: &'a [u8],
@@ -77,7 +77,7 @@ pub struct AccountData<'a> {
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AccountDataStored<'a> {
+struct AccountDataStored<'a> {
     pub version: u8,
     #[serde(with = "serde_bytes")]
     pub encrypted_data: &'a [u8],

@@ -16,7 +16,7 @@
 const WINDOW_SIZE: u32 = 64;
 const CHAR_OFFSET: u32 = 31;
 
-pub struct Rollsum {
+pub(crate) struct Rollsum {
     s1: u32,
     s2: u32,
     window: [u8; WINDOW_SIZE as usize],

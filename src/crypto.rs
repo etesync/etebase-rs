@@ -30,11 +30,14 @@ fn generichash_quick(msg: &[u8], key: Option<&[u8]>) -> Result<[u8; 32]> {
         .expect("generichash returned result of wrong size"))
 }
 
-pub fn init() -> Result<()> {
+pub(crate) fn init() -> Result<()> {
     to_enc_error!(sodiumoxide::init(), "Failed initialising libsodium")
 }
 
-pub fn derive_key(salt: &[u8; SALT_SIZE], password: &str) -> Result<[u8; SYMMETRIC_KEY_SIZE]> {
+pub(crate) fn derive_key(
+    salt: &[u8; SALT_SIZE],
+    password: &str,
+) -> Result<[u8; SYMMETRIC_KEY_SIZE]> {
     let mut key = [0; SYMMETRIC_KEY_SIZE];
     let password = password.as_bytes();
 
@@ -50,7 +53,7 @@ pub fn derive_key(salt: &[u8; SALT_SIZE], password: &str) -> Result<[u8; SYMMETR
     Ok(key)
 }
 
-pub struct CryptoManager {
+pub(crate) struct CryptoManager {
     pub version: u8,
     cipher_key: [u8; 32],
     mac_key: [u8; 32],
@@ -233,7 +236,7 @@ impl CryptoManager {
     }
 }
 
-pub struct LoginCryptoManager {
+pub(crate) struct LoginCryptoManager {
     pubkey: sign::PublicKey,
     privkey: sign::SecretKey,
 }
@@ -257,7 +260,7 @@ impl LoginCryptoManager {
     }
 }
 
-pub struct BoxCryptoManager {
+pub(crate) struct BoxCryptoManager {
     pubkey: box_::PublicKey,
     privkey: box_::SecretKey,
 }
@@ -316,7 +319,7 @@ impl BoxCryptoManager {
     }
 }
 
-pub struct CryptoMac {
+pub(crate) struct CryptoMac {
     state: generichash::State,
 }
 
