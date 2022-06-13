@@ -6,6 +6,9 @@ on:
       rust-version:
         required: true
         type: string
+      minimal-versions:
+        required: false
+        type: boolean
 
 jobs:
   test:
@@ -19,6 +22,20 @@ jobs:
           toolchain: ${{ inputs.rust-version }}
           override: true
       - uses: Swatinem/rust-cache@v1
+
+      # Generate lockfile with minimal dependency versions using nightly
+      - name: Install nightly toolchain
+        if: ${{ inputs.minimal-versions }}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+      - name: Generate lockfile with minimum dependency versions
+        if: ${{ inputs.minimal-versions }}
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: nightly
+          command: generate-lockfile
+          args: -Z minimal-versions
 
       - name: Run local test Server
         run: |
