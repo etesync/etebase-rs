@@ -121,7 +121,6 @@ impl Account {
     pub fn signup_key(client: Client, user: &User, main_key: &[u8]) -> Result<Self> {
         super::init()?;
 
-        // TODO: change argument type to [u8; 32]
         let main_key: [u8; 32] = main_key
             .try_into()
             .map_err(|_| Error::ProgrammingError("Key should be exactly 32 bytes long."))?;
@@ -212,7 +211,6 @@ impl Account {
     pub fn login_key(client: Client, username: &str, main_key: &[u8]) -> Result<Self> {
         super::init()?;
 
-        // TODO: change argument type to [u8; 32]
         let main_key: [u8; 32] = main_key
             .try_into()
             .map_err(|_| Error::ProgrammingError("Key should be exactly 32 bytes long."))?;
@@ -424,7 +422,6 @@ impl Account {
         let version = super::CURRENT_VERSION;
 
         let encryption_key = if let Some(encryption_key) = encryption_key {
-            // TODO: change argument type to Option<&[u8; 32]>
             encryption_key.try_into().map_err(|_| {
                 Error::ProgrammingError("Encryption key must be exactly 32 bytes long")
             })?
@@ -465,7 +462,6 @@ impl Account {
         encryption_key: Option<&[u8]>,
     ) -> Result<Self> {
         let encryption_key = if let Some(encryption_key) = encryption_key {
-            // TODO: change argument type to Option<&[u8; 32]>
             encryption_key.try_into().map_err(|_| {
                 Error::ProgrammingError("Encryption key must be exactly 32 bytes long")
             })?
@@ -1184,7 +1180,6 @@ impl CollectionInvitationManager {
         pubkey: &[u8],
         access_level: CollectionAccessLevel,
     ) -> Result<()> {
-        // TODO: change argument type to &[u8; 32]
         let pubkey: &[u8; 32] = pubkey
             .try_into()
             .map_err(|_| Error::ProgrammingError("Public key should be exactly 32 bytes long"))?;
