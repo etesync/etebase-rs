@@ -7,7 +7,7 @@ use std::convert::TryInto;
 use std::iter;
 use std::sync::Arc;
 
-use crate::utils::{PRIVATE_KEY_SIZE, SALT_LENGTH};
+use crate::utils::{PRIVATE_KEY_SIZE, SALT_SIZE};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -196,7 +196,7 @@ impl Account {
         // generation.
         let salt = login_challenge
             .salt
-            .get(..SALT_LENGTH)
+            .get(..SALT_SIZE)
             .ok_or(Error::Encryption(
                 "Salt obtained from login challenge too short: expected at least 16 bytes",
             ))?
@@ -352,7 +352,7 @@ impl Account {
 
         let salt = login_challenge
             .salt
-            .get(..SALT_LENGTH)
+            .get(..SALT_SIZE)
             .ok_or(Error::Encryption(
                 "Salt obtained from login challenge too short: expected at least 16 bytes",
             ))?

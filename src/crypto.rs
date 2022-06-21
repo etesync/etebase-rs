@@ -8,7 +8,7 @@ use sodiumoxide::crypto::{
     sign,
 };
 
-use crate::utils::{SALT_LENGTH, SYMMETRIC_KEY_SIZE};
+use crate::utils::{SALT_SIZE, SYMMETRIC_KEY_SIZE};
 
 use super::error::{Error, Result};
 
@@ -34,7 +34,7 @@ pub fn init() -> Result<()> {
     to_enc_error!(sodiumoxide::init(), "Failed initialising libsodium")
 }
 
-pub fn derive_key(salt: &[u8; SALT_LENGTH], password: &str) -> Result<[u8; SYMMETRIC_KEY_SIZE]> {
+pub fn derive_key(salt: &[u8; SALT_SIZE], password: &str) -> Result<[u8; SYMMETRIC_KEY_SIZE]> {
     let mut key = [0; SYMMETRIC_KEY_SIZE];
     let password = password.as_bytes();
 
