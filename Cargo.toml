@@ -24,7 +24,6 @@ crate-type = ["lib"]
 
 [dependencies]
 sodiumoxide = "^0.2.7"
-libsodium-sys = "^0.2.7"
 url = "^2.2.2"
 serde = { version = "^1.0.136", features = ["derive"] }
 serde_bytes = "^0.11.5"
