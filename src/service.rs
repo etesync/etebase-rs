@@ -7,6 +7,7 @@ use std::convert::TryInto;
 use std::iter;
 use std::sync::Arc;
 
+use crate::utils::{PRIVATE_KEY_SIZE, SALT_SIZE};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -23,9 +24,8 @@ use super::{
         ItemListResponse, ItemManagerOnline, IteratorListResponse, LoginBodyResponse,
         LoginChallange, LoginResponseUser, User, UserProfile,
     },
-    try_into,
     utils::{
-        buffer_unpad, from_base64, randombytes, to_base64, MsgPackSerilization, StrBase64,
+        buffer_unpad, from_base64, randombytes_array, to_base64, MsgPackSerilization, StrBase64,
         SYMMETRIC_KEY_SIZE,
     },
 };
@@ -86,7 +86,7 @@ pub struct AccountDataStored<'a> {
 /// The main object for all user interactions and data manipulation, representing an authenticated
 /// user account.
 pub struct Account {
-    main_key: Vec<u8>,
+    main_key: [u8; SYMMETRIC_KEY_SIZE],
     version: u8,
     pub user: LoginResponseUser,
     client: Arc<Client>,
@@ -108,10 +108,12 @@ impl Account {
     pub fn signup(client: Client, user: &User, password: &str) -> Result<Self> {
         super::init()?;
 
-        let salt = randombytes(32);
-        let main_key = derive_key(&salt, password)?;
+        // only the first 16 bytes of the salt are used for key generation, but previous
+        // implementations have always generated 32 bytes regardless.
+        let salt = randombytes_array::<32>();
+        let main_key = derive_key(&salt[..16].try_into().unwrap(), password)?;
 
-        Self::signup_common(client, user, main_key, salt)
+        Self::signup_common(client, user, main_key, &salt)
     }
 
     /// Creates a new user on the server and returns a handle to it. The user is authenticated
@@ -119,39 +121,38 @@ impl Account {
     pub fn signup_key(client: Client, user: &User, main_key: &[u8]) -> Result<Self> {
         super::init()?;
 
-        if main_key.len() != SYMMETRIC_KEY_SIZE {
-            return Err(Error::ProgrammingError(
-                "Key should be exactly 32 bytes long.",
-            ));
-        }
+        let main_key: [u8; 32] = main_key
+            .try_into()
+            .map_err(|_| Error::ProgrammingError("Key should be exactly 32 bytes long."))?;
 
-        let salt = randombytes(32);
-        let main_key = main_key.to_vec();
+        // Since the key is provided as-is instead of being generated from a password+hash, this is
+        // not actually used for anything; generate it anyway for consistency.
+        let salt = randombytes_array::<32>();
 
-        Self::signup_common(client, user, main_key, salt)
+        Self::signup_common(client, user, main_key, &salt)
     }
 
     fn signup_common(
         mut client: Client,
         user: &User,
-        main_key: Vec<u8>,
-        salt: Vec<u8>,
+        main_key: [u8; SYMMETRIC_KEY_SIZE],
+        salt: &[u8],
     ) -> Result<Self> {
         let authenticator = Authenticator::new(&client);
         let version = super::CURRENT_VERSION;
 
-        let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
+        let main_crypto_manager = MainCryptoManager::new(&main_key, version)?;
         let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
         let identity_crypto_manager = BoxCryptoManager::keygen(None)?;
 
-        let account_key = randombytes(SYMMETRIC_KEY_SIZE);
+        let account_key = randombytes_array();
         let content = [&account_key, identity_crypto_manager.privkey()].concat();
         let encrypted_content = main_crypto_manager.0.encrypt(&content, None)?;
 
         let login_response = authenticator.signup(
             user,
-            &salt,
+            salt,
             login_crypto_manager.pubkey(),
             identity_crypto_manager.pubkey(),
             &encrypted_content,
@@ -159,8 +160,7 @@ impl Account {
 
         client.set_token(Some(&login_response.token));
 
-        let account_crypto_manager =
-            main_crypto_manager.account_crypto_manager(try_into!(&account_key[..])?)?;
+        let account_crypto_manager = main_crypto_manager.account_crypto_manager(&account_key)?;
 
         let ret = Self {
             main_key,
@@ -191,7 +191,17 @@ impl Account {
             rest => rest?,
         };
 
-        let main_key = derive_key(&login_challenge.salt, password)?;
+        // A 32-byte value is generated during signup, but only first 16 bytes are used for key
+        // generation.
+        let salt = login_challenge
+            .salt
+            .get(..SALT_SIZE)
+            .ok_or(Error::Encryption(
+                "Salt obtained from login challenge too short: expected at least 16 bytes",
+            ))?
+            .try_into()
+            .unwrap();
+        let main_key = derive_key(&salt, password)?;
 
         Self::login_common(client, username, main_key, login_challenge)
     }
@@ -201,11 +211,9 @@ impl Account {
     pub fn login_key(client: Client, username: &str, main_key: &[u8]) -> Result<Self> {
         super::init()?;
 
-        if main_key.len() < SYMMETRIC_KEY_SIZE {
-            return Err(Error::ProgrammingError(
-                "Key should be at least 32 bytes long.",
-            ));
-        }
+        let main_key: [u8; 32] = main_key
+            .try_into()
+            .map_err(|_| Error::ProgrammingError("Key should be exactly 32 bytes long."))?;
 
         let authenticator = Authenticator::new(&client);
         let login_challenge = match authenticator.get_login_challenge(username) {
@@ -213,7 +221,7 @@ impl Account {
                 // FIXME: fragile, we should have a proper error value or actually use codes
                 if s == "User not properly init" {
                     let user = User::new(username, "init@localhost");
-                    return Self::signup_key(client, &user, main_key);
+                    return Self::signup_key(client, &user, &main_key[..]);
                 } else {
                     return Err(Error::Unauthorized(s));
                 }
@@ -221,23 +229,20 @@ impl Account {
             rest => rest?,
         };
 
-        let main_key = main_key.to_vec();
-
         Self::login_common(client, username, main_key, login_challenge)
     }
 
     fn login_common(
         mut client: Client,
         username: &str,
-        main_key: Vec<u8>,
+        main_key: [u8; SYMMETRIC_KEY_SIZE],
         login_challenge: LoginChallange,
     ) -> Result<Self> {
         let authenticator = Authenticator::new(&client);
 
         let version = login_challenge.version;
 
-        let main_key = main_key.to_vec();
-        let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
+        let main_crypto_manager = MainCryptoManager::new(&main_key, version)?;
         let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
         let response_struct = LoginBodyResponse {
@@ -260,9 +265,16 @@ impl Account {
         let content = main_crypto_manager
             .0
             .decrypt(&login_response.user.encrypted_content, None)?;
-        let account_key = &content[..SYMMETRIC_KEY_SIZE];
-        let account_crypto_manager =
-            main_crypto_manager.account_crypto_manager(try_into!(account_key)?)?;
+
+        // The content is the concatenation of the account key and the private key
+        let account_key = content
+            .get(..SYMMETRIC_KEY_SIZE)
+            .ok_or(Error::Encryption(
+                "Server's login response too short to contain account key",
+            ))?
+            .try_into()
+            .unwrap();
+        let account_crypto_manager = main_crypto_manager.account_crypto_manager(account_key)?;
 
         let ret = Self {
             main_key,
@@ -285,8 +297,7 @@ impl Account {
         let version = self.version;
 
         let username = &self.user.username;
-        let main_key = &self.main_key;
-        let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
+        let main_crypto_manager = MainCryptoManager::new(&self.main_key, version)?;
         let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
         let response_struct = LoginBodyResponse {
@@ -331,14 +342,22 @@ impl Account {
         let main_key = &self.main_key;
         let login_challenge = authenticator.get_login_challenge(username)?;
 
-        let old_main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
+        let old_main_crypto_manager = MainCryptoManager::new(main_key, version)?;
         let content = old_main_crypto_manager
             .0
             .decrypt(&self.user.encrypted_content, None)?;
         let old_login_crypto_manager = old_main_crypto_manager.login_crypto_manager()?;
 
-        let main_key = derive_key(&login_challenge.salt, new_password)?;
-        let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
+        let salt = login_challenge
+            .salt
+            .get(..SALT_SIZE)
+            .ok_or(Error::Encryption(
+                "Salt obtained from login challenge too short: expected at least 16 bytes",
+            ))?
+            .try_into()
+            .unwrap();
+        let main_key = derive_key(&salt, new_password)?;
+        let main_crypto_manager = MainCryptoManager::new(&main_key, version)?;
         let login_crypto_manager = main_crypto_manager.login_crypto_manager()?;
 
         let encrypted_content = main_crypto_manager.0.encrypt(&content, None)?;
@@ -401,8 +420,16 @@ impl Account {
     /// The data should be encrypted using a 32-byte `encryption_key` for added security.
     pub fn save(&self, encryption_key: Option<&[u8]>) -> Result<String> {
         let version = super::CURRENT_VERSION;
-        let encryption_key = encryption_key.unwrap_or(&[0; 32]);
-        let crypto_manager = StorageCryptoManager::new(try_into!(encryption_key)?, version)?;
+
+        let encryption_key = if let Some(encryption_key) = encryption_key {
+            encryption_key.try_into().map_err(|_| {
+                Error::ProgrammingError("Encryption key must be exactly 32 bytes long")
+            })?
+        } else {
+            &[0; 32]
+        };
+
+        let crypto_manager = StorageCryptoManager::new(encryption_key, version)?;
         let account_data = AccountData {
             user: self.user.clone(),
             version,
@@ -434,13 +461,20 @@ impl Account {
         account_data_stored: &str,
         encryption_key: Option<&[u8]>,
     ) -> Result<Self> {
-        let encryption_key = encryption_key.unwrap_or(&[0; 32]);
+        let encryption_key = if let Some(encryption_key) = encryption_key {
+            encryption_key.try_into().map_err(|_| {
+                Error::ProgrammingError("Encryption key must be exactly 32 bytes long")
+            })?
+        } else {
+            &[0; 32]
+        };
+
         let account_data_stored = from_base64(account_data_stored)?;
         let account_data_stored: AccountDataStored =
             rmp_serde::from_read_ref(&account_data_stored)?;
         let version = account_data_stored.version;
 
-        let crypto_manager = StorageCryptoManager::new(try_into!(encryption_key)?, version)?;
+        let crypto_manager = StorageCryptoManager::new(encryption_key, version)?;
         let decrypted = crypto_manager
             .0
             .decrypt(account_data_stored.encrypted_data, Some(&[version]))?;
@@ -450,14 +484,25 @@ impl Account {
         client.set_server_url(account_data.server_url)?;
 
         let main_key = crypto_manager.0.decrypt(account_data.key, None)?;
+        let main_key = main_key
+            .as_slice()
+            .try_into()
+            .map_err(|_| Error::Encryption("Restored main key has wrong size"))?;
 
-        let main_crypto_manager = MainCryptoManager::new(try_into!(&main_key[..])?, version)?;
+        let main_crypto_manager = MainCryptoManager::new(&main_key, version)?;
         let content = main_crypto_manager
             .0
             .decrypt(&account_data.user.encrypted_content, None)?;
-        let account_key = &content[..SYMMETRIC_KEY_SIZE];
-        let account_crypto_manager =
-            main_crypto_manager.account_crypto_manager(try_into!(account_key)?)?;
+
+        // The content is the concatenation of the account key and the private key
+        let account_key = content
+            .get(..SYMMETRIC_KEY_SIZE)
+            .ok_or(Error::Encryption(
+                "Server's login response too short to contain account key",
+            ))?
+            .try_into()
+            .unwrap();
+        let account_crypto_manager = main_crypto_manager.account_crypto_manager(account_key)?;
 
         Ok(Self {
             user: account_data.user,
@@ -487,8 +532,7 @@ impl Account {
 
     fn main_crypto_manager(&self) -> Result<MainCryptoManager> {
         let version = self.version;
-        let main_key = &self.main_key;
-        MainCryptoManager::new(try_into!(&main_key[..])?, version)
+        MainCryptoManager::new(&self.main_key, version)
     }
 
     fn identity_crypto_manager(&self) -> Result<BoxCryptoManager> {
@@ -496,8 +540,16 @@ impl Account {
         let content = main_crypto_manager
             .0
             .decrypt(&self.user.encrypted_content, None)?;
-        let privkey = &content[SYMMETRIC_KEY_SIZE..];
-        main_crypto_manager.identity_crypto_manager(try_into!(privkey)?)
+
+        // The content is the concatenation of the account key and the private key
+        let privkey = content
+            .get(SYMMETRIC_KEY_SIZE..(SYMMETRIC_KEY_SIZE + PRIVATE_KEY_SIZE))
+            .ok_or(Error::Encryption(
+                "Server's login response too short to contain private key",
+            ))?
+            .try_into()
+            .unwrap();
+        main_crypto_manager.identity_crypto_manager(privkey)
     }
 }
 
@@ -1128,6 +1180,9 @@ impl CollectionInvitationManager {
         pubkey: &[u8],
         access_level: CollectionAccessLevel,
     ) -> Result<()> {
+        let pubkey: &[u8; 32] = pubkey
+            .try_into()
+            .map_err(|_| Error::ProgrammingError("Public key should be exactly 32 bytes long"))?;
         let invitation = collection.col.create_invitation(
             &self.account_crypto_manager,
             &self.identity_crypto_manager,

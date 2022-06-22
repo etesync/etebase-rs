@@ -8,6 +8,8 @@ use sodiumoxide::crypto::{
     sign,
 };
 
+use crate::utils::{SALT_SIZE, SYMMETRIC_KEY_SIZE};
+
 use super::error::{Error, Result};
 
 macro_rules! to_enc_error {
@@ -16,7 +18,7 @@ macro_rules! to_enc_error {
     };
 }
 
-fn generichash_quick(msg: &[u8], key: Option<&[u8]>) -> Result<Vec<u8>> {
+fn generichash_quick(msg: &[u8], key: Option<&[u8]>) -> Result<[u8; 32]> {
     let mut state = to_enc_error!(
         generichash::State::new(Some(32), key),
         "Failed to init hash"
@@ -24,28 +26,28 @@ fn generichash_quick(msg: &[u8], key: Option<&[u8]>) -> Result<Vec<u8>> {
     to_enc_error!(state.update(msg), "Failed to update hash")?;
     Ok(to_enc_error!(state.finalize(), "Failed to finalize hash")?
         .as_ref()
-        .to_vec())
+        .try_into()
+        .expect("generichash returned result of wrong size"))
 }
 
 pub fn init() -> Result<()> {
     to_enc_error!(sodiumoxide::init(), "Failed initialising libsodium")
 }
 
-pub fn derive_key(salt: &[u8], password: &str) -> Result<Vec<u8>> {
-    let mut key = vec![0; 32];
-    let salt = &salt[..argon2id13::SALTBYTES];
-    let salt: &[u8; argon2id13::SALTBYTES] =
-        to_enc_error!(salt.try_into(), "Expect salt to be at least 16 bytes")?;
+pub fn derive_key(salt: &[u8; SALT_SIZE], password: &str) -> Result<[u8; SYMMETRIC_KEY_SIZE]> {
+    let mut key = [0; SYMMETRIC_KEY_SIZE];
     let password = password.as_bytes();
 
-    let ret = argon2id13::derive_key(
+    argon2id13::derive_key(
         &mut key,
         password,
         &argon2id13::Salt(*salt),
         argon2id13::OPSLIMIT_SENSITIVE,
         argon2id13::MEMLIMIT_MODERATE,
-    );
-    Ok(to_enc_error!(ret, "pwhash failed")?.as_ref().to_vec())
+    )
+    .map_err(|_| Error::Encryption("pwhash failed"))?;
+
+    Ok(key)
 }
 
 pub struct CryptoManager {
@@ -218,7 +220,7 @@ impl CryptoManager {
         )?)
     }
 
-    pub fn derive_subkey(&self, salt: &[u8]) -> Result<Vec<u8>> {
+    pub fn derive_subkey(&self, salt: &[u8]) -> Result<[u8; 32]> {
         generichash_quick(&self.sub_derivation_key, Some(salt))
     }
 
@@ -226,11 +228,11 @@ impl CryptoManager {
         CryptoMac::new(Some(&self.mac_key))
     }
 
-    pub fn calculate_mac(&self, msg: &[u8]) -> Result<Vec<u8>> {
+    pub fn calculate_mac(&self, msg: &[u8]) -> Result<[u8; 32]> {
         generichash_quick(msg, Some(&self.mac_key))
     }
 
-    pub fn calculate_hash(&self, msg: &[u8]) -> Result<Vec<u8>> {
+    pub fn calculate_hash(&self, msg: &[u8]) -> Result<[u8; 32]> {
         generichash_quick(msg, None)
     }
 }
@@ -299,14 +301,14 @@ impl BoxCryptoManager {
         let privkey_scalar = scalarmult::Scalar(*privkey);
         let privkey = box_::SecretKey(*privkey);
         let pubkey_scalar = scalarmult::scalarmult_base(&privkey_scalar);
-        let pubkey = box_::PublicKey(pubkey_scalar[..].try_into().unwrap());
+        let pubkey = box_::PublicKey(pubkey_scalar.0);
 
         Ok(BoxCryptoManager { privkey, pubkey })
     }
 
     pub fn encrypt(&self, msg: &[u8], pubkey: &[u8; box_::PUBLICKEYBYTES]) -> Result<Vec<u8>> {
-        let pubkey = box_::PublicKey(pubkey[..].try_into().unwrap());
-        let privkey = box_::SecretKey(self.privkey[..].try_into().unwrap());
+        let pubkey = box_::PublicKey(*pubkey);
+        let privkey = box_::SecretKey(self.privkey.0);
         let nonce = box_::gen_nonce();
         let encrypted = box_::seal(msg, &nonce, &pubkey, &privkey);
         let ret = [nonce.as_ref(), &encrypted].concat();
@@ -315,8 +317,8 @@ impl BoxCryptoManager {
     }
 
     pub fn decrypt(&self, cipher: &[u8], pubkey: &[u8; sign::PUBLICKEYBYTES]) -> Result<Vec<u8>> {
-        let pubkey = box_::PublicKey(pubkey[..].try_into().unwrap());
-        let privkey = box_::SecretKey(self.privkey[..].try_into().unwrap());
+        let pubkey = box_::PublicKey(*pubkey);
+        let privkey = box_::SecretKey(self.privkey.0);
         let nonce = &cipher[..box_::NONCEBYTES];
         let nonce: &[u8; box_::NONCEBYTES] =
             to_enc_error!(nonce.try_into(), "Got a nonce of a wrong size")?;

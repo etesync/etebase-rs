@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: © 2020 Etebase Authors
 // SPDX-License-Identifier: LGPL-2.1-only
 
+use std::convert::TryInto;
+
 use sodiumoxide::{
     base64,
     padding::{pad, unpad},
@@ -8,18 +10,13 @@ use sodiumoxide::{
 
 use super::error::{Error, Result};
 
-#[doc(hidden)]
-#[macro_export]
-macro_rules! try_into {
-    ($x:expr) => {
-        ($x).try_into()
-            .or(Err(Error::ProgrammingError("Try into failed")))
-    };
-}
-
 pub type StrBase64 = str;
 pub type StringBase64 = String;
 
+/// The size of the salt added to the password to derive the symmetric encryption key
+pub const SALT_SIZE: usize = 16; // sodium.crypto_pwhash_argon2id_SALTBYTES
+/// The size of the private encryption key
+pub const PRIVATE_KEY_SIZE: usize = 32; // sodium.crypto_box_curve25519xsalsa20poly1305_SECRETKEYBYTES;
 /// The size of a symmetric encryption key
 pub const SYMMETRIC_KEY_SIZE: usize = 32; // sodium.crypto_aead_xchacha20poly1305_ietf_KEYBYTES;
 /// The size of a symmetric encryption tag
@@ -42,6 +39,25 @@ pub const SYMMETRIC_NONCE_SIZE: usize = 24; // sodium.crypto_aead_xchacha20poly1
 /// ```
 pub fn randombytes(size: usize) -> Vec<u8> {
     sodiumoxide::randombytes::randombytes(size)
+}
+
+/// A version of [`randombytes`] that returns a fixed-size array instead of a Vec.
+///
+/// # Examples
+///
+/// ```
+/// use etebase::utils::randombytes_array;
+///
+/// // Explicitly specifying the length as a type generic
+/// let a = randombytes_array::<5>();
+///
+/// // Letting the length be inferred from the result type
+/// let b: [u8; 10] = randombytes_array();
+/// ```
+pub fn randombytes_array<const N: usize>() -> [u8; N] {
+    sodiumoxide::randombytes::randombytes(N)
+        .try_into()
+        .expect("randombytes() returned a Vec with wrong size")
 }
 
 /// Return a buffer filled with deterministically cryptographically random bytes
