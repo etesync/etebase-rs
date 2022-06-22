@@ -288,7 +288,7 @@ impl<'a> Authenticator<'a> {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let ret: LoginChallange = rmp_serde::from_read_ref(&res)?;
+        let ret: LoginChallange = rmp_serde::from_slice(res)?;
 
         Ok(ret)
     }
@@ -315,7 +315,7 @@ impl<'a> Authenticator<'a> {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let ret: LoginResponse = rmp_serde::from_read_ref(&res)?;
+        let ret: LoginResponse = rmp_serde::from_slice(res)?;
 
         Ok(ret)
     }
@@ -332,7 +332,7 @@ impl<'a> Authenticator<'a> {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let ret: LoginResponse = rmp_serde::from_read_ref(&res)?;
+        let ret: LoginResponse = rmp_serde::from_slice(res)?;
 
         Ok(ret)
     }
@@ -370,7 +370,7 @@ impl<'a> Authenticator<'a> {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let ret: Ret = rmp_serde::from_read_ref(&res)?;
+        let ret: Ret = rmp_serde::from_slice(res)?;
 
         Ok(ret.url)
     }
@@ -488,7 +488,7 @@ impl CollectionManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let serialized: EncryptedCollection = rmp_serde::from_read_ref(&res)?;
+        let serialized: EncryptedCollection = rmp_serde::from_slice(res)?;
         serialized.mark_saved();
 
         Ok(serialized)
@@ -519,8 +519,7 @@ impl CollectionManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let serialized: CollectionListResponse<EncryptedCollection> =
-            rmp_serde::from_read_ref(&res)?;
+        let serialized: CollectionListResponse<EncryptedCollection> = rmp_serde::from_slice(res)?;
         serialized.data.iter().for_each(|x| x.mark_saved());
 
         Ok(serialized)
@@ -578,7 +577,7 @@ impl ItemManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let serialized: EncryptedItem = rmp_serde::from_read_ref(&res)?;
+        let serialized: EncryptedItem = rmp_serde::from_slice(res)?;
         serialized.mark_saved();
 
         Ok(serialized)
@@ -590,7 +589,7 @@ impl ItemManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let serialized: ItemListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
+        let serialized: ItemListResponse<EncryptedItem> = rmp_serde::from_slice(res)?;
         serialized.data.iter().for_each(|x| x.mark_saved());
 
         Ok(serialized)
@@ -609,7 +608,7 @@ impl ItemManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let response: IteratorListResponse<EncryptedRevision> = rmp_serde::from_read_ref(&res)?;
+        let response: IteratorListResponse<EncryptedRevision> = rmp_serde::from_slice(res)?;
 
         let data: Vec<EncryptedItem> = response
             .data
@@ -646,7 +645,7 @@ impl ItemManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let serialized: ItemListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
+        let serialized: ItemListResponse<EncryptedItem> = rmp_serde::from_slice(res)?;
         serialized.data.iter().for_each(|x| x.mark_saved());
 
         Ok(serialized)
@@ -670,7 +669,7 @@ impl ItemManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let serialized: ItemListResponse<EncryptedItem> = rmp_serde::from_read_ref(&res)?;
+        let serialized: ItemListResponse<EncryptedItem> = rmp_serde::from_slice(res)?;
         serialized.data.iter().for_each(|x| x.mark_saved());
 
         Ok(serialized)
@@ -829,7 +828,7 @@ impl CollectionInvitationManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let serialized: IteratorListResponse<SignedInvitation> = rmp_serde::from_read_ref(&res)?;
+        let serialized: IteratorListResponse<SignedInvitation> = rmp_serde::from_slice(res)?;
 
         Ok(serialized)
     }
@@ -843,7 +842,7 @@ impl CollectionInvitationManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let serialized: IteratorListResponse<SignedInvitation> = rmp_serde::from_read_ref(&res)?;
+        let serialized: IteratorListResponse<SignedInvitation> = rmp_serde::from_slice(res)?;
 
         Ok(serialized)
     }
@@ -901,7 +900,7 @@ impl CollectionInvitationManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let serialized: UserProfile = rmp_serde::from_read_ref(&res)?;
+        let serialized: UserProfile = rmp_serde::from_slice(res)?;
 
         Ok(serialized)
     }
@@ -954,7 +953,7 @@ impl CollectionMemberManagerOnline {
         res.error_for_status()?;
         let res = res.bytes();
 
-        let serialized: IteratorListResponse<CollectionMember> = rmp_serde::from_read_ref(&res)?;
+        let serialized: IteratorListResponse<CollectionMember> = rmp_serde::from_slice(res)?;
 
         Ok(serialized)
     }

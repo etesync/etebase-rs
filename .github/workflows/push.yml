@@ -9,11 +9,12 @@ jobs:
     with:
       rust-version: stable
 
-  msrv-tests:
-    name: Run tests on the minimum supported rust version
+  minimal-versions-tests:
+    name: Run tests with minimal dependency and compiler versions
     uses: ./.github/workflows/test.yml
     with:
       rust-version: 1.56.0 # also change in Cargo.toml and README.md
+      minimal-versions: true
 
   formatting:
     name: Code formatting
@@ -46,4 +47,4 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features -- -D warnings
+          args: --all-features --all-targets -- -D warnings

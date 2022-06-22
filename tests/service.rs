@@ -51,7 +51,7 @@ fn user_reset(user: &TestUser) -> Result<()> {
 
 fn init_test(user: &TestUser) -> Result<Account> {
     etebase::init()?;
-    user_reset(&user)?;
+    user_reset(user)?;
 
     let client = Client::new(CLIENT_NAME, &test_url())?;
     let session_key = from_base64(sessionStorageKey)?;
@@ -92,7 +92,7 @@ fn is_etebase_server() -> Result<()> {
     // Verify we also fail correctly for login
     let client = Client::new(CLIENT_NAME, &test_url)?;
     assert_err!(
-        Account::login(client.clone(), USER2.username, USER2.password),
+        Account::login(client, USER2.username, USER2.password),
         Error::NotFound(_)
     );
 
@@ -104,7 +104,7 @@ fn get_dashboard_url() -> Result<()> {
     let etebase = init_test(&USER)?;
 
     match etebase.fetch_dashboard_url() {
-        Ok(url) => assert!(url.len() > 0),
+        Ok(url) => assert!(!url.is_empty()),
         err => assert_err!(err, Error::Http(_)),
     };
 
@@ -134,18 +134,17 @@ fn loading_cache_without_collection_type() -> Result<()> {
 fn simple_collection_handling() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let meta = ItemMetadata::new()
-        .set_name(Some("Collection"))
+    let mut meta = ItemMetadata::new();
+    meta.set_name(Some("Collection"))
         .set_description(Some("Mine"))
-        .set_color(Some("#aabbcc"))
-        .clone();
+        .set_color(Some("#aabbcc"));
     let content = b"SomeContent";
 
     let mut col = col_mgr.create("some.coltype", &meta, content)?;
     assert_eq!(col.collection_type()?, "some.coltype");
     verify_collection(&col, &meta, content)?;
 
-    let meta2 = meta.clone().set_name(Some("Collection meta2")).clone();
+    let meta2 = meta.set_name(Some("Collection meta2")).clone();
     col.set_meta(&meta2)?;
     verify_collection(&col, &meta2, content)?;
 
@@ -189,11 +188,10 @@ fn simple_item_handling() -> Result<()> {
 fn simple_collection_sync() -> Result<()> {
     let etebase = init_test(&USER)?;
     let col_mgr = etebase.collection_manager()?;
-    let meta = ItemMetadata::new()
-        .set_name(Some("Collection"))
+    let mut meta = ItemMetadata::new();
+    meta.set_name(Some("Collection"))
         .set_description(Some("Mine"))
-        .set_color(Some("#aabbcc"))
-        .clone();
+        .set_color(Some("#aabbcc"));
     let content = b"SomeContent";
 
     let mut col = col_mgr.create("some.coltype", &meta, content)?;
@@ -206,7 +204,7 @@ fn simple_collection_sync() -> Result<()> {
 
     let collections = col_mgr.list("some.coltype", None)?;
     assert_eq!(collections.data().len(), 1);
-    verify_collection(&collections.data().first().unwrap(), &meta, content)?;
+    verify_collection(collections.data().first().unwrap(), &meta, content)?;
 
     let mut col_old = col_mgr.fetch(col.uid(), None)?;
     {
@@ -322,7 +320,7 @@ fn simple_item_sync() -> Result<()> {
     {
         let items = it_mgr.list(None)?;
         assert_eq!(items.data().len(), 1);
-        verify_item(&items.data().first().unwrap(), &meta, content)?;
+        verify_item(items.data().first().unwrap(), &meta, content)?;
     }
 
     let mut item_old = it_mgr.fetch(item.uid(), None)?;
@@ -339,7 +337,7 @@ fn simple_item_sync() -> Result<()> {
     {
         let items = it_mgr.list(None)?;
         assert_eq!(items.data().len(), 1);
-        verify_item(&items.data().first().unwrap(), &meta2, content)?;
+        verify_item(items.data().first().unwrap(), &meta2, content)?;
     }
 
     {
@@ -366,7 +364,7 @@ fn simple_item_sync() -> Result<()> {
     {
         let items = it_mgr.list(None)?;
         assert_eq!(items.data().len(), 1);
-        verify_item(&items.data().first().unwrap(), &meta2, content2)?;
+        verify_item(items.data().first().unwrap(), &meta2, content2)?;
     }
 
     etebase.logout()
@@ -398,12 +396,12 @@ fn collection_as_item() -> Result<()> {
         assert_eq!(items.data().len(), 1);
         let meta = col.item()?.meta()?;
         let first_item = items.data().first().unwrap();
-        verify_item(&first_item, &meta, col_content)?;
+        verify_item(first_item, &meta, col_content)?;
         // Also verify the collection metadata is good
         assert_eq!(&first_item.meta_generic::<ItemMetadata>()?, &col_meta);
     }
 
-    let meta = ItemMetadata::new().clone();
+    let meta = ItemMetadata::new();
     let content = b"Item data";
     let item = it_mgr.create(&meta, content)?;
 
@@ -427,11 +425,7 @@ fn collection_as_item() -> Result<()> {
     {
         let collections = col_mgr.list("some.coltype", None)?;
         assert_eq!(collections.data().len(), 1);
-        verify_collection(
-            &collections.data().first().unwrap(),
-            &col_meta,
-            col_content2,
-        )?;
+        verify_collection(collections.data().first().unwrap(), &col_meta, col_content2)?;
     }
 
     let mut col = col_mgr.fetch(col.uid(), None)?;
@@ -442,11 +436,7 @@ fn collection_as_item() -> Result<()> {
     {
         let collections = col_mgr.list("some.coltype", None)?;
         assert_eq!(collections.data().len(), 1);
-        verify_collection(
-            &collections.data().first().unwrap(),
-            &col_meta,
-            col_content2,
-        )?;
+        verify_collection(collections.data().first().unwrap(), &col_meta, col_content2)?;
     }
 
     {
@@ -454,7 +444,7 @@ fn collection_as_item() -> Result<()> {
         assert_eq!(updates.data().len(), 1);
         let meta = col.item()?.meta()?;
         let first_item = updates.data().first().unwrap();
-        verify_item(&first_item, &meta, col_content2)?;
+        verify_item(first_item, &meta, col_content2)?;
         // Also verify the collection metadata is good
         assert_eq!(&first_item.meta_generic::<ItemMetadata>()?, &col_meta);
     }
@@ -493,7 +483,7 @@ fn collection_and_item_deletion() -> Result<()> {
         let items = it_mgr.list(Some(&fetch_options))?;
         assert_eq!(items.data().len(), 1);
         let first_item = items.data().first().unwrap();
-        verify_item(&first_item, &meta, content)?;
+        verify_item(first_item, &meta, content)?;
         assert!(first_item.is_deleted());
     }
 
@@ -506,7 +496,7 @@ fn collection_and_item_deletion() -> Result<()> {
         assert_eq!(collections.data().len(), 1);
 
         let first_col = collections.data().first().unwrap();
-        verify_collection(&first_col, &col_meta, col_content)?;
+        verify_collection(first_col, &col_meta, col_content)?;
         assert!(first_col.is_deleted());
     }
 
@@ -541,7 +531,7 @@ fn empty_content() -> Result<()> {
     {
         let items = it_mgr.list(None)?;
         let first_item = items.data().first().unwrap();
-        verify_item(&first_item, &meta, content)?;
+        verify_item(first_item, &meta, content)?;
     }
 
     etebase.logout()
@@ -1018,14 +1008,14 @@ fn collection_invitations() -> Result<()> {
     assert_eq!(&user2_profile.pubkey(), &user2_pubkey);
     // Off-band verification:
     assert_eq!(
-        pretty_fingerprint(&user2_profile.pubkey()),
+        pretty_fingerprint(user2_profile.pubkey()),
         pretty_fingerprint(user2_pubkey)
     );
 
     invite_mgr.invite(
         &col,
         USER2.username,
-        &user2_profile.pubkey(),
+        user2_profile.pubkey(),
         CollectionAccessLevel::ReadWrite,
     )?;
 
@@ -1052,7 +1042,7 @@ fn collection_invitations() -> Result<()> {
     invite_mgr.invite(
         &col,
         USER2.username,
-        &user2_profile.pubkey(),
+        user2_profile.pubkey(),
         CollectionAccessLevel::ReadWrite,
     )?;
 
@@ -1072,7 +1062,7 @@ fn collection_invitations() -> Result<()> {
     invite_mgr.invite(
         &col,
         USER2.username,
-        &user2_profile.pubkey(),
+        user2_profile.pubkey(),
         CollectionAccessLevel::ReadWrite,
     )?;
 
@@ -1115,7 +1105,7 @@ fn collection_invitations() -> Result<()> {
     invite_mgr.invite(
         &col,
         USER2.username,
-        &user2_profile.pubkey(),
+        user2_profile.pubkey(),
         CollectionAccessLevel::ReadWrite,
     )?;
 
@@ -1151,7 +1141,7 @@ fn collection_invitations() -> Result<()> {
 
         let stoken = new_col.stoken();
 
-        let fetch_options = FetchOptions::new().stoken(stoken.as_deref());
+        let fetch_options = FetchOptions::new().stoken(stoken);
         let collections = col_mgr2.list("some.coltype", Some(&fetch_options))?;
         assert_eq!(collections.data().len(), 0);
         assert_eq!(collections.removed_memberships().unwrap().len(), 1);
@@ -1182,7 +1172,7 @@ fn iterating_invitations() -> Result<()> {
         invite_mgr.invite(
             &col,
             USER2.username,
-            &user2_profile.pubkey(),
+            user2_profile.pubkey(),
             CollectionAccessLevel::ReadWrite,
         )?;
     }
@@ -1255,7 +1245,7 @@ fn collection_access_level() -> Result<()> {
     invite_mgr.invite(
         &col,
         USER2.username,
-        &user2_profile.pubkey(),
+        user2_profile.pubkey(),
         CollectionAccessLevel::ReadWrite,
     )?;
 
@@ -1365,7 +1355,7 @@ fn chunking_large_data() -> Result<()> {
 
     let it_mgr = col_mgr.item_manager(&col)?;
 
-    let meta = ItemMetadata::new().clone();
+    let meta = ItemMetadata::new();
     let content = randombytes_deterministic(120 * 1024, &[0; 32]); // 120kb of pseuedorandom data
 
     let mut item = it_mgr.create(&meta, &content)?;
@@ -1517,7 +1507,7 @@ fn login_and_password_change() -> Result<()> {
         Error::Unauthorized(_)
     );
 
-    let mut etebase2 = Account::login(client.clone(), USER2.username, another_password)?;
+    let mut etebase2 = Account::login(client, USER2.username, another_password)?;
 
     let col_mgr2 = etebase2.collection_manager()?;
 
@@ -1566,7 +1556,7 @@ fn session_save_and_restore() -> Result<()> {
             Account::restore(client.clone(), &saved, None),
             Error::Encryption(_)
         );
-        let etebase2 = Account::restore(client.clone(), &saved, Some(&key))?;
+        let etebase2 = Account::restore(client, &saved, Some(&key))?;
 
         let col_mgr2 = etebase2.collection_manager()?;
         let collections = col_mgr2.list("some.coltype", None)?;
