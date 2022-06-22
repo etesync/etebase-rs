@@ -185,7 +185,7 @@ impl MsgPackSerilization for ItemMetadata {
     }
 
     fn from_msgpack(data: &[u8]) -> Result<Self::Output> {
-        Ok(rmp_serde::from_read_ref(data)?)
+        Ok(rmp_serde::from_slice(data)?)
     }
 }
 
@@ -336,8 +336,8 @@ impl EncryptedCollection {
     }
 
     pub fn cache_load(cached: &[u8]) -> Result<Self> {
-        let cached: CachedContent = rmp_serde::from_read_ref(cached)?;
-        let ret: std::result::Result<Self, _> = rmp_serde::from_read_ref(&cached.data);
+        let cached: CachedContent = rmp_serde::from_slice(cached)?;
+        let ret: std::result::Result<Self, _> = rmp_serde::from_slice(&cached.data);
         // FIXME: remove this whole match once "collection-type-migration" is done
         Ok(match ret {
             Ok(ret) => ret,
@@ -352,7 +352,7 @@ impl EncryptedCollection {
                     stoken: Option<String>,
                 }
 
-                let ret: EncryptedCollectionLegacy = rmp_serde::from_read_ref(&cached.data)?;
+                let ret: EncryptedCollectionLegacy = rmp_serde::from_slice(&cached.data)?;
 
                 Self {
                     item: ret.item,
@@ -776,7 +776,7 @@ impl EncryptedRevision {
         // If we have more than one chunk we have the mapping header in the last chunk
         if self.chunks.len() > 1 {
             let buf = decrypted_chunks.pop().unwrap();
-            let header_chunk: (Vec<usize>,) = rmp_serde::from_read_ref(&buf)?;
+            let header_chunk: (Vec<usize>,) = rmp_serde::from_slice(&buf)?;
             indices = Some(header_chunk.0);
         }
 
@@ -870,8 +870,8 @@ impl EncryptedItem {
     }
 
     pub fn cache_load(cached: &[u8]) -> Result<Self> {
-        let cached: CachedContent = rmp_serde::from_read_ref(cached)?;
-        Ok(rmp_serde::from_read_ref(&cached.data)?)
+        let cached: CachedContent = rmp_serde::from_slice(cached)?;
+        Ok(rmp_serde::from_slice(&cached.data)?)
     }
 
     // FIXME: Actually make it not save content

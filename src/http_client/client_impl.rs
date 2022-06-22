@@ -91,11 +91,10 @@ impl Response {
             pub detail: Option<&'a str>,
         }
 
-        let content: ErrorResponse =
-            rmp_serde::from_read_ref(self.bytes()).unwrap_or(ErrorResponse {
-                code: None,
-                detail: None,
-            });
+        let content: ErrorResponse = rmp_serde::from_slice(self.bytes()).unwrap_or(ErrorResponse {
+            code: None,
+            detail: None,
+        });
 
         Err(match self.status {
             // FIXME: Use the detail too

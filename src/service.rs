@@ -470,15 +470,14 @@ impl Account {
         };
 
         let account_data_stored = from_base64(account_data_stored)?;
-        let account_data_stored: AccountDataStored =
-            rmp_serde::from_read_ref(&account_data_stored)?;
+        let account_data_stored: AccountDataStored = rmp_serde::from_slice(&account_data_stored)?;
         let version = account_data_stored.version;
 
         let crypto_manager = StorageCryptoManager::new(encryption_key, version)?;
         let decrypted = crypto_manager
             .0
             .decrypt(account_data_stored.encrypted_data, Some(&[version]))?;
-        let account_data: AccountData = rmp_serde::from_read_ref(&decrypted)?;
+        let account_data: AccountData = rmp_serde::from_slice(&decrypted)?;
 
         client.set_token(account_data.auth_token);
         client.set_server_url(account_data.server_url)?;
@@ -1138,7 +1137,7 @@ impl CollectionInvitationManager {
     pub fn accept(&self, invitation: &SignedInvitation) -> Result<()> {
         let raw_content =
             buffer_unpad(&invitation.decrypted_encryption_key(&self.identity_crypto_manager)?)?;
-        let content: SignedInvitationContent = rmp_serde::from_read_ref(&raw_content)?;
+        let content: SignedInvitationContent = rmp_serde::from_slice(&raw_content)?;
         let collection_type_uid = self
             .account_crypto_manager
             .collection_type_to_uid(&content.collection_type)?;

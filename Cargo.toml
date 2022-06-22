@@ -28,7 +28,7 @@ url = "^2.2.2"
 serde = { version = "^1.0.136", features = ["derive"] }
 serde_bytes = "^0.11.5"
 serde_repr = "^0.1.7"
-rmp-serde = "^1.0.0"
+rmp-serde = "^1.1.0"
 reqwest = { version = "^0.11.10", features = ["blocking"], optional = true }
 remove_dir_all = "^0.6.0"
 
