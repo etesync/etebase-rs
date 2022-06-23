@@ -14,6 +14,10 @@
 * Renamed the `Account::is_etebase_server()` function to a method - `Client::is_server_valid()`.
 * `Error` now implements `Eq`.
 * Made some error messages more specific
+* Most of the `test_helpers` module has been removed. This module was hidden from documentation and never
+  meant for public use.
+* The `user` field of `Account` has been made private. Its type (`LoginResponseUser`) was never publicly
+  accessible, so no application should have had a use for it.
 
 ## Version 0.5.3
 * Upgrade dependencies - ignore package lock. Upgrade to absolute latest.
