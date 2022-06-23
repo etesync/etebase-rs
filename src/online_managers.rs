@@ -128,7 +128,7 @@ impl<T> IteratorListResponse<T> {
 }
 
 #[derive(Deserialize)]
-pub struct LoginChallange {
+pub(crate) struct LoginChallange {
     #[serde(with = "serde_bytes")]
     pub challenge: Vec<u8>,
     #[serde(with = "serde_bytes")]
@@ -159,7 +159,7 @@ struct LoginBody<'a> {
 }
 
 #[derive(Serialize)]
-pub struct LoginBodyResponse<'a> {
+pub(crate) struct LoginBodyResponse<'a> {
     pub username: &'a str,
     #[serde(with = "serde_bytes")]
     pub challenge: &'a [u8],
@@ -169,7 +169,7 @@ pub struct LoginBodyResponse<'a> {
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct LoginResponseUser {
+pub(crate) struct LoginResponseUser {
     pub username: String,
     pub email: String,
     #[serde(with = "serde_bytes")]
@@ -179,7 +179,7 @@ pub struct LoginResponseUser {
 }
 
 #[derive(Deserialize)]
-pub struct LoginResponse {
+pub(crate) struct LoginResponse {
     pub token: String,
     pub user: LoginResponseUser,
 }
@@ -250,7 +250,7 @@ impl UserProfile {
     }
 }
 
-pub struct Authenticator<'a> {
+pub(crate) struct Authenticator<'a> {
     api_base: Url,
     client: &'a Client,
 }
@@ -465,7 +465,7 @@ pub fn apply_fetch_options(url: Url, options: Option<&FetchOptions>) -> Url {
     url
 }
 
-pub struct CollectionManagerOnline {
+pub(crate) struct CollectionManagerOnline {
     api_base: Url,
     client: Arc<Client>,
 }
@@ -555,7 +555,7 @@ struct ItemBatchBody<'a> {
     deps: Option<Vec<ItemBatchBodyDep<'a>>>,
 }
 
-pub struct ItemManagerOnline {
+pub(crate) struct ItemManagerOnline {
     api_base: Url,
     client: Arc<Client>,
 }
@@ -806,7 +806,7 @@ impl CollectionMember {
     }
 }
 
-pub struct CollectionInvitationManagerOnline {
+pub(crate) struct CollectionInvitationManagerOnline {
     api_base: Url,
     client: Arc<Client>,
 }
@@ -928,7 +928,7 @@ impl CollectionInvitationManagerOnline {
     }
 }
 
-pub struct CollectionMemberManagerOnline {
+pub(crate) struct CollectionMemberManagerOnline {
     api_base: Url,
     client: Arc<Client>,
 }

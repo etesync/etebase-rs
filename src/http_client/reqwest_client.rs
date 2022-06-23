@@ -20,7 +20,7 @@ impl From<reqwest::Error> for Error {
     }
 }
 
-pub struct Client {
+pub(super) struct Client {
     req_client: ReqwestClient,
 }
 

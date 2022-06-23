@@ -7,10 +7,8 @@ use common::{sessionStorageKey, test_url, TestUser, USER, USER2};
 use etebase::error::{Error, Result};
 use etebase::utils::{from_base64, randombytes_deterministic};
 use etebase::{
-    pretty_fingerprint,
-    test_helpers::{chunk_uids, test_reset},
-    Account, Client, Collection, CollectionAccessLevel, FetchOptions, Item, ItemMetadata,
-    PrefetchOption, User,
+    pretty_fingerprint, Account, Client, Collection, CollectionAccessLevel, FetchOptions, Item,
+    ItemMetadata, PrefetchOption, User,
 };
 
 use std::collections::HashSet;
@@ -44,7 +42,7 @@ fn user_reset(user: &TestUser) -> Result<()> {
         login_pubkey: &from_base64(user.loginPubkey)?,
         encrypted_content: &from_base64(user.encryptedContent)?,
     };
-    test_reset(&client, body_struct)?;
+    etebase::test_helpers::test_reset(&client, body_struct)?;
 
     Ok(())
 }
@@ -1365,7 +1363,7 @@ fn chunking_large_data() -> Result<()> {
 
     // Get the first chunks and init uid_set
     {
-        let chunks = chunk_uids(&item);
+        let chunks = etebase::test_helpers::chunk_uids(&item);
         assert_eq!(chunks.len(), 8);
         for chunk in chunks {
             uid_set.insert(chunk);
@@ -1388,7 +1386,7 @@ fn chunking_large_data() -> Result<()> {
 
     // Verify how much has changed
     {
-        let chunks = chunk_uids(&item);
+        let chunks = etebase::test_helpers::chunk_uids(&item);
         assert_eq!(chunks.len(), 8);
 
         let mut reused = 0;

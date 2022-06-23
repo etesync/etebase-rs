@@ -24,17 +24,17 @@ use super::{
     CURRENT_VERSION,
 };
 
-pub fn gen_uid_base64() -> StringBase64 {
+fn gen_uid_base64() -> StringBase64 {
     to_base64(&randombytes(24)).unwrap()
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct CachedContent {
+struct CachedContent {
     version: u8,
     data: Vec<u8>,
 }
 
-pub struct AccountCryptoManager(pub CryptoManager);
+pub(crate) struct AccountCryptoManager(pub CryptoManager);
 
 impl AccountCryptoManager {
     const COLTYPE_PAD_SIZE: usize = 32;
@@ -61,7 +61,7 @@ impl AccountCryptoManager {
     }
 }
 
-pub struct CollectionCryptoManager(CryptoManager);
+pub(crate) struct CollectionCryptoManager(CryptoManager);
 
 impl CollectionCryptoManager {
     pub fn new(key: &[u8; 32], version: u8) -> Result<Self> {
@@ -71,7 +71,7 @@ impl CollectionCryptoManager {
     }
 }
 
-pub struct ItemCryptoManager(CryptoManager);
+pub(crate) struct ItemCryptoManager(CryptoManager);
 
 impl ItemCryptoManager {
     pub fn new(key: &[u8; 32], version: u8) -> Result<Self> {
@@ -293,7 +293,7 @@ pub enum CollectionAccessLevel {
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct EncryptedCollection {
+pub(crate) struct EncryptedCollection {
     // Order matters because that's how we save to cache
     item: EncryptedItem,
     access_level: CollectionAccessLevel,
@@ -558,7 +558,7 @@ pub(crate) struct ChunkArrayItem(
 );
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct EncryptedRevision {
+pub(crate) struct EncryptedRevision {
     uid: StringBase64,
     #[serde(with = "serde_bytes")]
     meta: Vec<u8>,
@@ -815,7 +815,7 @@ impl EncryptedRevision {
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct EncryptedItem {
+pub(crate) struct EncryptedItem {
     uid: StringBase64,
     version: u8,
 

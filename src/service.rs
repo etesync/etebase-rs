@@ -66,7 +66,7 @@ impl StorageCryptoManager {
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AccountData<'a> {
+struct AccountData<'a> {
     pub version: u8,
     #[serde(with = "serde_bytes")]
     pub key: &'a [u8],
@@ -77,7 +77,7 @@ pub struct AccountData<'a> {
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AccountDataStored<'a> {
+struct AccountDataStored<'a> {
     pub version: u8,
     #[serde(with = "serde_bytes")]
     pub encrypted_data: &'a [u8],
@@ -88,7 +88,7 @@ pub struct AccountDataStored<'a> {
 pub struct Account {
     main_key: [u8; SYMMETRIC_KEY_SIZE],
     version: u8,
-    pub user: LoginResponseUser,
+    user: LoginResponseUser,
     client: Arc<Client>,
     account_crypto_manager: Arc<AccountCryptoManager>,
 }
