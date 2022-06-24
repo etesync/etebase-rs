@@ -39,11 +39,7 @@ pub mod managers {
 
 #[doc(hidden)]
 pub mod test_helpers {
-    pub use super::online_managers::test_reset;
-
-    pub fn chunk_uids(item: &crate::Item) -> Vec<String> {
-        super::service::test_chunk_uids(item)
-    }
+    pub use super::{online_managers::test_reset, service::test_chunk_uids as chunk_uids};
 }
 
 pub const CURRENT_VERSION: u8 = 1;
