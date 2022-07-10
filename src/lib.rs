@@ -37,6 +37,8 @@ pub mod managers {
     };
 }
 
+/// Helper functions for integration tests. Any items in this module is not considered part of the
+/// public API and may change at any time.
 #[doc(hidden)]
 pub mod test_helpers {
     pub use super::{online_managers::test_reset, service::test_chunk_uids as chunk_uids};
