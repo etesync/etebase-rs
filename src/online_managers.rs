@@ -17,7 +17,22 @@ use super::error::{Error, Result};
 use super::http_client::Client;
 use crate::utils::{StrBase64, StringBase64};
 
-pub fn test_reset(client: &Client, body_struct: SignupBody) -> Result<()> {
+/// Resets/reinitializes a given user account. Only used for integration tests, not part of public API.
+pub fn test_reset(
+    client: &Client,
+    user: &User,
+    salt: &[u8],
+    login_pubkey: &[u8],
+    pubkey: &[u8],
+    encrypted_content: &[u8],
+) -> Result<()> {
+    let body_struct = SignupBody {
+        user,
+        salt,
+        login_pubkey,
+        pubkey,
+        encrypted_content,
+    };
     let body = rmp_serde::to_vec_named(&body_struct)?;
     let url = client.api_base.join("api/v1/test/authentication/reset/")?;
 
@@ -138,7 +153,7 @@ pub(crate) struct LoginChallange {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SignupBody<'a> {
+pub(crate) struct SignupBody<'a> {
     pub user: &'a User,
     #[serde(with = "serde_bytes")]
     pub salt: &'a [u8],

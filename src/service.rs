@@ -1494,6 +1494,7 @@ impl Item {
     }
 }
 
-pub(crate) fn test_chunk_uids(item: &Item) -> Vec<String> {
+/// Returns the UIDs of an item's chunks. Only used for integration tests, not part of public API.
+pub fn test_chunk_uids(item: &Item) -> Vec<String> {
     item.item.test_chunk_uids()
 }

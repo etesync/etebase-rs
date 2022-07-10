@@ -35,14 +35,14 @@ fn user_reset(user: &TestUser) -> Result<()> {
         &acct_user,
         b"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     );
-    let body_struct = etebase::test_helpers::SignupBody {
-        user: &acct_user,
-        salt: &from_base64(user.salt)?,
-        pubkey: &from_base64(user.pubkey)?,
-        login_pubkey: &from_base64(user.loginPubkey)?,
-        encrypted_content: &from_base64(user.encryptedContent)?,
-    };
-    etebase::test_helpers::test_reset(&client, body_struct)?;
+    etebase::test_helpers::test_reset(
+        &client,
+        &acct_user,
+        &from_base64(user.salt)?,
+        &from_base64(user.loginPubkey)?,
+        &from_base64(user.pubkey)?,
+        &from_base64(user.encryptedContent)?,
+    )?;
 
     Ok(())
 }
