@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use url::Url;
 
-use crate::online_managers::Authenticator;
+use crate::{error::Error, online_managers::Authenticator};
 
 use super::error::Result;
 
@@ -34,6 +34,14 @@ pub struct Client {
 impl Client {
     fn normalize_url(server_url: &str) -> Result<Url> {
         let mut ret = Url::parse(server_url)?;
+
+        if !["http", "https"].contains(&ret.scheme()) {
+            return Err(Error::UrlParse(format!(
+                "Invalid server URL scheme, expected http or https: {}",
+                ret.scheme()
+            )));
+        }
+
         if !ret.path().ends_with('/') {
             ret.path_segments_mut().unwrap().push("");
         }
