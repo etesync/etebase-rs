@@ -98,6 +98,14 @@ fn is_etebase_server() -> Result<()> {
 }
 
 #[test]
+fn server_url_parsing() {
+    let client = Client::new(CLIENT_NAME, "localhost:1234");
+    assert!(client.is_err());
+
+    Client::new(CLIENT_NAME, "HTTPS://localhost:1234").unwrap();
+}
+
+#[test]
 fn get_dashboard_url() -> Result<()> {
     let etebase = init_test(&USER)?;
 
