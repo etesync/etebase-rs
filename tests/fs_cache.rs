@@ -30,7 +30,7 @@ impl TempDir {
         let rand = to_base64(&randbytes).unwrap();
         let name = format!("etebase-test-{}", rand);
 
-        let path = tmpdir.join(&name);
+        let path = tmpdir.join(name);
         match std::fs::create_dir(&path) {
             Ok(_) => Ok(TempDir { path }),
             Err(e) => Err(e),

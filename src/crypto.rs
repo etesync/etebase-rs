@@ -363,7 +363,7 @@ impl CryptoMac {
 fn get_encoded_chunk(content: &[u8], suffix: &str) -> String {
     let num =
         (((content[0] as u32) << 16) + ((content[1] as u32) << 8) + (content[2] as u32)) % 100000;
-    return format!("{:0>5}{}", num, suffix);
+    format!("{:0>5}{}", num, suffix)
 }
 
 /// Return a pretty formatted fingerprint of the content
