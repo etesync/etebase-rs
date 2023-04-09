@@ -363,7 +363,7 @@ impl CryptoMac {
 fn get_encoded_chunk(content: &[u8], suffix: &str) -> String {
     let num =
         (((content[0] as u32) << 16) + ((content[1] as u32) << 8) + (content[2] as u32)) % 100000;
-    return format!("{:0>5}{}", num, suffix);
+    format!("{:0>5}{}", num, suffix)
 }
 
 /// Return a pretty formatted fingerprint of the content
@@ -385,14 +385,14 @@ pub fn pretty_fingerprint(content: &[u8]) -> String {
      * We then use bytes 29-31 for another number, and then the 3 most significant bits of each first byte for the last.
      */
     let mut last_num: u32 = 0;
-    let parts = (0..10).into_iter().map(|i| {
+    let parts = (0..10).map(|i| {
         let suffix = if i % 4 == 3 { "\n" } else { delimiter };
 
         last_num = (last_num << 3) | ((fingerprint[i] as u32) & 0xE0) >> 5;
         get_encoded_chunk(&fingerprint[i * 3..], suffix)
     });
 
-    let last_num = (0..10).into_iter().fold(0, |accum, i| {
+    let last_num = (0..10).fold(0, |accum, i| {
         (accum << 3) | ((fingerprint[i] as u32) & 0xE0) >> 5
     }) % 100000;
     let last_num = format!("{:0>5}", last_num);

@@ -562,7 +562,6 @@ fn list_response_correctness() -> Result<()> {
     let it_mgr = col_mgr.item_manager(&col)?;
 
     let items: Vec<Item> = (0..5)
-        .into_iter()
         .map(|i| {
             let meta = ItemMetadata::new()
                 .set_name(Some(&format!("Item {}", i)))
@@ -645,7 +644,6 @@ fn item_transactions() -> Result<()> {
     let mut item_old2 = it_mgr.fetch(item.uid(), None)?;
 
     let items: Vec<Item> = (0..5)
-        .into_iter()
         .map(|i| {
             let meta = ItemMetadata::new()
                 .set_name(Some(&format!("Item {}", i)))
@@ -756,7 +754,6 @@ fn item_batch_stoken() -> Result<()> {
     let mut item2 = it_mgr.fetch(item.uid(), None)?;
 
     let items: Vec<Item> = (0..5)
-        .into_iter()
         .map(|i| {
             let meta = ItemMetadata::new()
                 .set_name(Some(&format!("Item {}", i)))
@@ -830,7 +827,6 @@ fn item_fetch_updates() -> Result<()> {
     it_mgr.batch(iter::once(&item), None)?;
 
     let items: Vec<Item> = (0..5)
-        .into_iter()
         .map(|i| {
             let meta = ItemMetadata::new()
                 .set_name(Some(&format!("Item {}", i)))
@@ -990,7 +986,6 @@ fn collection_invitations() -> Result<()> {
     let it_mgr = col_mgr.item_manager(&col)?;
 
     let items: Vec<Item> = (0..5)
-        .into_iter()
         .map(|i| {
             let meta = ItemMetadata::new()
                 .set_name(Some(&format!("Item {}", i)))
@@ -1228,7 +1223,6 @@ fn collection_access_level() -> Result<()> {
     let it_mgr = col_mgr.item_manager(&col)?;
 
     let items: Vec<Item> = (0..5)
-        .into_iter()
         .map(|i| {
             let meta = ItemMetadata::new()
                 .set_name(Some(&format!("Item {}", i)))

@@ -163,10 +163,10 @@ impl FileSystemCache {
         col_file.push("col");
 
         let content = col_mgr.cache_save(collection)?;
-        fs::write(col_file, &content)?;
+        fs::write(col_file, content)?;
 
         let items_dir = self.get_collection_items_dir(collection.uid());
-        fs::create_dir_all(&items_dir)?;
+        fs::create_dir_all(items_dir)?;
 
         Ok(())
     }
@@ -186,10 +186,10 @@ impl FileSystemCache {
         col_file.push("col");
 
         let content = col_mgr.cache_save_with_content(collection)?;
-        fs::write(col_file, &content)?;
+        fs::write(col_file, content)?;
 
         let items_dir = self.get_collection_items_dir(collection.uid());
-        fs::create_dir_all(&items_dir)?;
+        fs::create_dir_all(items_dir)?;
 
         Ok(())
     }
@@ -239,7 +239,7 @@ impl FileSystemCache {
     pub fn item_set(&self, item_mgr: &ItemManager, col_uid: &str, item: &Item) -> Result<()> {
         let item_file = self.get_collection_items_dir(col_uid).join(item.uid());
         let content = item_mgr.cache_save(item)?;
-        fs::write(item_file, &content)?;
+        fs::write(item_file, content)?;
         Ok(())
     }
 
@@ -257,7 +257,7 @@ impl FileSystemCache {
     ) -> Result<()> {
         let item_file = self.get_collection_items_dir(col_uid).join(item.uid());
         let content = item_mgr.cache_save_with_content(item)?;
-        fs::write(item_file, &content)?;
+        fs::write(item_file, content)?;
         Ok(())
     }
 
