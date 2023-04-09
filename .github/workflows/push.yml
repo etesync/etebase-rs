@@ -13,7 +13,7 @@ jobs:
     name: Run tests with minimal dependency and compiler versions
     uses: ./.github/workflows/test.yml
     with:
-      rust-version: 1.56.0 # also change in Cargo.toml and README.md
+      rust-version: 1.63.0 # also change in Cargo.toml and README.md
       minimal-versions: true
 
   formatting:
