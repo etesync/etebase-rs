@@ -2,12 +2,18 @@
 
 ## Unreleased
 ### Features
+
+### Changes
+
+## Version 0.6.0
+### Features
 * Added `utils::randombytes_array()` function to create fixed-sized arrays of random numbers
 
 ### Fixes
 * Loosened the argument types for `ItemMetadata::set_*()` methods to allow passing `String`s directly
 * Loosened the argument types for several methods to take any `IntoIterator`, not just `Iterator`
 * Various documentation fixes
+* Bump version of `remove_dir_all` to fix a CVE
 
 ### Changes
 * Renamed `SignedInvitation::from_*()` methods to `sender_*()` to avoid confusing them with constructors.
