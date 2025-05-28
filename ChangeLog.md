@@ -5,6 +5,15 @@
 
 ### Changes
 
+## Version 0.6.1
+### Features
+
+### Fixes
+* openssl: bump to address CVE-2025-3416
+
+### Changes
+
+
 ## Version 0.6.0
 ### Features
 * Added `utils::randombytes_array()` function to create fixed-sized arrays of random numbers
