@@ -1267,6 +1267,7 @@ impl CollectionMemberManager {
 /// Like [`Item`]s, collections have two pieces of data associated with them:
 /// * [metadata](ItemMetadata) - contains meta information like name and modification time
 /// * Content - a buffer containing arbitrary binary data
+///
 /// They also have an immutable type and an associated sync token
 #[derive(Clone)]
 pub struct Collection {

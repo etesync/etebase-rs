@@ -77,7 +77,7 @@ impl FileSystemCache {
     /// # Arguments:
     /// * `client` - the already setup [`Client`] object
     /// * `encryption_key` - the same encryption key passed to [`save_account`](Self::save_account)
-    ///    while saving the account
+    ///   while saving the account
     pub fn load_account(&self, client: &Client, encryption_key: Option<&[u8]>) -> Result<Account> {
         let account_file = self.user_dir.join("account");
         let data = fs::read_to_string(account_file)?;
